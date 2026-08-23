@@ -111,11 +111,12 @@ Show the exact file changes needed as a unified diff."
     echo "--- Running remote review via Azure Foundry..."
 
     # Load Azure credentials
-    VAULT_NAME="${VAULT_NAME:-kv-seekapa-apps}"
+    VAULT_NAME="${VAULT_NAME:-}"
     ENDPOINT="${AZURE_OPENAI_ENDPOINT:-}"
     KEY="${AZURE_OPENAI_KEY:-}"
 
     if [ -z "$ENDPOINT" ] || [ -z "$KEY" ]; then
+      VAULT_NAME="${VAULT_NAME:?set VAULT_NAME to your key vault name, or set AZURE_OPENAI_ENDPOINT + AZURE_OPENAI_KEY directly}"
       ENDPOINT=$(az keyvault secret show --vault-name "$VAULT_NAME" --name "AzureAIFoundry-Endpoint" --query value -o tsv 2>/dev/null) || true
       KEY=$(az keyvault secret show --vault-name "$VAULT_NAME" --name "AzureOpenAI-Key" --query value -o tsv 2>/dev/null) || true
     fi
@@ -127,7 +128,7 @@ Show the exact file changes needed as a unified diff."
       exec "$0" review "$@"
     fi
 
-    DEPLOYMENT="${AZURE_CODEX_DEPLOYMENT:-gpt-5.3-codex-CI-Reviewer}"
+    DEPLOYMENT="${AZURE_CODEX_DEPLOYMENT:?set AZURE_CODEX_DEPLOYMENT to your review-deployment name}"
 
     # Capture diff
     DIFF_CONTENT=$(git diff HEAD --no-color 2>/dev/null | head -3000)

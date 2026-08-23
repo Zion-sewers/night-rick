@@ -6,11 +6,11 @@ effort: low
 
 ## Purpose
 
-Activate before writing any frontend code. Injects the Seekapa UI design standard into the session so you don't need to re-prompt it every time.
+Activate before writing any frontend code. Injects the house UI design standard into the session so you don't need to re-prompt it every time.
 
 ## What This Enforces
 
-You are now operating under the Seekapa UI standard. All UI output must comply with `~/.Codex/rules/anti-slop-ui.md`. Summary:
+You are now operating under the house UI standard. All UI output must comply with `~/.Codex/rules/anti-slop-ui.md`. Summary:
 
 **Palette — use one of these, no exceptions:**
 - Catppuccin Mocha (dark): base #1e1e2e, text #cdd6f4, blue #89b4fa, green #a6e3a1, red #f38ba8

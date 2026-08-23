@@ -96,7 +96,7 @@ df = df.with_columns([
 from autogluon.tabular import TabularPredictor
 predictor = TabularPredictor(label="target").fit(df.to_pandas(), time_limit=120)
 
-# TIME-SERIES (Yarin pattern):
+# TIME-SERIES (zero-shot forecasting pattern):
 # from chronos import ChronosPipeline  # zero-shot, no training
 # pipeline = ChronosPipeline.from_pretrained("amazon/chronos-t5-small")
 # from statsforecast import StatsForecast
@@ -166,12 +166,15 @@ Never commit data files — they stay in the project dir (gitignored).
 
 ## Per-project defaults
 
+Add one row per project you actually run notebooks in, named after that
+project's own folder. Example rows, showing the pattern:
+
 | Project | Default type | Target column | Notes |
 |---------|-------------|---------------|-------|
-| campaign-analysis | timeseries + tabular | ftd_count, conversion_rate | CPCV for CV (FTD = temporal labels); Chronos-2 forecast; GD Coverage Metric |
-| qc | eval | score, pass_rate | GD Coverage Metric + CWS; PaCMAP white-gap view |
-| cs-agent | eval | escalation_rate, accuracy | GD Coverage Metric + CWS; Mondrian CP per topic |
-| HR-agent | embedding | candidate_text | PaCMAP clustering; no temporal CV needed |
+| `<campaign-scoring-project>` | timeseries + tabular | e.g. a conversion-event count, a conversion rate | CPCV for CV (event count = temporal labels); Chronos-2 forecast; GD Coverage Metric |
+| `<qa-eval-project>` | eval | score, pass_rate | GD Coverage Metric + CWS; PaCMAP white-gap view |
+| `<agent-eval-project>` | eval | escalation_rate, accuracy | GD Coverage Metric + CWS; Mondrian CP per topic |
+| `<embedding-clustering-project>` | embedding | candidate_text | PaCMAP clustering; no temporal CV needed |
 
 ## Dependencies (add to pyproject.toml dev group when creating notebook)
 

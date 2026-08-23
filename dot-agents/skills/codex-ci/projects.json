@@ -1,34 +1,34 @@
 {
-  "figma-4-all": {
+  "<ts-project-with-tiers>": {
     "test_cmd": "bun run test:p0",
     "full_test_cmd": "bun run test:staged",
     "lint_cmd": "bunx eslint plugin test scripts --ext .js,.mjs,.cjs",
     "constraints": "ES2017. No optional chaining, nullish coalescing, async iterators. No mocks except global.figma.",
     "mutation_targets": "plugin/"
   },
-  "social-intelligence-unit": {
+  "<python-project>": {
     "test_cmd": "uv run pytest tests/unit/ -x --tb=short -q",
     "full_test_cmd": "uv run pytest tests/",
     "lint_cmd": "uv run ruff check src/",
     "integration_test_cmd": "uv run pytest tests/integration/ -v",
     "property_test_cmd": "uv run pytest tests/property/ -v",
-    "type_check_cmd": "uv run mypy src/siu/",
+    "type_check_cmd": "uv run mypy src/<package-name>/",
     "format_cmd": "uv run ruff format --check src/",
     "frontend_lint_cmd": "cd frontend && bun run lint",
     "frontend_type_cmd": "cd frontend && bun run type-check",
     "frontend_test_cmd": "cd frontend && bunx playwright test",
-    "coverage_cmd": "uv run pytest tests/ --cov=src/siu --cov-fail-under=90",
+    "coverage_cmd": "uv run pytest tests/ --cov=src/<package-name> --cov-fail-under=90",
     "constraints": "Python 3.12. TypeScript strict (frontend). No mocks (except global.figma). VCR.py for API fixtures. 10 system invariants + 5 quality gates enforced.",
     "mutation_targets": "src/"
   },
-  "seekapa-video": {
+  "<ts-project>": {
     "test_cmd": "bun test",
     "full_test_cmd": "bun test",
     "lint_cmd": "bun run lint",
     "constraints": "TypeScript strict. Remotion pipeline.",
     "mutation_targets": "src/"
   },
-  "seekapa-training-platform": {
+  "<python-project-b>": {
     "test_cmd": "cd backend && python3 -m pytest tests/ -x -q",
     "full_test_cmd": "cd backend && python3 -m pytest tests/ -v",
     "lint_cmd": "echo 'no linter configured'",

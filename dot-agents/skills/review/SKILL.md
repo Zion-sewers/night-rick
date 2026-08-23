@@ -159,7 +159,7 @@ For each new/modified loop, query, or data operation:
 
 #### 4e. API Latency
 - [ ] Expected P95 latency stated for new endpoints
-- [ ] Compare against project thresholds (SIU: API P95 <200ms, Ingestion P95 <30s)
+- [ ] Compare against project thresholds (example: API P95 <200ms, ingestion P95 <30s)
 - [ ] Async operations for anything >500ms
 
 **Grade:** A-F based on findings.

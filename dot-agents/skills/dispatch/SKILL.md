@@ -1,6 +1,6 @@
 ---
 name: dispatch
-description: Sync agent-to-agent dispatch from Codex orchestrator to a registered peer (Codex executor on gpt-5.5, Foundry agents seekapa/AxiaCS, future bridges). Triggers on /dispatch, "ask seekapa", "have AxiaCS check", "send to codex for review", "second-opinion from gpt-5.5". Default timeout 60s, sync only in v1, one peer per call. Logs every call to ~/.Codex/cache/a2a/audit.jsonl.
+description: Sync agent-to-agent dispatch from Codex orchestrator to a registered peer (Codex executor on gpt-5.5, Foundry agents <agent-a>/<agent-b>, future bridges). Triggers on /dispatch, "ask <agent-a>", "have <agent-b> check", "send to codex for review", "second-opinion from gpt-5.5". Default timeout 60s, sync only in v1, one peer per call. Logs every call to ~/.Codex/cache/a2a/audit.jsonl.
 model: sonnet
 allowed-tools: ["Bash($HOME/.claude/bin/a2a-codex-call.sh *)", "Bash($HOME/.claude/bin/a2a-foundry-call.py *)", "Bash($HOME/.claude/bin/a2a-audit.py *)"]
 ---
@@ -11,13 +11,13 @@ allowed-tools: ["Bash($HOME/.claude/bin/a2a-codex-call.sh *)", "Bash($HOME/.clau
 
 ```
 codex:home                  Codex CLI (gpt-5.5, ChatGPT subscription, $0 marginal)
-foundry:seekapa             Azure Foundry seekapa agent (Azure billing — uses your tenant)
-foundry:AxiaCS              Azure Foundry AxiaCS agent (same)
-foundry:<any-other>         Any other agent in the seekapa_ai project (auto-supported)
+foundry:<agent-a>           Azure Foundry agent (Azure billing — uses your tenant)
+foundry:<agent-b>           Azure Foundry agent (same)
+foundry:<any-other>         Any other agent in your Foundry project (auto-supported)
 ```
 
 Future addresses (NOT supported in v1):
-- `kilocode:siu/<agent>` — Kilocode runtime bridge (deferred per refined plan)
+- `kilocode:<project>/<agent>` — Kilocode runtime bridge (deferred per refined plan)
 - `Codex:<project>` — cross-Codex-session dispatch (deferred until inboxes exist)
 
 ## v1 semantics — exactly these
@@ -39,12 +39,12 @@ Future addresses (NOT supported in v1):
 ~/.Codex/bin/a2a-codex-call.sh "summarize this 200-line file in 5 bullets" --effort low
 ```
 
-### Foundry seekapa / AxiaCS (production agent KB queries — Azure billing)
+### Foundry agents (production agent KB queries — Azure billing)
 
 ```bash
-~/.Codex/bin/a2a-foundry-call.py seekapa "what is the OTP send rate limit?"
-~/.Codex/bin/a2a-foundry-call.py AxiaCS "explain KYC tier 2 requirements" --timeout 45
-~/.Codex/bin/a2a-foundry-call.py seekapa "<prompt>" --responses-api    # raw API for tool calls
+~/.Codex/bin/a2a-foundry-call.py <agent-a> "what is the rate limit for this endpoint?"
+~/.Codex/bin/a2a-foundry-call.py <agent-b> "explain the tier-2 requirements" --timeout 45
+~/.Codex/bin/a2a-foundry-call.py <agent-a> "<prompt>" --responses-api    # raw API for tool calls
 ```
 
 ### Audit / observability
@@ -60,8 +60,8 @@ Future addresses (NOT supported in v1):
 |---|---|---|
 | Get a different model's perspective on a tricky design | `codex:home` with effort=high | Cheap second opinion, gpt-5.5 catches what Codex missed |
 | Generate boilerplate (tests, fixtures, mocks-of-fixtures) | `codex:home` with effort=medium | Codex is cheaper for repetitive output |
-| Verify a KB answer before drafting customer reply | `foundry:seekapa` | Production agent has the actual KB index |
-| Compare Axia and Seekapa policies on same question | both `foundry:AxiaCS` and `foundry:seekapa` | Brand-aware cross-check |
+| Verify a KB answer before drafting customer reply | `foundry:<agent-a>` | Production agent has the actual KB index |
+| Compare policies across two brands/products on the same question | both `foundry:<agent-b>` and `foundry:<agent-a>` | Brand-aware cross-check |
 | Long-form research synthesis | use `deep-research` skill, NOT dispatch | Deep-research is multi-source by design |
 | Review a PR | `codex review` (built-in subcommand) is preferred over /dispatch | Codex has a dedicated review surface |
 
@@ -88,7 +88,7 @@ Don't paste the full JSON envelope — extract `response_text` and prepend the a
 ## Cost guidance
 
 - `codex:home` (gpt-5.5 via ChatGPT subscription) — **$0 marginal**, but consumes weekly quota. Use freely.
-- `foundry:seekapa` / `foundry:AxiaCS` — Azure billing on your i-sdd tenant. Cheap per call (~$0.001-0.01) but watch for runaway loops.
+- `foundry:<agent-a>` / `foundry:<agent-b>` — Azure billing on your own tenant. Cheap per call (~$0.001-0.01) but watch for runaway loops.
 - Token cost in *this* Codex session: every dispatch response gets injected back into context. Long responses bloat the orchestrator session. Prefer concise dispatch prompts that ask for structured output (JSON, tables, bullet lists) over open-ended ones.
 
 ## Future (v2, NOT supported now)

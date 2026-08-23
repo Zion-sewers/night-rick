@@ -68,7 +68,7 @@ CONTEXT HYGIENE REPORT — <date>
   34 files, 713 lines total
   [LOW]      taxonomy: lesson_prompt_versioning named lesson_* but type=project
   [MEDIUM]   action-item masquerading as memory: project_qc_transcription_update.md
-  [LOW]      stale (24 days): project_cs_agent_v39_status.md
+  [LOW]      stale (24 days): project_<project-name>_v39_status.md
 
 === SKILLS ===
   installed: 26
@@ -80,11 +80,11 @@ CONTEXT HYGIENE REPORT — <date>
   [HIGH]     project key fragmentation (expected <8, got 16) — recall bug active
 
 === PROJECTS ===
-    cs-agent:  no-claudeignore  root-clutter=203  big-files=4
-    qc:        (clean)
+    <project-a>:  no-claudeignore  root-clutter=203  big-files=4
+    <project-b>:  (clean)
 
 === TREE DELTA ===
-    cs-agent: +3 new entries since last snapshot
+    <project-a>: +3 new entries since last snapshot
 ```
 
 ## Rules that apply

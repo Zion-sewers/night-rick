@@ -13,7 +13,7 @@ description: AI-augmented CI workflows for local fix/review, mutation checks, an
 |------|--------|-------------|
 | `fix` | Codex CLI (local) | Captures test failures, proposes source fixes |
 | `review` | Codex CLI (local) | Reviews uncommitted/branch diff locally |
-| `review-remote` | Azure Foundry (cloud) | Reviews diff via GPT-5.3-codex-CI-Reviewer |
+| `review-remote` | Azure Foundry (cloud) | Reviews diff via a dedicated cloud reviewer deployment |
 | `mutate` | Codex CLI (local) | Generates semantic mutants to test suite gaps |
 | `tdd <spec>` | Codex CLI (local) | Generates failing test, then minimal implementation |
 | `tdd-green` | Codex CLI (local) | Generates implementation for existing TDD test |
@@ -49,8 +49,8 @@ TDD GREEN: `codex exec` generates minimal implementation to pass.
 
 ### review-remote
 
-Sends diff to Azure Foundry `gpt-5.3-codex-CI-Reviewer` deployment.
-Runs two passes: code review + safety audit. Auth via `az login` + Azure KV (`kv-seekapa-apps`).
+Sends diff to a dedicated Azure Foundry review deployment (name it in your own
+`projects.json`). Runs two passes: code review + safety audit. Auth via `az login` + Azure KV (`<your-key-vault-name>`).
 Falls back to local `review` if credentials unavailable.
 
 ## Project Config

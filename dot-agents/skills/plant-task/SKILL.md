@@ -22,7 +22,7 @@ Do NOT use for:
 | Scope | File | Surfaced on session start when... |
 |---|---|---|
 | `global` (platform, hooks, rules, skills) | `~/.Codex/TODO.md` | Codex opens outside `~/projects/<name>/` |
-| `<project-name>` (cs-agent, qc, SIU, campaign-analysis, HR-agent, figma-4-all) | `~/projects/<project-name>/.Codex/TODO.md` | Codex opens under that project's dir |
+| `<project-name>` (any of your own projects under `~/projects/`) | `~/projects/<project-name>/.Codex/TODO.md` | Codex opens under that project's dir |
 
 The SessionStart hooks `session-global-bootstrap.sh` and `session-project-bootstrap.sh` read these files and inject the open tasks into the next session's context.
 
@@ -83,7 +83,7 @@ Rules:
 **Planted:** 2026-04-19 by /plant-task
 ```
 
-**Project (cs-agent):**
+**Project (a customer-service agent project):**
 
 ```markdown
 ## [P0] — Fix exception swallowing in get_messages()

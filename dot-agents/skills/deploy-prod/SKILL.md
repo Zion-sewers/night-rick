@@ -25,8 +25,8 @@ git log --oneline -5
 ### Step 2: Verify Tests
 
 Run the project's test command:
-- **cs-agent:** `cd axia-seekapa-cs-agents && python -m pytest tests/ -k "not deepeval" -x -q`
-- **qc-telephony-api:** `uv run pytest tests/ -x -q`
+- **A customer-service agent project:** `cd <agent-project> && python -m pytest tests/ -k "not deepeval" -x -q`
+- **A telephony/API project:** `uv run pytest tests/ -x -q`
 - **Other:** Check project AGENTS.md for test command
 
 Show evidence (pass/fail counts).

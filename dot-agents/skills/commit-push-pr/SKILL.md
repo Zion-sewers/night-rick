@@ -33,11 +33,11 @@ Check CWD and run the matching pre-commit gate. Run lint and tests in parallel.
 
 | CWD matches | Static | Runtime |
 |-------------|--------|---------|
-| `*/siu*` | `uv run ruff check src/ && uv run mypy src/siu/` | `uv run pytest tests/unit/ -x -q` |
-| `*/cs-agent*` | `uv run ruff check . && uv run mypy .` | `python -m pytest tests/ -k "not deepeval" -x -q` |
-| `*/figma-4-all*` | `bun run lint && bunx knip` | `bun run test:p0` |
-| `*/qc*` | `uv run ruff check . && uv run mypy .` | `pytest tests/ -x -q` |
-| `*/seekapa-training-platform*` | `cd backend && ruff check .` | `cd backend && python -m pytest tests/ -x -q` |
+| `*/<python-project>*` | `uv run ruff check src/ && uv run mypy src/<package-name>/` | `uv run pytest tests/unit/ -x -q` |
+| `*/<agent-project>*` | `uv run ruff check . && uv run mypy .` | `python -m pytest tests/ -k "not deepeval" -x -q` |
+| `*/<ts-project-with-tiers>*` | `bun run lint && bunx knip` | `bun run test:p0` |
+| `*/<qc-project>*` | `uv run ruff check . && uv run mypy .` | `pytest tests/ -x -q` |
+| `*/<python-project-b>*` | `cd backend && ruff check .` | `cd backend && python -m pytest tests/ -x -q` |
 | `package.json` found | `bunx eslint --fix .` | `bun test` |
 | `pyproject.toml` found | `uv run ruff check --fix . && uv run mypy .` | `uv run pytest -x -q` |
 

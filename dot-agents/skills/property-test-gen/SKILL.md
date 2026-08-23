@@ -69,20 +69,20 @@ def test_signal_score_invariant(platform, signal_score):
 
 ## Common Invariants to Test
 
-**From figma-4-all:**
+**From a design-tool canvas engine:**
 - Aspect ratio preservation for images/logos
 - Bounds clamping (all nodes within frame ±2px)
 - Constraint solving (SCALE constraints never distort)
 - Layout coherence (sibling pair delta ≤0.5px)
 
-**From social-intelligence-unit (10 System Invariants):**
+**From a campaign-scoring domain (10 System Invariants):**
 1. Normalized record IDs are stable (never change)
-2. Briefs reference valid ad_id
-3. Experiments reference valid brief_id
+2. Briefs reference a valid parent id
+3. Experiments reference a valid brief id
 4. Signal score: 0.0-5.0 (NOT 0-1)
 5. Tier: S, A, B, or C
 6. Confidence: 'high' or 'degraded'
-7. Geo: SA, AE, QA (Phase 1)
+7. Geo: a fixed enum of launch regions (Phase 1)
 8. Platform: 'meta' or 'tiktok'
 9. Angle: fomo, social-proof, urgency, authority, other
 10. SLA deadline: always future when brief created

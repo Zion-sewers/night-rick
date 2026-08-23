@@ -14,8 +14,8 @@ Usage:
   agent_run.py <project_endpoint> <agent_id> "<prompt>"
 
 Example:
-  agent_run.py "https://brn-azai.services.ai.azure.com/api/projects/seekapa_ai" \
-               "ORM-FLAGGING-AGENT" "is this comment toxic?"
+  agent_run.py "https://<foundry-account>.services.ai.azure.com/api/projects/<project-name>" \
+               "<agent-id>" "is this comment toxic?"
 
 Stdout: assistant message text (pipe-safe).
 Stderr: thread/run/step lifecycle, tool calls.

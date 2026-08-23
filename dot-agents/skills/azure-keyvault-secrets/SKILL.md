@@ -4,18 +4,16 @@ description: Sync MCP/project secrets from Azure Key Vault for Codex sessions.
 ---
 
 ## Purpose
-Provide one formal secrets path for global + SIU + figma-4-all when running Codex.
+Provide one formal secrets path for global + per-project scopes when running Codex.
 
 ## Commands
 - Auto scope, MCP keys: `~/.Codex/bin/Codex-secrets-sync --project auto --mcp-only`
-- SIU scope: `~/.Codex/bin/Codex-secrets-sync --project siu`
-- figma scope: `~/.Codex/bin/Codex-secrets-sync --project figma4all`
+- Per-project scope: `~/.Codex/bin/Codex-secrets-sync --project <project-name>`
 
 ## Files
 - `~/.Codex/secrets/keyvault.conf`
 - `~/.Codex/secrets/global.map`
-- `projects/social-intelligence-unit/.Codex/secrets.map`
-- `projects/figma-4-all/.Codex/secrets.map`
+- `projects/<project-name>/.Codex/secrets.map` (one per project that needs secrets)
 
 ## Notes
 - `~/.Codex/bin/perplexity-mcp-launch` lazily calls secret sync if `PERPLEXITY_API_KEY` is missing.

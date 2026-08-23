@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# azure-activity-watch — finds stop/delete/restart/scale ops on AZAI_group
-# resources caused by anyone other than the owner (default: shoval.be@i-sdd.com).
-# Usage: ./run.sh [--since 14d] [--owner shoval.be@i-sdd.com] [--rg AZAI_group] [--json]
+# azure-activity-watch — finds stop/delete/restart/scale ops on your resource
+# group caused by anyone other than the owner (set via OWNER / --owner).
+# Usage: ./run.sh [--since 14d] [--owner you@example.com] [--rg <resource-group>] [--json]
 
 set -euo pipefail
 
-OWNER="${OWNER:-shoval.be@i-sdd.com}"
-RG="${RG:-AZAI_group}"
+OWNER="${OWNER:-}"
+RG="${RG:-}"
 SINCE="${SINCE:-7d}"
 FORMAT="table"
 
@@ -19,6 +19,9 @@ while [[ $# -gt 0 ]]; do
     *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
 done
+
+: "${OWNER:?set OWNER env var or pass --owner you@example.com}"
+: "${RG:?set RG env var or pass --rg <resource-group>}"
 
 # az activity-log accepts --offset directly (e.g. 14d / 24h). Default --max-events
 # is 50, which silently drops older interesting events; raise it.

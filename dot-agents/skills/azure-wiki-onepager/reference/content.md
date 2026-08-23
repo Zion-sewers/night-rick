@@ -53,7 +53,7 @@ Sections marked **[REQUIRED]** must always be present.
 
 Never skip levels — `####` must live inside `###` inside `##`.
 
-## CS-Agent Content Template
+## Agent Content Template
 
 Canonical structure. Fill in bracketed placeholders.
 

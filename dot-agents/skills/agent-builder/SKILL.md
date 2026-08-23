@@ -16,7 +16,7 @@ model: opus
 
 ### 1. Azure AI Foundry Agents
 
-Agents that run inside `brn-azai` Foundry projects. Used by Seekapa, ORM, Axia CS.
+Agents that run inside an Azure AI Foundry project.
 
 **Create:**
 ```bash
@@ -25,7 +25,7 @@ from azure.ai.projects import AIProjectClient
 from azure.identity import DefaultAzureCredential
 
 p = AIProjectClient(
-    endpoint="https://brn-azai.services.ai.azure.com/api/projects/seekapa_ai",
+    endpoint="https://<foundry-account>.services.ai.azure.com/api/projects/<project-name>",
     credential=DefaultAzureCredential(),
 )
 agent = p.agents.create_agent(
@@ -48,8 +48,8 @@ p.agents.update_agent(agent_id, instructions=new_text)
 **List / get / delete:**
 ```python
 p.agents.list_agents()
-p.agents.get_agent("ORM-FLAGGING-AGENT")          # latest
-p.agents.get_agent("ORM-FLAGGING-AGENT:7")        # pinned
+p.agents.get_agent("my-agent")          # latest
+p.agents.get_agent("my-agent:7")        # pinned
 p.agents.delete_agent(agent_id)                   # DESTRUCTIVE — explicit operator OK
 ```
 
@@ -70,7 +70,7 @@ bun add @microsoft/agents-extensions-ai
 
 Write `src/index.ts` extending `ActivityHandler`. Auth flows through Azure Bot Service — provision separately:
 ```bash
-az bot create --resource-group AZAI_group --name my-m365-agent-bot \
+az bot create --resource-group <resource-group> --name my-m365-agent-bot \
   --kind azurebot --sku F0 --app-type SingleTenant
 ```
 

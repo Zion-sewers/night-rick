@@ -30,12 +30,12 @@ Outside ADO Wiki (`.tsx`, `.jsx`, `.vue`, `.svelte`, app CSS), `anti-slop-ui.md`
 
 ## Canonical Target Pages
 
-When producing an ADO Wiki one-pager, mirror the structure of these two reference pages (user-designated exemplars for Corp-AI wiki):
+When producing an ADO Wiki one-pager, mirror the structure of your own team's exemplar
+reference pages in your DevOps wiki (name them here once you've picked them):
 
-- `https://dev.azure.com/Corp-domain/Corp-AI/_wiki/wikis/Corp-AI.wiki/325/Campaign-Analysis`
-- `https://dev.azure.com/Corp-domain/Corp-AI/_wiki/wikis/Corp-AI.wiki/23/CS-Agents`
+- `https://dev.azure.com/<devops-org>/<devops-project>/_wiki/wikis/<devops-project>.wiki/<page-id>/<page-name>`
 
-These pages cannot be fetched from inside Codex (no network allowlist for `dev.azure.com`). To diff live vs template, open them in a browser or run `az devops wiki page show --wiki Corp-AI.wiki --path <path>` locally. The template defined here is authoritative; the live pages are the visual target.
+These pages cannot be fetched from inside Codex (no network allowlist for `dev.azure.com`). To diff live vs template, open them in a browser or run `az devops wiki page show --wiki <devops-project>.wiki --path <path>` locally. The template defined here is authoritative; the live pages are the visual target.
 
 ## Reference Modules
 
@@ -43,12 +43,12 @@ Load the relevant module when authoring — they're intentionally split to stay 
 
 - `reference/tokens.md` — Design tokens, typography, color, spacing, layout grids, CSS standards. **Always load first.**
 - `reference/components.md` — Copy-pasteable HTML for header band, KPI cards, callouts, Q&A accordion, system-prompt code block, architecture table, step pipeline, changelog.
-- `reference/content.md` — Content spine (required sections), CS-agent content template, system-prompt authoring standard, Q&A authoring rules, Mermaid flow standard.
+- `reference/content.md` — Content spine (required sections), agent content template, system-prompt authoring standard, Q&A authoring rules, Mermaid flow standard.
 - `reference/checklist.md` — Interaction patterns, accessibility + performance checklist, anti-pattern catalogue, pre-publish quality gate.
 
 ## Related Memory / Rules
 
-- Memory: `project_wiki_rewrite.md` — "CS-Agent Wiki Rewrite Status" (Yasha-grade depth per endpoint; `doc-design.md` is the standard).
+- Memory: `project_wiki_rewrite.md` — "Agent Wiki Rewrite Status" (thorough depth per endpoint, matching the bar a demanding technical reviewer would hold you to; `doc-design.md` is the standard).
 - Rule (overridden in-scope): `~/.Codex/rules/anti-slop-ui.md`.
 - Skill: `azure-devops` — ADO CLI / PR workflow (creating the wiki PR itself).
 

@@ -677,6 +677,7 @@ correct for its date**. Scheme `1` means read its lane letters through
 | `dot-agents/skills/agent-team/SKILL.md` | - | definition-see-skills_sync | class | n/a | - | - | - |
 | `dot-agents/skills/answer-question/SKILL.md` | - | definition-see-skills_sync | class | n/a | - | - | - |
 | `dot-agents/skills/azd/SKILL.md` | - | definition-see-skills_sync | class | n/a | - | - | - |
+| `dot-agents/skills/azure-activity-watch/SKILL.md` | - | definition-see-skills_sync | class | n/a | - | - | - |
 | `dot-agents/skills/azure-devops/SKILL.md` | - | definition-see-skills_sync | class | n/a | - | - | - |
 | `dot-agents/skills/azure-foundry/SKILL.md` | - | definition-see-skills_sync | class | n/a | - | - | - |
 | `dot-agents/skills/azure-keyvault-secrets/SKILL.md` | - | definition-see-skills_sync | class | n/a | - | - | - |
@@ -880,10 +881,8 @@ correct for its date**. Scheme `1` means read its lane letters through
 | `dot-claude/skills/azure-runtime/SKILL.md` | 2025-04-01 | definition-see-skills_sync | class | n/a | - | - | - |
 | `dot-codex/skills/azure-devops/PERMISSIONS.md` | 2026-02-16 | definition-see-skills_sync | class | n/a | - | - | - |
 | `dot-codex/skills/azure-devops/README.md` | 2026-02-16 | definition-see-skills_sync | class | n/a | - | - | - |
-| `dot-agents/skills/heidegger-reflect/SKILL.md` | 2026-02-19 | definition-see-skills_sync | class | n/a | - | - | - |
 | `dot-claude/skills/heidegger-reflect/SKILL.md` | 2026-02-19 | definition-see-skills_sync | class | n/a | - | - | - |
 | `dot-claude/skills/advisor/SKILL.md` | 2026-04-09 | definition-see-skills_sync | class | n/a | - | - | - |
-| `dot-agents/skills/azure-activity-watch/SKILL.md` | 2026-05-03 | definition-see-skills_sync | class | n/a | - | - | - |
 | `dot-agents/skills/azure-audit/SKILL.md` | 2026-05-03 | definition-see-skills_sync | class | n/a | - | - | - |
 | `dot-claude/skills/azure-activity-watch/SKILL.md` | 2026-05-03 | definition-see-skills_sync | class | n/a | - | - | - |
 | `dot-claude/skills/azure-audit/SKILL.md` | 2026-05-03 | definition-see-skills_sync | class | n/a | - | - | - |
@@ -899,6 +898,7 @@ correct for its date**. Scheme `1` means read its lane letters through
 | `dot-claude/skills/to-questionnaire/SKILL.md` | 2026-08-12 | definition-see-skills_sync | class | n/a | - | - | - |
 | `dot-claude/skills/meme-gen/SKILL.md` | 2026-08-17 | definition-see-skills_sync | class | n/a | - | - | - |
 | `dot-claude/skills/review-pr-ado/SKILL.md` | 2026-08-18 | definition-see-skills_sync | class | n/a | - | - | - |
+| `dot-agents/skills/heidegger-reflect/SKILL.md` | 2026-08-19 | definition-see-skills_sync | class | n/a | - | - | - |
 | `dot-claude/skills/books-index/SKILL.md` | 2026-08-23 | definition-see-skills_sync | class | n/a | - | - | - |
 | `dot-claude/skills/resolving-merge-conflicts/SKILL.md` | 2026-08-23 | definition-see-skills_sync | class | n/a | - | - | - |
 | `dot-claude/skills/wait-what/SKILL.md` | 2026-08-23 | definition-see-skills_sync | class | n/a | - | - | - |

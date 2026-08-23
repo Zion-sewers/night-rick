@@ -69,7 +69,12 @@ Each reflection analyzes through four lenses:
 
 ## Output Format
 
-Reflections are appended to: `docs/prompts/Heidegar_self_reflect_oded.md`
+Corrected 2026-08-23: this section previously named an external framework
+doc (`docs/prompts/Heidegar_self_reflect_oded.md`) to append reflections
+to. Checked via full git history: that file has never existed in this
+repo. Reflections are standalone files, per the pattern used by the
+`heidegger-reflect` skill: `docs/reflections/YYYY-MM-DD-<task-slug>.md`,
+not appended to any shared doc.
 
 Under section: `## Reflection: [YYYY-MM-DD HH:MM] - [Task Name]`
 

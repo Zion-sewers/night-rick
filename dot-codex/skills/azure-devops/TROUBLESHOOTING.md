@@ -209,7 +209,7 @@ grep -E "qa_reports|node_modules" .gitignore
 
 #### Problem: "Large files or binaries staged"
 ```
-WARN: File too large: releases/figma4all-v3.0.0-release.zip (371 KB)
+WARN: File too large: releases/my-project-v3.0.0-release.zip (371 KB)
 ```
 
 **Cause:** Binary files shouldn't be in git

@@ -45,7 +45,7 @@ Check that all 10 system invariants have property tests
 - [ ] Golden master tests for complex outputs
 
 ### 4. SOTA Testing Standards
-Reference: `projects/figma-4-all/test/testing_best_practices.md`
+Reference: `projects/<ts-project-with-tiers>/test/testing_best_practices.md`
 
 **Required test types:**
 - Type checking & linting (static)
@@ -61,7 +61,7 @@ Reference: `projects/figma-4-all/test/testing_best_practices.md`
 - Distributed → Contract + Chaos tests
 
 ### 5. Code Implementation Quality
-- [ ] ES2017 compliance (figma-4-all)
+- [ ] ES2017 compliance (project-specific target)
 - [ ] Clean architecture patterns followed
 - [ ] No dead code (knip passes)
 - [ ] Linting clean (ESLint, Ruff)

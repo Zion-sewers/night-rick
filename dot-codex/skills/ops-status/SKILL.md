@@ -55,8 +55,8 @@ Present as a compact table:
 ```
 | Project | Branch | Dirty | Last Commit |
 |---------|--------|-------|-------------|
-| SIU     | main   | 0     | abc1234 fix gates |
-| Figma   | feature/v3 | 3 | def5678 layout engine |
+| api-svc | main   | 0     | abc1234 fix gates |
+| web-app | feature/v3 | 3 | def5678 layout engine |
 ```
 
 Keep report under 15 lines. No verbose output.

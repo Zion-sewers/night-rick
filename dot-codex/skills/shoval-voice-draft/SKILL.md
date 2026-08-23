@@ -1,6 +1,6 @@
 ---
 name: shoval-voice-draft
-description: Draft messages in Shoval Benjer's natural work style for review before sending. Per-recipient tone (Yasha / Liron / Ali / Adnan / Daniel / Vlad, including Vlad's ultra-compact single-answer style for the QC call-analyzer platform), Hebrew/English code-switching rules, "bottom line" energy, message templates. Triggers on "draft a message", "draft/reply/explain to <name>" (e.g. Vlad), "in my voice", "/draft". Never auto-sends. Always review-only.
+description: Draft messages in Shoval Benjer's natural work style for review before sending. Per-recipient tone (technical peer / manager / casual teammate / requirements-first teammate / formal stakeholder / terse external collaborator, including that collaborator's ultra-compact single-answer style for his own project), Hebrew/English code-switching rules, "bottom line" energy, message templates. Triggers on "draft a message", "draft/reply/explain to <recipient>", "in my voice", "/draft". Never auto-sends. Always review-only.
 model: sonnet
 ---
 
@@ -67,7 +67,7 @@ Use naturally, not all at once:
 - "I will update after I check"
 - "if anything else is needed please let me know"
 - "I think the right way is..."
-- "I talked with Yasha/Liron/Ali and..."
+- "I talked with the team and..."
 - "I need approval / access / confirmation before moving forward"
 
 ## Hebrew/English Mixing
@@ -101,7 +101,7 @@ Use English for technical nouns and workflow terms:
 
 ## Tone By Recipient
 
-### Yasha
+### Technical peer
 
 Tone: direct, technical, respectful, sometimes sharper but should be softened.
 
@@ -115,7 +115,7 @@ Example:
 
 "I get the direction. My only concern is visibility: before I move private usage into a team setup, I want to understand who can see usage, billing, and session data. Once that is clear, I can align the setup."
 
-### Liron
+### Manager
 
 Tone: accountable, practical, business-focused.
 
@@ -123,13 +123,13 @@ Best pattern:
 
 - Start with status.
 - Mention what is usable now.
-- Ask what she wants prioritized.
+- Ask what they want prioritized.
 
 Example:
 
 "זה כרגע איפה שאני עומד: יש התחלה שעובדת, אבל לפני שאני מפרסם את זה הלאה אני רוצה לסגור איתך מה נחשב מספיק טוב לשימוש ראשון. אם הדחיפות היא תחילת שבוע הבא, אני אתמקד רק במה שחייב להיות שמיש."
 
-### Ali
+### Casual teammate
 
 Tone: friendly, helpful, action-oriented.
 
@@ -143,7 +143,7 @@ Example:
 
 "Hi bro, send me the exact example and what output you need. I can check what is possible with the current tools and tell you the fastest path."
 
-### Adnan
+### Requirements-first teammate
 
 Tone: concise, context-requesting, collaborative.
 
@@ -154,9 +154,9 @@ Best pattern:
 
 Example:
 
-"Hey Adnan, please write the full requirement and the pages/tools involved. I will check the fastest solution and update what can be automated."
+"Hey, please write the full requirement and the pages/tools involved. I will check the fastest solution and update what can be automated."
 
-### Daniel
+### Formal stakeholder
 
 Tone: professional, slightly more formal.
 
@@ -168,25 +168,25 @@ Best pattern:
 
 Example:
 
-"I talked with Yasha about access. For HeyGen/ElevenLabs, the right path is an approved request rather than sharing credentials directly. After I align priorities with Liron, I can help define what video flow is useful for marketing."
+"I talked with the team about access. For a new tool, the right path is an approved request rather than sharing credentials directly. After I align priorities with my manager, I can help define what flow is useful for the team."
 
-### Vlad
+### Terse external collaborator
 
-Tone: minimal. He owns the QC call-analyzer platform (Go + Next.js) and wants the least text that answers him. He has said so directly. Full detail in "Vlad's Preferred Messaging Style" below.
+Tone: minimal. He owns a separate project (his own codebase) and wants the least text that answers him. He has said so directly. Full detail in "Terse Collaborator's Preferred Messaging Style" below.
 
 Best pattern:
 
 - One answer or one question per message, nothing extra.
 - Give the exact data point he asked for (a label, a value), not the reasoning behind it.
 - No patches or diffs. Share code as a full project zip.
-- Never touch his Go/Next.js code or open a PR into his repo without asking.
+- Never touch his code or open a PR into his repo without asking.
 - Mon to Fri only.
 
 Example:
 
 He asks "what will you send, ACC list or Call ID list?" You answer "Call ID list." That is the whole message.
 
-## Vlad's Preferred Messaging Style
+## Terse Collaborator's Preferred Messaging Style
 
 ### Keep it short and compact
 
@@ -205,13 +205,13 @@ He asks "what will you send, ACC list or Call ID list?" You answer "Call ID list
 
 ### Respect his ownership boundaries
 
-- *"on Golang and Next.js i like work alone"* and *"my project must have only my code"*, so no PRs into his repo without permission.
+- *"on my stack i like work alone"* and *"my project must have only my code"*, so no PRs into his repo without permission.
 
 ### Respect his working hours
 
-- *"i'm not working on saturday and sunday"*, so keep work messages to Mon-Fri.
+- He works Monday to Friday only, so keep work messages to that window.
 
-## Practical Template for Messaging Vlad
+## Practical Template for Messaging a Terse Collaborator
 
 | Do | Don't |
 | --- | --- |

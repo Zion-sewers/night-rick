@@ -241,7 +241,7 @@ Just create a PR if branch already exists
 
 - **Permissions & Security:** `PERMISSIONS.md`
 - **Implementation Details:** `azure-devops.sh`
-- **Figma4All Workflow:** Root `CLAUDE.md` - see git workflow section
+- **Project-specific workflow:** Root `CLAUDE.md` - see git workflow section
 
 ## Configuration
 

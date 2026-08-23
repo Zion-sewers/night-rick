@@ -304,7 +304,7 @@ Prevent these destructive patterns:
 
 ```bash
 # Run this to stop automatic branch/log deletion
-cd ~/projects/social-intelligence-unit
+cd <path-to-your-project>
 mv .kilocode/hooks/post-merge-cleanup.json \
    .kilocode/hooks/post-merge-cleanup.json.disabled
 ```

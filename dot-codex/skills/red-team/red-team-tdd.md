@@ -166,7 +166,7 @@ When reviewing code:
 
 ### References
 
-- SOTA Testing: `projects/figma-4-all/test/testing_best_practices.md`
+- SOTA Testing: `projects/<ts-project-with-tiers>/test/testing_best_practices.md`
 - TDD: Kent Beck, "Test Driven Development: By Example"
 - Property-Based Testing: Hypothesis docs, fast-check docs
 - Mutation Testing: Stryker, mutmut documentation

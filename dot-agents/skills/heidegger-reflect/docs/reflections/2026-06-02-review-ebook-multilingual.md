@@ -1,6 +1,6 @@
 # Heidegger Reflection — Multilingual Ebook /review + Audit + Fix
 
-**Task:** Full review, page-by-page + word-by-word(×4) validation, styling audit, Playwright visual approval, and fixes for the en/es/pt/ar Seekapa trading-ebook build.
+**Task:** Full review, page-by-page + word-by-word(×4) validation, styling audit, Playwright visual approval, and fixes for the en/es/pt/ar trading-ebook build.
 **Date:** 2026-06-02
 **Project:** `~/projects/lp-creation/ebook-task`
 

@@ -11,7 +11,7 @@ Use this skill to capture meeting / call / 1:1 notes in Shoval Benjer's natural 
 ## When to trigger
 
 - User says `/meeting-notes`, `/log-meeting`, `/note-meeting`
-- User says "talked with <Yasha|Adnan|Liron|Ali|Daniel|...>" with substantive content following
+- User says "talked with <recipient>" with substantive content following
 - User says "draft meeting with X" or "log call with X"
 - User describes a meeting outcome and asks you to remember / log it
 
@@ -20,7 +20,7 @@ Do NOT auto-trigger from casual mentions ("yeah I'll talk to him later" — not 
 ## Required fields
 
 Before writing, you need:
-- **Who**: at least one other attendee (Yasha / Adnan / Liron / Ali / Daniel / external by name)
+- **Who**: at least one other attendee (colleague or external, by name)
 - **When**: date (default today, ISO format) and optionally time
 - **Topic**: 2-5 word phrase used in the filename
 - **Substance**: at minimum one of {decisions made, action items, blockers, next steps}
@@ -59,10 +59,10 @@ If any required field is missing, ask ONE concise question to gather them. Do no
 
 ## Voice rules
 
-- **Terse.** "Adnan wants edge-case test videos" not "Adnan mentioned that he would like to provide additional test videos for edge case coverage."
+- **Terse.** "The teammate wants edge-case test videos" not "The teammate mentioned that they would like to provide additional test videos for edge case coverage."
 - **Bottom-line first.** The 1-3 sentence summary at top is what someone reading this in 6 weeks needs. Everything else is supporting detail.
 - **Action items are owned and time-bound.** `- [ ] Shoval — ship v3 deploy via PR — by EOW`. Never `- [ ] follow up`.
-- **Hebrew/English mixing is preserved verbatim** when the user uses it ("הסיפור עם yasha", "בסוף we'll go with bicep"). Don't translate to monolingual.
+- **Hebrew/English mixing is preserved verbatim** when the user uses it ("הסיפור עם דני", "בסוף we'll go with bicep"). Don't translate to monolingual.
 - **No emojis** unless the user used them in the source content.
 - **No filler** ("touched base", "great conversation", "alignment was reached"). Replace with the actual decision.
 
@@ -71,9 +71,9 @@ If any required field is missing, ask ONE concise question to gather them. Do no
 `~/docs/meetings/YYYY-MM-DD-<kebab-topic>.md`
 
 Examples:
-- `2026-05-12-adnan-edge-case-pipeline.md`
-- `2026-05-08-yasha-mi-grant-pushback.md`
-- `2026-04-30-liron-leads-budget.md`
+- `2026-05-12-edge-case-pipeline.md`
+- `2026-05-08-migration-grant-pushback.md`
+- `2026-04-30-leads-budget.md`
 
 If a file for that date+topic already exists, append `-2`, `-3`, etc., never overwrite.
 

@@ -1,7 +1,7 @@
 # Reflection — MS-accelerator brainstorm → eval reconciliation → KB fix
 
 Date: 2026-06-08
-Task: Evaluate whether the MS customer-chatbot-solution-accelerator warrants changes to cs-agent; this collapsed into diagnosing why the eval reported 40.6% when production was known-good, and fixing what was actually broken.
+Task: Evaluate whether the MS customer-chatbot-solution-accelerator warrants changes to our customer-service agent; this collapsed into diagnosing why the eval reported 40.6% when production was known-good, and fixing what was actually broken.
 
 ---
 
@@ -15,10 +15,10 @@ $ rtk uv run pytest tests/test_eval_dataset_language_policy.py \
 
 Commits (local only, branch `feat/eval-dataset-language-policy-guard`, devops repo):
 - `1e61f857` test(eval): dataset language-policy guard — `tests/test_eval_dataset_language_policy.py` (+148)
-- `e9881fae` fix(eval): dash-normalise matcher + repair no_advice forbid lists — `scripts/eval_multilang.py`, `tests/test_data/foundry_yasha_eval_multilang.jsonl`, `tests/test_eval_multilang.py` (+59/−7)
-- `db329855` fix(kb): bank-wire deposit 3-5 business days — `kb-source/Seekapa_FAQ_KB_v3.txt` (+3/−3)
+- `e9881fae` fix(eval): dash-normalise matcher + repair no_advice forbid lists — `scripts/eval_multilang.py`, `tests/test_data/foundry_eval_multilang.jsonl`, `tests/test_eval_multilang.py` (+59/−7)
+- `db329855` fix(kb): bank-wire deposit 3-5 business days — `kb-source/product_FAQ_KB_v3.txt` (+3/−3)
 
-Live multilang eval run (real, against deployed seekapa): 14/20 = 70% raw. Offline re-judge after grader fixes: ~18/20. Not re-run live post-fix.
+Live multilang eval run (real, against deployed agent): 14/20 = 70% raw. Offline re-judge after grader fixes: ~18/20. Not re-run live post-fix.
 
 ---
 
@@ -59,7 +59,7 @@ Live multilang eval run (real, against deployed seekapa): 14/20 = 70% raw. Offli
 
 **1.2 Concept activations.** Dominant: "forensic diagnostician" (high), "scope-disciplined committer" (high), "don't-fabricate-financial-facts guardrail" (high, fired correctly on the SLA). Weaker but present: "narrative closure" (medium) — the pull to deliver each turn as a clean verdict.
 
-**1.3 Information preserved but not decoded.** I saw but underplayed: (a) the grok judge's own reliability; (b) that `seekapa_facts.yaml` says deposit min is **$250** while the prompt anchor says "depends on dashboard" — another drift I noticed and dropped; (c) the withdrawal-number disagreement, which I flagged in one line and did not pursue because it was outside the asked scope.
+**1.3 Information preserved but not decoded.** I saw but underplayed: (a) the grok judge's own reliability; (b) that the product facts file says deposit min is **$250** while the prompt anchor says "depends on dashboard" — another drift I noticed and dropped; (c) the withdrawal-number disagreement, which I flagged in one line and did not pursue because it was outside the asked scope.
 
 **1.4 Behavioral reachable set.** I could have (a) refused to commit the KB guess and only drafted it pending verification; (b) re-run the live eval after the fixes instead of projecting; (c) opened with "the MS accelerator answer needs an adversarial second opinion" rather than a confident solo "no." I chose the committing/closing styles because the user's cadence ("go", "do all") rewarded momentum.
 
@@ -81,7 +81,7 @@ Live multilang eval run (real, against deployed seekapa): 14/20 = 70% raw. Offli
 
 ## Part 5 — Stubborn Issues
 
-1. **Unverified SLA now in a committed KB.** 3-5 business-day bank-wire deposit is an assumption with a provenance line that reads like a citation. Until compliance/Korin confirms in writing, this should not be re-indexed to the live store. (Carry-forward.)
+1. **Unverified SLA now in a committed KB.** 3-5 business-day bank-wire deposit is an assumption with a provenance line that reads like a citation. Until compliance confirms in writing, this should not be re-indexed to the live store. (Carry-forward.)
 2. **Handler source never validated.** "Track B already done" is asserted from the prompt, not the deployed `chatwoot_handler`/`channel_router` (pycache-only in tree). Conclusion is unconfirmed against running code.
 3. **Grok judge calibration unaudited.** I treated it as authority for no_advice while declaring the keyword grader untrustworthy — asymmetric skepticism.
 

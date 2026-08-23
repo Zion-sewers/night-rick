@@ -11,10 +11,10 @@
 $ uv run pytest review-alert/tests/ -q
 15 passed, 3 warnings in 0.11s
 ```
-Deployed image: `sentimarkregistry.azurecr.io/orm-review-alert:20260611-1055`.
+Deployed image: `<container-registry>.azurecr.io/orm-review-alert:20260611-1055`.
 Live cross-validation (7 mislabeled registry entries, best-of-3 guarded):
 HedgeGuard×2 + hegg.energy → RETIRE (genuine other entity); hedg.com Trustpilot,
-WikiFX, Daman, Seekapa FPA → KEPT open (real brand). 0 open wrong-company remaining.
+WikiFX, Daman, and the tracked brand's own FPA entity → KEPT open (real brand). 0 open wrong-company remaining.
 Production `_state/registry.json` corrected and snapshotted before overwrite.
 
 ## Part 2: Honest Completion
@@ -53,7 +53,7 @@ Production `_state/registry.json` corrected and snapshotted before overwrite.
    blobs, which still carry the OLD wrong-company labels. If `_state/registry.json` is ever
    deleted, my correction is silently undone. The fix lives in mutable state, not only in code.
 3. **Hedg has zero authoritative coverage** — I built the authoritative layer and demonstrated
-   it on Seekapa, leaving the user's strategic-target brand entirely on the unverified path.
+   it on the tracked brand, leaving the user's strategic-target brand entirely on the unverified path.
 
 **Internal mechanisms (AI patterns that shaped this):**
 - I anchored hard on the first message's framing ("remove wrong company") and initially built a
@@ -64,7 +64,7 @@ Production `_state/registry.json` corrected and snapshotted before overwrite.
   before I had earned the answer.
 
 **Implications (user action-space):**
-- Enables: trustworthy Seekapa NEW-review signal; no more old-as-new noise; real Hedg complaints
+- Enables: trustworthy NEW-review signal for the tracked brand; no more old-as-new noise; real Hedg complaints
   no longer hidden; an honest verified/unverified split the user can triage by.
 - Limits: Hedg dashboards remain unverified until a feed is wired; Trustpilot "deleted review"
   risk persists; the registry correction needs to be encoded in code to be durable.

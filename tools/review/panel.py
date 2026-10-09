@@ -934,6 +934,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 if args.allow_external else "local-only")
     tier = None
     forced_live = False
+    res = None
     if cache_active:
         res = cache.lookup(
             key_lines, registry_fp=fp, langs=langs, external_mode=ext_mode,
@@ -947,24 +948,36 @@ def cmd_run(args: argparse.Namespace) -> int:
             tier = res["tier"]
             findings = res["entry"]["findings"]
             print("decision cache: {} hit (registry {})".format(tier, fp[:12]))
-    if findings is None:
+    live = findings is None
+    if live:
         findings = run_local(lines)
+    # Signals are computed ONCE and shared by the external-leg gate and the
+    # cost table: the table must account for the decision it reports, never
+    # a differently-based twin. Signal lines exclude machine-written state
+    # (SELF_REFERENTIAL) but keep test files: a test file is exempt from
+    # local checks yet is real change the external leg can review, and the
+    # tests-aspect trigger needs to see it.
+    signal_lines = [ln for ln in lines
+                    if not SELF_REFERENTIAL.search(ln["file"])]
+    signals = review_cache.review_signals(
+        signal_lines, findings,
+        {ln["file"]: lang_of(ln["file"]) for ln in signal_lines})
+    trigger_eval = review_cache.evaluate_triggers(signals)
+    ext_ran = False
+    if args.allow_external and live:
         # Trigger-conditioned aspect execution (#372): the expensive external
         # leg runs only when at least one aspect's trigger fires; the skip is
-        # recorded, never silent.
-        if args.allow_external:
-            _trig_early = review_cache.evaluate_triggers(
-                review_cache.review_signals(
-                    lines, findings,
-                    {ln["file"]: lang_of(ln["file"]) for ln in lines}))
-            if review_cache.external_should_run(_trig_early):
-                ext, ext_note = run_external(
-                    lines, project, args.verbose,
-                    getattr(args, "external_model", None))
-                findings += ext
-            else:
-                ext_note = ("external skipped: no aspect triggered "
-                            "(trigger-conditioned execution, #372)")
+        # recorded, never silent. This narrows the previous always-run
+        # behavior for --allow-external (stated residual, see review_cache).
+        if review_cache.external_should_run(trigger_eval):
+            ext, ext_note = run_external(
+                lines, project, args.verbose,
+                getattr(args, "external_model", None))
+            findings += ext
+            ext_ran = True
+        else:
+            ext_note = ("external skipped: no aspect triggered "
+                        "(trigger-conditioned execution, #372)")
 
     blocking = [f for f in findings if f["severity"] == HIGH]
     med = [f for f in findings if f["severity"] == MED]
@@ -991,34 +1004,24 @@ def cmd_run(args: argparse.Namespace) -> int:
     blockers = [f for f in findings if f["severity"] in fail_at]
     verdict = "pass" if not blockers else "changes-requested"
     if cache_active:
+        # forced_key renews the capped entry's replay budget (anti-loop
+        # guard contract); without it the guard would ratchet shut forever.
         cache.store(key_lines, registry_fp=fp, langs=langs,
                     external_mode=ext_mode, prior_checksum=prior,
-                    verdict=verdict, findings=findings)
+                    verdict=verdict, findings=findings,
+                    reset_replays_for_key=(res or {}).get("forced_key")
+                    if forced_live else None)
 
     # Expected-calls-per-review accounting (#372, ch.11 Table 11-3):
     #   expected = P(triggered) x calls_when_triggered x (1 - memoized).
-    # The guardrails row (cheap deterministic checks) always runs; expensive
-    # aspects run only when triggered. calls_when_triggered comes from the
-    # allocator (actors picked per aspect); memoized is 1.0 when this run
-    # was served from cache, else 0.0. Signals measure the reviewable
-    # change; has_test_file looks at the whole diff because a test file is
-    # exempt from checks but still counts as regression evidence.
-    signals = review_cache.review_signals(
-        key_lines, findings,
-        {ln["file"]: lang_of(ln["file"]) for ln in key_lines})
-    signals["has_test_file"] = any(
-        review_cache.TEST_FILE_RE.search(f) for f in files)
-    trigger_eval = review_cache.evaluate_triggers(signals)
-    try:
-        import allocate as _allocate
-        calls_when_triggered = {
-            a: len(_allocate.allocate(a, want=2)["picked"])
-            for a in review_cache.ASPECTS
-        }
-    except Exception:
-        calls_when_triggered = {}
+    # Rows are execution legs (measured actuals), not aspects: the cheap
+    # deterministic panel is one leg, the external model pass is one leg.
+    # Per-aspect trigger detail lives in aspect_triggers. trigger_eval is
+    # the SAME evaluation that gated the external leg above, so the table
+    # accounts for the decision it reports.
     cost_table = review_cache.expected_calls_table(
-        trigger_eval, calls_when_triggered,
+        trigger_eval, external_possible=args.allow_external,
+        external_ran=ext_ran, local_ran=live,
         memoized_fraction=1.0 if tier is not None else 0.0)
 
     coverage = (
@@ -1069,14 +1072,14 @@ def cmd_run(args: argparse.Namespace) -> int:
     print("  " + coverage)
     if args.allow_external:
         print("  external: " + ext_note)
-    print("  expected calls per review (P(triggered) x calls x (1-memoized)):")
+    print("  expected calls per review (P(triggered) x calls x (1-memoized); "
+          "actuals measured):")
     for row in cost_table:
-        if row["p_triggered"] > 0 or row["aspect"] == "guardrails(local-panel)":
-            print("    {:<22} p={:.1f} calls={} memoized={:.1f} expected={} {}".format(
-                row["aspect"], row["p_triggered"],
-                row["calls_when_triggered"], row["memoized"],
-                row["expected_calls"],
-                "({})".format(row["trigger"]) if row["trigger"] else ""))
+        print("    {:<22} p={:.1f} calls={} memoized={:.1f} expected={} actual={} {}".format(
+            row["leg"], row["p_triggered"],
+            row["calls_when_triggered"], row["memoized"],
+            row["expected_calls"], row["actual_calls"],
+            "({})".format(row["trigger"]) if row["trigger"] else ""))
     print("  artifact: {}".format(os.path.relpath(dest, project)))
     if sh("git status --porcelain", project)[1].strip():
         print("  note: the tree is dirty, so this artifact describes uncommitted work while "
@@ -1486,7 +1489,9 @@ def main(argv: list[str]) -> int:
     r.add_argument("--fail-on", choices=("high", "medium", "low"), default="high")
     r.add_argument("--allow-external", action="store_true",
                    help="also send the change to a free OpenRouter model; refuses if the "
-                        "change contains credential-shaped content")
+                        "change contains credential-shaped content. Trigger-conditioned "
+                        "(#372): the leg runs only when an aspect trigger fires; a run "
+                        "with no fired trigger skips it and records the skip")
     r.add_argument("--external-model",
                    help="OpenRouter model id to try first, e.g. z-ai/glm-4.7-flash. "
                         "Omitted, the client picks a zero-priced model. A priced id "

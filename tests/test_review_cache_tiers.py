@@ -62,7 +62,6 @@ def _store(c, lines, verdict="pass", findings=None, **kw):
     args.update(kw)
     c.store(lines, verdict=verdict, findings=findings or [], **args)
 
-
 def _lines(file="a.py", texts=("x = 1",)):
     return [{"file": file, "line": i + 1, "text": t}
             for i, t in enumerate(texts)]
@@ -214,17 +213,40 @@ def test_anti_loop_forces_live_after_max_replays(tmp_path):
 
 
 def test_anti_loop_live_run_resets_replay_counter(tmp_path):
+    # The real wiring: the forced live run stores the CURRENT (reformatted)
+    # diff and passes the capped entry's forced_key, so the capped entry's
+    # replay budget renews instead of ratcheting shut forever.
+    c = _cache(tmp_path)
+    base = _lines(texts=("def f():", "    return 1"))
+    _store(c, base)
+    reformatted = _lines(texts=("def  f():", "\treturn 1"))
+    forced_key = None
+    for _ in range(rc.MAX_REPLAYS + 1):
+        res = _lookup(c, reformatted)
+        if res["forced_live"]:
+            forced_key = res["forced_key"]
+    assert forced_key is not None
+    _store(c, reformatted, reset_replays_for_key=forced_key)
+    # A further formatting variant reuses via the normalized tier again:
+    # the capped entry's budget was renewed.
+    v2 = _lines(texts=("def   f():", " \t return 1"))
+    res = _lookup(c, v2)
+    assert res["tier"] == rc.TIER_NORMALIZED
+    assert res["forced_live"] is False
+
+
+def test_anti_loop_without_reset_key_ratchets(tmp_path):
+    # Pin the failure mode the reset exists to prevent: if the caller
+    # ignores forced_key, the capped entry keeps forcing live forever.
     c = _cache(tmp_path)
     base = _lines(texts=("def f():", "    return 1"))
     _store(c, base)
     reformatted = _lines(texts=("def  f():", "\treturn 1"))
     for _ in range(rc.MAX_REPLAYS + 1):
         _lookup(c, reformatted)
-    # The forced live run stores a fresh verdict: the streak restarts.
-    _store(c, base)
-    res = _lookup(c, reformatted)
-    assert res["tier"] == rc.TIER_NORMALIZED
-    assert res["forced_live"] is False
+    _store(c, reformatted)  # no reset_replays_for_key
+    res = _lookup(c, _lines(texts=("def   f():", " \t return 1")))
+    assert res["forced_live"] is True
 
 
 def test_exact_hits_are_counted_not_capped(tmp_path):
@@ -377,34 +399,73 @@ def test_external_should_run():
 
 # ------------------------------------------------------------------ cost table
 
+def _trig(**over):
+    base = {a: {"triggered": False, "trigger": None} for a in rc.ASPECTS}
+    base.update(over)
+    return base
+
+
 def test_expected_calls_table_math():
-    trig = {a: {"triggered": False, "trigger": None} for a in rc.ASPECTS}
-    trig["perf"] = {"triggered": True, "trigger": "diff-size>=20-code-lines"}
-    calls = {a: 2 for a in rc.ASPECTS}
-    rows = rc.expected_calls_table(trig, calls, memoized_fraction=0.0)
-    by = {r["aspect"]: r for r in rows}
-    # guardrails row: always P=1, one call, never skipped.
-    assert by["guardrails(local-panel)"]["p_triggered"] == 1.0
-    assert by["guardrails(local-panel)"]["expected_calls"] == 1.0
-    # triggered aspect: 1.0 x 2 x (1 - 0) = 2.
-    assert by["perf"]["expected_calls"] == pytest.approx(2.0)
-    assert by["perf"]["actual_calls"] == 2
-    # untriggered aspect: expected 0, actual 0.
-    assert by["security"]["expected_calls"] == pytest.approx(0.0)
-    assert by["security"]["actual_calls"] == 0
-    # Full memoization zeroes the orchestration cost (Table 11-3).
-    rows_m = rc.expected_calls_table(trig, calls, memoized_fraction=1.0)
-    by_m = {r["aspect"]: r for r in rows_m}
-    assert by_m["perf"]["expected_calls"] == pytest.approx(0.0)
+    trig = _trig(perf={"triggered": True,
+                       "trigger": "diff-size>=20-code-lines"})
+    rows = rc.expected_calls_table(trig, external_possible=True,
+                                   external_ran=True, local_ran=True,
+                                   memoized_fraction=0.0)
+    by = {r["leg"]: r for r in rows}
+    assert set(by) == {"guardrails(local-panel)", "external(model-leg)"}
+    # Guardrails row: always P=1, one call, measured actual.
+    g = by["guardrails(local-panel)"]
+    assert g["p_triggered"] == 1.0
+    assert g["expected_calls"] == pytest.approx(1.0)
+    assert g["actual_calls"] == 1
+    # External leg: P=1 (possible and triggered), one model pass, measured.
+    e = by["external(model-leg)"]
+    assert e["p_triggered"] == 1.0
+    assert e["expected_calls"] == pytest.approx(1.0)
+    assert e["actual_calls"] == 1
+    assert "diff-size>=20-code-lines" in (e["trigger"] or "")
+
+
+def test_expected_calls_table_actuals_are_measured():
+    # ADVERSARIAL (product B1): actual_calls must report what ran, never
+    # what the triggers imply. Local-only run with fired triggers:
+    # expected>0 but actual==0 on the external leg.
+    trig = _trig(security={"triggered": True,
+                           "trigger": "risk:high-security-finding"})
+    rows = rc.expected_calls_table(trig, external_possible=False,
+                                   external_ran=False, local_ran=True,
+                                   memoized_fraction=0.0)
+    by = {r["leg"]: r for r in rows}
+    e = by["external(model-leg)"]
+    assert e["p_triggered"] == 0.0  # not possible in this configuration
+    assert e["expected_calls"] == pytest.approx(0.0)
+    assert e["actual_calls"] == 0
+    # Memoized run: the local leg did not run either.
+    rows_m = rc.expected_calls_table(trig, external_possible=False,
+                                     external_ran=False, local_ran=False,
+                                     memoized_fraction=1.0)
+    by_m = {r["leg"]: r for r in rows_m}
     assert by_m["guardrails(local-panel)"]["expected_calls"] == pytest.approx(0.0)
+    assert by_m["guardrails(local-panel)"]["actual_calls"] == 0
 
 
-def test_cost_table_covers_all_registry_aspects():
+def test_expected_calls_table_memoization_zeroes_guardrails():
+    trig = _trig()
+    rows = rc.expected_calls_table(trig, external_possible=True,
+                                   external_ran=False, local_ran=False,
+                                   memoized_fraction=1.0)
+    by = {r["leg"]: r for r in rows}
+    assert by["guardrails(local-panel)"]["expected_calls"] == pytest.approx(0.0)
+    # The external leg is never memoized: untriggered here, P=0.
+    assert by["external(model-leg)"]["p_triggered"] == 0.0
+    assert by["external(model-leg)"]["trigger"] is None
+
+
+def test_aspect_triggers_cover_all_registry_aspects():
     trig = rc.evaluate_triggers(_signals())
-    rows = rc.expected_calls_table(trig, {}, 0.0)
-    aspects = {r["aspect"] for r in rows}
     for a in rc.ASPECTS:
-        assert a in aspects
+        assert a in trig
+        assert "triggered" in trig[a] and "trigger" in trig[a]
 
 
 # ------------------------------------------------------------------ prior findings
@@ -476,3 +537,34 @@ def test_cache_key_keeps_state_source():
            if not panel.EXEMPT.search(ln["file"])
            and not panel.SELF_REFERENTIAL.search(ln["file"])]
     assert key == [src]
+
+
+def test_key_lines_premise_exempt_lines_produce_no_findings():
+    # Pins the safety premise of keying the cache on reviewable lines:
+    # EXEMPT and SELF_REFERENTIAL lines contribute no findings, so
+    # excluding them from the key cannot change the verdict being
+    # replayed. Each planted line WOULD fire a HIGH check if reviewable.
+    lines = _diff({
+        "tests/test_x.py": "x = eval(user_input)\n",
+        "state/reviews/old.json":
+            '{"q": "SELECT * FROM t WHERE a = \'x\' + y"}\n',
+        "svc/ok.py": "x = 1\n",
+    })
+    by_file = {ln["file"] for ln in lines}
+    assert {"tests/test_x.py", "state/reviews/old.json", "svc/ok.py"} <= by_file
+    key = [ln for ln in lines
+           if not panel.EXEMPT.search(ln["file"])
+           and not panel.SELF_REFERENTIAL.search(ln["file"])]
+    assert [ln["file"] for ln in key] == ["svc/ok.py"]
+    findings = panel.run_local(lines)
+    cited = {f["file"] for f in findings}
+    assert "tests/test_x.py" not in cited
+    assert "state/reviews/old.json" not in cited
+    # Sanity: the planted lines really are finding-shaped; run_local on
+    # the exempt files alone (filter bypassed) fires.
+    direct = panel.run_local([
+        {"file": "svc/e.py", "line": 1, "text": "x = eval(user_input)"},
+        {"file": "svc/q.py", "line": 1,
+         "text": "q = \"SELECT * FROM t WHERE a = 'x' + y\""},
+    ])
+    assert {f["check"] for f in direct} >= {"eval-added", "sql-concat"}

@@ -287,9 +287,12 @@ class TieredDecisionCache:
         """Look up a memoized decision.
 
         Returns a result dict: {"tier": tier|None, "entry": entry|None,
-        "forced_live": bool}. forced_live means the anti-loop guard fired:
-        the caller MUST run the checks live and store the fresh verdict
-        (which resets the replay counter).
+        "forced_live": bool, "forced_key": key|None}. forced_live means the
+        anti-loop guard fired: the caller MUST run the checks live and store
+        the fresh verdict, passing forced_key as store()'s
+        reset_replays_for_key so the capped entry's replay counter resets.
+        Without the reset the guard degrades to a one-way ratchet: the
+        capped entry would force live on every future variant forever.
         """
         cond = conditioning_fingerprint(
             registry_fp=registry_fp,
@@ -305,7 +308,8 @@ class TieredDecisionCache:
             ent["hits"] = int(ent.get("hits", 0)) + 1
             self.telemetry["exact_hits"] += 1
             self._save()
-            return {"tier": TIER_EXACT, "entry": ent, "forced_live": False}
+            return {"tier": TIER_EXACT, "entry": ent, "forced_live": False,
+                    "forced_key": None}
 
         nkey = normalized_key(lines)
         for key, cand in self._data.items():
@@ -354,9 +358,15 @@ class TieredDecisionCache:
               external_mode: str = "local-only",
               prior_checksum: str | None = None,
               verdict: str, findings: list[dict],
-              persona_scope: str | None = None) -> None:
-        """Store a live verdict. Storing resets the replay counter: a live
-        run happened, so the anti-loop streak starts over."""
+              persona_scope: str | None = None,
+              reset_replays_for_key: str | None = None) -> None:
+        """Store a live verdict.
+
+        Storing resets the new entry's replay counter (a live run happened).
+        reset_replays_for_key also resets the named entry's counter: pass
+        lookup()'s forced_key after a forced live run, so the capped entry's
+        replay budget renews instead of ratcheting shut forever.
+        """
         cond = conditioning_fingerprint(
             registry_fp=registry_fp,
             langs=list(langs or []),
@@ -384,6 +394,10 @@ class TieredDecisionCache:
             "semantic_fp": semantic_fingerprint(lines),
             "persona_scope": persona_scope,
         }
+        if reset_replays_for_key is not None:
+            capped = self._data.get(reset_replays_for_key)
+            if isinstance(capped, dict):
+                capped["replays"] = 0
         self.telemetry["stores"] += 1
         self._save()
 
@@ -398,6 +412,26 @@ class TieredDecisionCache:
 # (enacted by external actors per tools/review/actors.json) run only when a
 # trigger fires. Triggers are explicit, few, and named so a skipped aspect is
 # attributable, never silent.
+#
+# STATED RESIDUALS.
+# - --allow-external no longer guarantees the external leg. When no aspect
+#   trigger fires, the leg is skipped and the skip is recorded in the
+#   artifact's external_note (never silent), but the coverage narrows vs
+#   the previous always-run behavior: a YAML/CI-only diff with no code
+#   signals gets no model pass. This is the issue's demanded mechanism,
+#   not an accident, and it is stated here so the narrowing is a choice.
+# - persona_scope=None means panel-wide. Per-persona scoping exists as a
+#   conditioning dimension for future per-persona verdict stores; the
+#   semantic tier's scope isolation is exercised by tests, inert in
+#   panel.py's wiring today.
+# - external_mode is a live conditioning dimension even though the current
+#   wiring bypasses the cache for external runs: a local-only verdict can
+#   never replay under an external run, by construction rather than by
+#   the bypass alone.
+# - Replayed findings carry the line numbers of the run that stored them;
+#   the keys ignore line numbers by design, so a reformatted re-review
+#   replays findings against shifted lines. Findings cite file+check as
+#   well as line, which survive reformatting; the line is advisory.
 
 CODE_LANGS = {"py", "ts", "js", "go", "rs", "java", "kt", "cs", "rb", "php",
               "sql", "sh", "ps1", "swift"}
@@ -407,10 +441,6 @@ IO_LANGS = {"py", "ts", "js", "go"}  # IO edges: where boundary checks bite
 # Registry aspects in actors.json order.
 ASPECTS = ["correctness", "security", "boundary", "simplicity",
            "perf", "slop", "tests", "a11y"]
-
-# A test file added anywhere in the diff counts as regression evidence
-# (mirrors e_rows._TEST_FILE).
-TEST_FILE_RE = re.compile(r"(^|/)(test_.*|.*_test\.[a-z]+|tests/)")
 
 
 def review_signals(lines: list[dict], findings: list[dict],
@@ -481,38 +511,48 @@ def external_should_run(trigger_eval: dict[str, dict]) -> bool:
     return any(v.get("triggered") for v in trigger_eval.values())
 
 
-def expected_calls_table(trigger_eval: dict[str, dict],
-                         calls_when_triggered: dict[str, int],
+def expected_calls_table(trigger_eval: dict[str, dict], *,
+                         external_possible: bool,
+                         external_ran: bool,
+                         local_ran: bool,
                          memoized_fraction: float) -> list[dict]:
-    """Table 11-3 accounting per review.
+    """Table 11-3 accounting per review, at executed-leg granularity.
 
     expected_calls = P(triggered) x calls_when_triggered x (1 - memoized).
-    P(triggered) is this review's trigger outcome (1/0 with the named
-    trigger); calls_when_triggered comes from the allocator (actors picked
-    per aspect); memoized is the cache tier-hit fraction for this run
-    (1.0 when the whole local pass was served from cache, else 0.0).
-    The guardrails row (cheap deterministic checks) is always P=1.
+    P(triggered) is THIS review's trigger outcome (1/0 with the named
+    trigger); across many reviews the mean of the column estimates the
+    chapter's probability. actual_calls is MEASURED, never derived: the
+    local leg ran or it did not, the external leg ran or it did not.
+
+    Rows are execution legs, not aspects, because the execution is leg-
+    shaped: the cheap deterministic panel is one leg, the external model
+    pass is one leg covering whichever aspects triggered. Per-aspect
+    trigger detail lives in aspect_triggers (evaluate_triggers output),
+    which this table does not duplicate. An earlier revision put
+    per-aspect call counts in this table while the wiring gated one
+    boolean for the whole leg; the table then claimed reviews that never
+    ran. Leg granularity keeps the accounting and the execution identical.
     """
-    rows = [{
-        "aspect": "guardrails(local-panel)",
-        "p_triggered": 1.0,
-        "trigger": "always",
-        "calls_when_triggered": 1,
-        "memoized": memoized_fraction,
-        "expected_calls": round(1.0 * 1 * (1 - memoized_fraction), 3),
-        "actual_calls": 1,
-    }]
-    for aspect in ASPECTS:
-        t = trigger_eval.get(aspect, {})
-        p = 1.0 if t.get("triggered") else 0.0
-        calls = int(calls_when_triggered.get(aspect, 0))
-        rows.append({
-            "aspect": aspect,
-            "p_triggered": p,
-            "trigger": t.get("trigger"),
-            "calls_when_triggered": calls,
+    fired = sorted(t["trigger"] for t in trigger_eval.values()
+                   if t.get("triggered") and t.get("trigger"))
+    ext_p = 1.0 if (external_possible and fired) else 0.0
+    return [
+        {
+            "leg": "guardrails(local-panel)",
+            "p_triggered": 1.0,
+            "trigger": "always",
+            "calls_when_triggered": 1,
             "memoized": memoized_fraction,
-            "expected_calls": round(p * calls * (1 - memoized_fraction), 3),
-            "actual_calls": calls if t.get("triggered") else 0,
-        })
-    return rows
+            "expected_calls": round(1.0 * 1 * (1 - memoized_fraction), 3),
+            "actual_calls": 1 if local_ran else 0,
+        },
+        {
+            "leg": "external(model-leg)",
+            "p_triggered": ext_p,
+            "trigger": ("any-aspect:" + ",".join(fired)) if fired else None,
+            "calls_when_triggered": 1,
+            "memoized": 0.0,
+            "expected_calls": round(ext_p * 1 * (1 - 0.0), 3),
+            "actual_calls": 1 if external_ran else 0,
+        },
+    ]

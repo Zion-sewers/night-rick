@@ -294,6 +294,7 @@ open ticket, not a promise made here: nothing currently fails when it drifts.
 - [specs/2026-07-31-project-federation.md](specs/2026-07-31-project-federation.md): Per-repo project federation for the ShovalBenjer estate, and why it is not built *(status not declared)*
 - [specs/2026-07-31-research-corpus-and-cache.md](specs/2026-07-31-research-corpus-and-cache.md): Research corpus and cache (row-reuse, cache2action) *(status not declared)*
 - [specs/2026-07-31-zion-board-as-product-instrument.md](specs/2026-07-31-zion-board-as-product-instrument.md): Zion as a product instrument, not a task list *(status: active)*
+- [specs/2026-10-09-review-cache-tiers.md](specs/2026-10-09-review-cache-tiers.md): Spec: tiered memoized review decisions + trigger-conditioned persona execution, exact/normalized/semantic tiers with full conditioning, anti-loop guard, Table 11-3 cost accounting (#372) *(status: active)*
 
 ## Analysis (point-in-time, inputs to TODO, never a decision)
 

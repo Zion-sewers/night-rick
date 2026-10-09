@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Tiered memoized review decisions + trigger-conditioned aspect execution.
 
+Spec: docs/specs/2026-10-09-review-cache-tiers.md (Status: active).
+
 Issue #372, mechanism adapted from AIGUIDE ch.11 ("From Compute to Cost"):
 the chapter memoizes planner decisions in three tiers (exact / normalized /
 semantic) with context guards so a decision is never replayed under different

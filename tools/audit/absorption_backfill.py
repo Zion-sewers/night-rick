@@ -99,6 +99,9 @@ VERDICT_CLASS = {
     "tools-workspace": "split",
     "tools-wsl": "keep-ours",
     "tools": "split",
+    # Added 2026-10-09 with the #372 review-cache component: stem assigned by
+    # reading the record's own verdict ("keep-ours"), not derived by keyword.
+    "review-cache": "keep-ours",
 }
 
 # The only record whose own body already names what was taken and where it

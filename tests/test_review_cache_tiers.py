@@ -428,8 +428,9 @@ def test_expected_calls_table_math():
 
 def test_expected_calls_table_actuals_are_measured():
     # ADVERSARIAL (product B1): actual_calls must report what ran, never
-    # what the triggers imply. Local-only run with fired triggers:
-    # expected>0 but actual==0 on the external leg.
+    # what the triggers imply. Local-only run with fired triggers: the
+    # external leg is not possible in this configuration, so p=0,
+    # expected=0, actual=0 -- triggers alone never fabricate calls.
     trig = _trig(security={"triggered": True,
                            "trigger": "risk:high-security-finding"})
     rows = rc.expected_calls_table(trig, external_possible=False,

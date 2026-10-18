@@ -77,11 +77,12 @@ jobs:
     if: ${{ !github.event.pull_request.draft }}
     runs-on: [self-hosted, linux]
     env:
-      # This runner lives on the operator's WSL machine, which has a real
-      # ~/.claude. Redirecting HOME reproduces the hosted-runner shape: the
-      # live-tree halves of rules/skills/pointers SKIP instead of racing the
-      # peer sessions that edit the live tree mid-run. Billed minutes: zero.
-      HOME: /home/shov/actions-runner/ci-home
+      # Redirecting HOME reproduces the hosted-runner shape: the live-tree
+      # halves of rules/skills/pointers SKIP instead of racing the peer
+      # sessions that edit the live tree mid-run. Uses the per-job temp dir
+      # (not a hardcoded operator path) so any self-hosted host works.
+      # See #433.
+      HOME: ${{ runner.temp }}/ci-home
     permissions:
       contents: read
     steps:
@@ -238,11 +239,12 @@ jobs:
     if: ${{ !github.event.pull_request.draft && github.event_name == 'pull_request' }}
     runs-on: [self-hosted, linux]
     env:
-      # This runner lives on the operator's WSL machine, which has a real
-      # ~/.claude. Redirecting HOME reproduces the hosted-runner shape: the
-      # live-tree halves of rules/skills/pointers SKIP instead of racing the
-      # peer sessions that edit the live tree mid-run. Billed minutes: zero.
-      HOME: /home/shov/actions-runner/ci-home
+      # Redirecting HOME reproduces the hosted-runner shape: the live-tree
+      # halves of rules/skills/pointers SKIP instead of racing the peer
+      # sessions that edit the live tree mid-run. Uses the per-job temp dir
+      # (not a hardcoded operator path) so any self-hosted host works.
+      # See #433.
+      HOME: ${{ runner.temp }}/ci-home
     permissions:
       contents: read
     steps:
@@ -292,11 +294,12 @@ jobs:
     if: ${{ !github.event.pull_request.draft }}
     runs-on: [self-hosted, linux]
     env:
-      # This runner lives on the operator's WSL machine, which has a real
-      # ~/.claude. Redirecting HOME reproduces the hosted-runner shape: the
-      # live-tree halves of rules/skills/pointers SKIP instead of racing the
-      # peer sessions that edit the live tree mid-run. Billed minutes: zero.
-      HOME: /home/shov/actions-runner/ci-home
+      # Redirecting HOME reproduces the hosted-runner shape: the live-tree
+      # halves of rules/skills/pointers SKIP instead of racing the peer
+      # sessions that edit the live tree mid-run. Uses the per-job temp dir
+      # (not a hardcoded operator path) so any self-hosted host works.
+      # See #433.
+      HOME: ${{ runner.temp }}/ci-home
     permissions:
       contents: read
     steps:

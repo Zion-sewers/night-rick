@@ -76,16 +76,18 @@ jobs:
     # Does NOT cover: e2e, a11y_ux (see header).
     if: ${{ !github.event.pull_request.draft }}
     runs-on: [self-hosted, linux]
-    env:
-      # Redirecting HOME reproduces the hosted-runner shape: the live-tree
-      # halves of rules/skills/pointers SKIP instead of racing the peer
-      # sessions that edit the live tree mid-run. Uses the per-job temp dir
-      # (not a hardcoded operator path) so any self-hosted host works.
-      # See #433.
-      HOME: ${{ runner.temp }}/ci-home
     permissions:
       contents: read
     steps:
+      # Portable HOME redirect (see #433): the `runner` context is NOT
+      # available in job-level `env:` (step-level only), so export via
+      # $GITHUB_ENV from the first step. Empty dir, no real ~/.claude ->
+      # live-tree halves of rules/skills/pointers SKIP instead of racing
+      # peer sessions. $RUNNER_TEMP is runner-writable on any host.
+      - name: Redirect HOME to a portable empty dir
+        run: |
+          mkdir -p "$RUNNER_TEMP/ci-home"
+          echo "HOME=$RUNNER_TEMP/ci-home" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with:
           # Full history: several domains (review, docs, pipeline) diff
@@ -238,16 +240,18 @@ jobs:
     # the half that is safe to automate.
     if: ${{ !github.event.pull_request.draft && github.event_name == 'pull_request' }}
     runs-on: [self-hosted, linux]
-    env:
-      # Redirecting HOME reproduces the hosted-runner shape: the live-tree
-      # halves of rules/skills/pointers SKIP instead of racing the peer
-      # sessions that edit the live tree mid-run. Uses the per-job temp dir
-      # (not a hardcoded operator path) so any self-hosted host works.
-      # See #433.
-      HOME: ${{ runner.temp }}/ci-home
     permissions:
       contents: read
     steps:
+      # Portable HOME redirect (see #433): the `runner` context is NOT
+      # available in job-level `env:` (step-level only), so export via
+      # $GITHUB_ENV from the first step. Empty dir, no real ~/.claude ->
+      # live-tree halves of rules/skills/pointers SKIP instead of racing
+      # peer sessions. $RUNNER_TEMP is runner-writable on any host.
+      - name: Redirect HOME to a portable empty dir
+        run: |
+          mkdir -p "$RUNNER_TEMP/ci-home"
+          echo "HOME=$RUNNER_TEMP/ci-home" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -293,16 +297,18 @@ jobs:
     # confirmation, same convention as the Chrome-path assumption noted above.
     if: ${{ !github.event.pull_request.draft }}
     runs-on: [self-hosted, linux]
-    env:
-      # Redirecting HOME reproduces the hosted-runner shape: the live-tree
-      # halves of rules/skills/pointers SKIP instead of racing the peer
-      # sessions that edit the live tree mid-run. Uses the per-job temp dir
-      # (not a hardcoded operator path) so any self-hosted host works.
-      # See #433.
-      HOME: ${{ runner.temp }}/ci-home
     permissions:
       contents: read
     steps:
+      # Portable HOME redirect (see #433): the `runner` context is NOT
+      # available in job-level `env:` (step-level only), so export via
+      # $GITHUB_ENV from the first step. Empty dir, no real ~/.claude ->
+      # live-tree halves of rules/skills/pointers SKIP instead of racing
+      # peer sessions. $RUNNER_TEMP is runner-writable on any host.
+      - name: Redirect HOME to a portable empty dir
+        run: |
+          mkdir -p "$RUNNER_TEMP/ci-home"
+          echo "HOME=$RUNNER_TEMP/ci-home" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5

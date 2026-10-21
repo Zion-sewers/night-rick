@@ -117,3 +117,12 @@ REVIEW.md | living
 docs/ESTATE-DIRECTORY-CATALOG.md | dated-snapshot
 .github/ISSUE_TEMPLATE/task.md | living
 docs/archive/sagemaker-hyperpod.md | reference | fetched AWS doc page, dropped 2026-08-12 17:34 by a parallel session; belongs under docs/analysis or a corpus dir if kept
+.github/agent-coffee/COFFEE.md | living
+.github/discussions-seed.md | living
+anatomy/E-ROWS.md | living
+anatomy/README.md | living
+anatomy/e-rows/README.md | living
+gem-27sep.md | dated-snapshot
+geminiresearch24sep.md | dated-snapshot
+installs-rec.md | operator-input
+tools/fleetview/README.md | living

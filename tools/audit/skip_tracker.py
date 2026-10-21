@@ -75,6 +75,8 @@ def _run_suites(project: str) -> list[dict[str, int | str]]:
                 print(f"WARNING: could not parse summary for {suite['name']}")
         except subprocess.TimeoutExpired:
             print(f"WARNING: {suite['name']} timed out")
+        except FileNotFoundError as e:
+            print(f"WARNING: {suite['name']} could not start ({e}); skipping suite")
     return results
 
 

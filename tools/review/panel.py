@@ -61,6 +61,7 @@ import subprocess
 import sys
 
 import e_rows
+import async_purity
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SETUP = os.path.abspath(os.path.join(HERE, ".."))
@@ -637,7 +638,7 @@ SELF_REFERENTIAL = re.compile(
     r"|^state/(?!.*\.(?:" + SOURCE_EXT + r")$)")
 
 
-def run_local(lines: list[dict]) -> list[dict]:
+def run_local(lines: list[dict], project: str | None = None) -> list[dict]:
     findings: list[dict] = []
     for persona, spec in PERSONAS.items():
         for cid, sev, langs, pat, why in spec["checks"]:
@@ -674,6 +675,12 @@ def run_local(lines: list[dict]) -> list[dict]:
                   if not EXEMPT.search(ln["file"])
                   and not SELF_REFERENTIAL.search(ln["file"])]
     findings += e_rows.composite_findings(reviewable, lines)
+    # AST checks need file content, not just added lines: they parse the
+    # working-tree file and report only violations on added lines, so a
+    # pre-existing problem never blocks a new change. project is None in
+    # unit tests that feed synthetic lines; the AST leg simply skips.
+    if project is not None:
+        findings += async_purity.findings_for_diff(reviewable, project)
     return findings
 
 
@@ -913,7 +920,7 @@ def cmd_run(args: argparse.Namespace) -> int:
             findings = hit["findings"]
             print("decision cache: hit (registry {})".format(fp[:12]))
     if findings is None:
-        findings = run_local(lines)
+        findings = run_local(lines, project)
         if args.allow_external:
             ext, ext_note = run_external(lines, project, args.verbose,
                                          getattr(args, "external_model", None))
@@ -1111,17 +1118,26 @@ def cmd_selftest(args: argparse.Namespace) -> int:
             ".panel { min-width: 1200px; }",                                # px-width-large
             ".tiny { font-size: 10px; }",                                   # fixed-px-font
         ],
+        "async_demo.py": [
+            "import requests, time",
+            "async def fetch(url):",                                        # async-purity
+            "    resp = requests.get(url, timeout=5)",
+            "    time.sleep(1)",
+            "    return resp.text",
+        ],
     }
     want = [(p, c) for p, spec in PERSONAS.items() for c, *_ in spec["checks"]]
+    # AST checks do not live in PERSONAS; their ids are asserted explicitly.
+    want.append(("correctness", "async-purity"))
     with tempfile.TemporaryDirectory() as td:
         sh("git init -q .", td)
         sh('git -c user.email=t@t -c user.name=t commit -q --allow-empty -m base', td)
         for name, body in planted.items():
             open(os.path.join(td, name), "w", encoding="utf-8").write("\n".join(body) + "\n")
         lines = added_lines(td, "HEAD")
-        found = {(f["persona"], f["check"]) for f in run_local(lines)}
+        found = {(f["persona"], f["check"]) for f in run_local(lines, td)}
         print("planted change produced {} finding(s) over {} line(s)".format(
-            len(run_local(lines)), len(lines)))
+            len(run_local(lines, td)), len(lines)))
         for persona, check in want:
             ok = (persona, check) in found
             print("  {}  {:<12} {}".format("ok  " if ok else "MISS", persona, check))
@@ -1177,7 +1193,7 @@ def cmd_selftest(args: argparse.Namespace) -> int:
         }
         for name, body in innocent.items():
             open(os.path.join(td, name), "w", encoding="utf-8").write("\n".join(body) + "\n")
-        clean = run_local(added_lines(td, "HEAD"))
+        clean = run_local(added_lines(td, "HEAD"), td)
         ok = not clean
         print("\n  {}  ordinary code produces no findings".format("ok  " if ok else "MISS"))
         for f in clean:
@@ -1230,7 +1246,7 @@ def cmd_selftest(args: argparse.Namespace) -> int:
             with open(os.path.join(td, rel.replace("/", os.sep)), "a", encoding="utf-8") as fh:
                 fh.write(body + "\n")
 
-        echo_found = run_local(added_lines(td, "HEAD"))
+        echo_found = run_local(added_lines(td, "HEAD"), td)
         noise = [f for f in echo_found if f["file"] != "src/state/api.ts"]
         ok = not noise
         print("\n  {}  neither its own output nor a ledger is reviewed as source".format(

@@ -16,3 +16,40 @@ Build facts, session setup, and execution commands MUST be read from [AGENTS.md]
    - No emoji in code, commit messages, or documentation.
    - Connector em-dashes and en-dashes are flagged by `tools/slop_lint.py`.
 5. **Verification Requirement**: Every bug fix or feature addition must include matching automated test updates under `tests/` or subproject test suites.
+
+## Severity calibration
+
+- **P0 blocking**: a weakened, swallowed, or bypassed verification oracle;
+  a change that alters the judging criteria for its own PR (REVIEW.md is
+  always read from the base branch, so a branch can never soften the policy
+  it is judged by).
+- **P1 must-fix before merge**: new behavior without matching test updates
+  (see Verification above); a security, data-loss, or secret-leak risk.
+- **P2 non-blocking**: style, naming, prose. Never block on P2 inside the
+  out-of-scope paths listed above.
+
+## Summary style
+
+Verdict first, then findings, then what was skipped:
+
+1. One line: `approve` / `request-changes` / `comment`.
+2. Findings grouped by severity, each with file and line.
+3. `Not reviewed:` the out-of-scope paths that were skipped and why
+   (generated, append-only, archive).
+
+Keep the prose under 40 lines. The machine record is
+`state/reviews/<sha>.json` written by `tools/review/panel.py`; the summary
+is for humans, not a second copy of the ledger.
+
+## Sub-agent budget
+
+Scale review effort to diff size:
+
+| Diff | Budget |
+|---|---|
+| <= 200 lines | single pass, no subagents |
+| 200-2000 lines | one focused subagent on the riskiest file class |
+| > 2000 lines | split by component, at most 3 subagents |
+
+Spawning subagents for a 30-line diff is the failure mode; so is a single
+pass over a 5,000-line diff. State what was not read.

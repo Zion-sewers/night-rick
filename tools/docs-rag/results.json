@@ -1,0 +1,344 @@
+{
+ "store": "qdrant",
+ "collection": "docs_rag_v1",
+ "embedder": "nvidia/nemotron-3-embed-1b",
+ "n_questions": 20,
+ "runs": 3,
+ "recall@5_mean": 1.0,
+ "latency_ms": {
+  "p50": 852.5,
+  "p95": 1192.9,
+  "n": 60,
+  "note": "Qdrant round-trip only; query encoding excluded"
+ },
+ "cost": {
+  "usd": 0.0,
+  "note": "Qdrant Cloud free tier (shoval-free)"
+ },
+ "mongodb": {
+  "status": "not_evaluated",
+  "reason": "no MongoDB Atlas connector or account exists; creating one needs Shoval's sign-up. See claude-setup#422."
+ },
+ "per_question": [
+  {
+   "id": "Q01",
+   "question": "How does the corpus chunker split documents into indexable chunks, and what are ",
+   "ground_truth": [
+    "2026-08-30-corpus-chunker"
+   ],
+   "retrieved_top5": [
+    "2026-08-30-corpus-chunker",
+    "2026-08-30-corpus-chunker",
+    "2026-07-31-research-corpus-and-cache",
+    "2026-08-30-corpus-chunker",
+    "2026-08-30-corpus-chunker"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  },
+  {
+   "id": "Q02",
+   "question": "Which license classes does the license gate define, and which licenses fall into",
+   "ground_truth": [
+    "2026-08-30-corpus-license-gate"
+   ],
+   "retrieved_top5": [
+    "2026-08-30-corpus-license-gate",
+    "2026-08-30-corpus-license-gate",
+    "2026-08-31-corpus-license-tag-profile",
+    "2026-08-30-corpus-license-gate",
+    "2026-08-30-corpus-license-gate"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  },
+  {
+   "id": "Q03",
+   "question": "What are the four subcommands of the dedup tool, and what does the apply subcomm",
+   "ground_truth": [
+    "2026-08-30-corpus-dedup"
+   ],
+   "retrieved_top5": [
+    "2026-08-30-corpus-dedup",
+    "2026-08-30-corpus-dedup",
+    "2026-08-30-corpus-semantic-dedup",
+    "2026-08-30-corpus-dedup",
+    "2026-08-30-corpus-semantic-dedup"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  },
+  {
+   "id": "Q04",
+   "question": "How does the semantic dedup tool find duplicate chunks, and which chunk of a dup",
+   "ground_truth": [
+    "2026-08-30-corpus-semantic-dedup"
+   ],
+   "retrieved_top5": [
+    "2026-08-30-corpus-semantic-dedup",
+    "2026-08-30-corpus-semantic-dedup",
+    "2026-08-30-corpus-semantic-dedup",
+    "2026-08-30-corpus-dedup",
+    "2026-08-30-corpus-semantic-dedup"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  },
+  {
+   "id": "Q05",
+   "question": "What is the corpus audit tool and what are its six subcommands for cross-referen",
+   "ground_truth": [
+    "2026-08-31-corpus-audit"
+   ],
+   "retrieved_top5": [
+    "2026-08-31-corpus-audit",
+    "2026-08-31-corpus-audit",
+    "2026-08-31-corpus-audit",
+    "2026-08-31-corpus-health-scorecard",
+    "2026-08-31-corpus-dashboard"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  },
+  {
+   "id": "Q06",
+   "question": "Why can a biased simhash function or skewed inputs create blind spots in near-du",
+   "ground_truth": [
+    "2026-08-31-corpus-simhash-distribution"
+   ],
+   "retrieved_top5": [
+    "2026-08-31-corpus-simhash-distribution",
+    "2026-08-31-corpus-simhash-edge-profile",
+    "2026-08-31-corpus-simhash-distribution",
+    "2026-08-31-corpus-simhash-status-profile",
+    "2026-08-31-corpus-simhash-distribution"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  },
+  {
+   "id": "Q07",
+   "question": "What limitation of tagger.py with 20 keyword lists and semantic.py with 20 domai",
+   "ground_truth": [
+    "2026-08-31-corpus-topic-model"
+   ],
+   "retrieved_top5": [
+    "2026-08-31-corpus-topic-model",
+    "2026-08-31-corpus-topic-model",
+    "2026-08-30-corpus-tagger",
+    "2026-08-31-corpus-vocab-analysis",
+    "2026-08-30-corpus-domain-store"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  },
+  {
+   "id": "Q08",
+   "question": "What text complexity signals does the corpus chunk readability scorer measure?",
+   "ground_truth": [
+    "2026-08-31-corpus-readability"
+   ],
+   "retrieved_top5": [
+    "2026-08-31-corpus-readability",
+    "2026-08-31-corpus-readability",
+    "2026-08-31-corpus-readability",
+    "2026-08-31-corpus-readability",
+    "2026-08-31-corpus-readability"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  },
+  {
+   "id": "Q09",
+   "question": "What are the two subcommands of the corpus health scorecard tool?",
+   "ground_truth": [
+    "2026-08-31-corpus-health-scorecard"
+   ],
+   "retrieved_top5": [
+    "2026-08-31-corpus-health-scorecard",
+    "2026-08-31-corpus-health-scorecard",
+    "2026-08-31-corpus-health-scorecard",
+    "2026-08-31-corpus-health-scorecard",
+    "2026-08-30-corpus-health-oracle"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  },
+  {
+   "id": "Q10",
+   "question": "How does the query coverage tool use auto-generated probe queries to find chunks",
+   "ground_truth": [
+    "2026-08-31-corpus-query-coverage"
+   ],
+   "retrieved_top5": [
+    "2026-08-31-corpus-query-coverage",
+    "2026-08-31-corpus-query-coverage",
+    "2026-08-31-corpus-query-coverage",
+    "2026-08-31-corpus-query-coverage",
+    "2026-08-31-corpus-query-coverage"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  },
+  {
+   "id": "Q11",
+   "question": "What do the related and explain subcommands of the corpus recommend tool do?",
+   "ground_truth": [
+    "2026-08-31-corpus-recommend"
+   ],
+   "retrieved_top5": [
+    "2026-08-31-corpus-recommend",
+    "2026-08-31-corpus-recommend",
+    "2026-08-31-corpus-recommend",
+    "2026-08-31-corpus-diversity",
+    "2026-08-31-corpus-xray"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  },
+  {
+   "id": "Q12",
+   "question": "What cross-table questions did the xray tool answer that previously required man",
+   "ground_truth": [
+    "2026-08-31-corpus-xray"
+   ],
+   "retrieved_top5": [
+    "2026-08-31-corpus-xray",
+    "2026-08-31-corpus-xray",
+    "2026-08-31-corpus-citation-graph",
+    "2026-08-30-corpus-lineage",
+    "2026-08-31-corpus-similarity-analysis"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  },
+  {
+   "id": "Q13",
+   "question": "Why was a dashboard tool needed to get a corpus overview instead of running indi",
+   "ground_truth": [
+    "2026-08-31-corpus-dashboard"
+   ],
+   "retrieved_top5": [
+    "2026-08-31-corpus-dashboard",
+    "2026-08-31-corpus-dashboard",
+    "2026-08-31-corpus-dashboard",
+    "2026-08-31-corpus-chunk-profile",
+    "2026-08-31-corpus-health-scorecard"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  },
+  {
+   "id": "Q14",
+   "question": "What does the version churn tool measure about the temporal velocity of corpus c",
+   "ground_truth": [
+    "2026-08-31-corpus-version-churn"
+   ],
+   "retrieved_top5": [
+    "2026-08-31-corpus-version-churn",
+    "2026-08-31-corpus-version-churn",
+    "2026-08-31-corpus-version-churn",
+    "2026-08-31-corpus-chunk-evolution",
+    "2026-08-31-corpus-version-timeline"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  },
+  {
+   "id": "Q15",
+   "question": "What language analyses were missing before the language distribution tool, such ",
+   "ground_truth": [
+    "2026-08-31-corpus-language-distribution"
+   ],
+   "retrieved_top5": [
+    "2026-08-31-corpus-language-distribution",
+    "2026-08-31-corpus-language-distribution",
+    "2026-08-31-corpus-language-distribution",
+    "2026-08-31-corpus-language-distribution",
+    "2026-08-31-corpus-language-distribution"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  },
+  {
+   "id": "Q16",
+   "question": "What export filters were missing from the batch export tool, and what computed d",
+   "ground_truth": [
+    "2026-08-30-corpus-batch-export"
+   ],
+   "retrieved_top5": [
+    "2026-08-30-corpus-batch-export",
+    "2026-08-30-corpus-batch-export",
+    "2026-08-30-corpus-batch-export",
+    "2026-08-30-corpus-batch-export",
+    "2026-08-30-corpus-export"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  },
+  {
+   "id": "Q17",
+   "question": "Which three timestamp columns had zero GROUP BY queries anywhere in the codebase",
+   "ground_truth": [
+    "2026-08-31-corpus-temporal-distribution"
+   ],
+   "retrieved_top5": [
+    "2026-08-31-corpus-temporal-distribution",
+    "2026-08-31-corpus-version-timeline",
+    "2026-08-31-corpus-temporal-distribution",
+    "2026-08-31-corpus-classification-timeline",
+    "2026-08-31-corpus-edge-detection-timeline"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  },
+  {
+   "id": "Q18",
+   "question": "What naming collision forced renaming cache2cache to row-reuse, and what does AD",
+   "ground_truth": [
+    "2026-07-31-research-corpus-and-cache"
+   ],
+   "retrieved_top5": [
+    "2026-07-31-research-corpus-and-cache",
+    "2026-07-31-research-corpus-and-cache",
+    "2026-07-31-research-corpus-and-cache",
+    "2026-07-31-research-corpus-and-cache",
+    "2026-07-31-research-corpus-and-cache"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  },
+  {
+   "id": "Q19",
+   "question": "Which stage of the ingestion pipeline does the citation gate tool implement?",
+   "ground_truth": [
+    "2026-08-30-corpus-cite-gate"
+   ],
+   "retrieved_top5": [
+    "2026-08-30-corpus-cite-gate",
+    "2026-07-31-research-corpus-and-cache",
+    "2026-08-30-corpus-cite-gate",
+    "2026-08-30-corpus-cite-gate",
+    "2026-08-30-corpus-cite-gate"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  },
+  {
+   "id": "Q20",
+   "question": "Which contradictions does the corpus audit tool treat as highest priority, and w",
+   "ground_truth": [
+    "2026-08-31-corpus-audit"
+   ],
+   "retrieved_top5": [
+    "2026-08-31-corpus-audit",
+    "2026-08-31-corpus-audit",
+    "2026-08-31-corpus-audit",
+    "2026-08-31-corpus-xray",
+    "2026-08-30-corpus-contradiction-detection"
+   ],
+   "recall@5": 1.0,
+   "first_hit_rank": 1
+  }
+ ]
+}

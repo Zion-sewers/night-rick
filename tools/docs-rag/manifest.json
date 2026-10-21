@@ -1,0 +1,2678 @@
+{
+ "collection": "docs_rag_v1",
+ "embedder": "nvidia/nemotron-3-embed-1b",
+ "dim": 2048,
+ "n_chunks": 1619,
+ "n_docs": 210,
+ "docs": {
+  "2026-07-31-research-corpus-and-cache": {
+   "n_chunks": 51,
+   "chunk_ids": [
+    "2026-07-31-research-corpus-and-cache#c000",
+    "2026-07-31-research-corpus-and-cache#c001",
+    "2026-07-31-research-corpus-and-cache#c002",
+    "2026-07-31-research-corpus-and-cache#c003",
+    "2026-07-31-research-corpus-and-cache#c004",
+    "2026-07-31-research-corpus-and-cache#c005",
+    "2026-07-31-research-corpus-and-cache#c006",
+    "2026-07-31-research-corpus-and-cache#c007",
+    "2026-07-31-research-corpus-and-cache#c008",
+    "2026-07-31-research-corpus-and-cache#c009",
+    "2026-07-31-research-corpus-and-cache#c010",
+    "2026-07-31-research-corpus-and-cache#c011",
+    "2026-07-31-research-corpus-and-cache#c012",
+    "2026-07-31-research-corpus-and-cache#c013",
+    "2026-07-31-research-corpus-and-cache#c014",
+    "2026-07-31-research-corpus-and-cache#c015",
+    "2026-07-31-research-corpus-and-cache#c016",
+    "2026-07-31-research-corpus-and-cache#c017",
+    "2026-07-31-research-corpus-and-cache#c018",
+    "2026-07-31-research-corpus-and-cache#c019",
+    "2026-07-31-research-corpus-and-cache#c020",
+    "2026-07-31-research-corpus-and-cache#c021",
+    "2026-07-31-research-corpus-and-cache#c022",
+    "2026-07-31-research-corpus-and-cache#c023",
+    "2026-07-31-research-corpus-and-cache#c024",
+    "2026-07-31-research-corpus-and-cache#c025",
+    "2026-07-31-research-corpus-and-cache#c026",
+    "2026-07-31-research-corpus-and-cache#c027",
+    "2026-07-31-research-corpus-and-cache#c028",
+    "2026-07-31-research-corpus-and-cache#c029",
+    "2026-07-31-research-corpus-and-cache#c030",
+    "2026-07-31-research-corpus-and-cache#c031",
+    "2026-07-31-research-corpus-and-cache#c032",
+    "2026-07-31-research-corpus-and-cache#c033",
+    "2026-07-31-research-corpus-and-cache#c034",
+    "2026-07-31-research-corpus-and-cache#c035",
+    "2026-07-31-research-corpus-and-cache#c036",
+    "2026-07-31-research-corpus-and-cache#c037",
+    "2026-07-31-research-corpus-and-cache#c038",
+    "2026-07-31-research-corpus-and-cache#c039",
+    "2026-07-31-research-corpus-and-cache#c040",
+    "2026-07-31-research-corpus-and-cache#c041",
+    "2026-07-31-research-corpus-and-cache#c042",
+    "2026-07-31-research-corpus-and-cache#c043",
+    "2026-07-31-research-corpus-and-cache#c044",
+    "2026-07-31-research-corpus-and-cache#c045",
+    "2026-07-31-research-corpus-and-cache#c046",
+    "2026-07-31-research-corpus-and-cache#c047",
+    "2026-07-31-research-corpus-and-cache#c048",
+    "2026-07-31-research-corpus-and-cache#c049",
+    "2026-07-31-research-corpus-and-cache#c050"
+   ]
+  },
+  "2026-08-30-corpus-artifact-extraction": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-30-corpus-artifact-extraction#c000",
+    "2026-08-30-corpus-artifact-extraction#c001",
+    "2026-08-30-corpus-artifact-extraction#c002",
+    "2026-08-30-corpus-artifact-extraction#c003",
+    "2026-08-30-corpus-artifact-extraction#c004",
+    "2026-08-30-corpus-artifact-extraction#c005",
+    "2026-08-30-corpus-artifact-extraction#c006"
+   ]
+  },
+  "2026-08-30-corpus-batch-export": {
+   "n_chunks": 6,
+   "chunk_ids": [
+    "2026-08-30-corpus-batch-export#c000",
+    "2026-08-30-corpus-batch-export#c001",
+    "2026-08-30-corpus-batch-export#c002",
+    "2026-08-30-corpus-batch-export#c003",
+    "2026-08-30-corpus-batch-export#c004",
+    "2026-08-30-corpus-batch-export#c005"
+   ]
+  },
+  "2026-08-30-corpus-cache2action": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-30-corpus-cache2action#c000",
+    "2026-08-30-corpus-cache2action#c001",
+    "2026-08-30-corpus-cache2action#c002",
+    "2026-08-30-corpus-cache2action#c003",
+    "2026-08-30-corpus-cache2action#c004",
+    "2026-08-30-corpus-cache2action#c005",
+    "2026-08-30-corpus-cache2action#c006",
+    "2026-08-30-corpus-cache2action#c007"
+   ]
+  },
+  "2026-08-30-corpus-chunk-versions": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-30-corpus-chunk-versions#c000",
+    "2026-08-30-corpus-chunk-versions#c001",
+    "2026-08-30-corpus-chunk-versions#c002",
+    "2026-08-30-corpus-chunk-versions#c003",
+    "2026-08-30-corpus-chunk-versions#c004",
+    "2026-08-30-corpus-chunk-versions#c005",
+    "2026-08-30-corpus-chunk-versions#c006",
+    "2026-08-30-corpus-chunk-versions#c007"
+   ]
+  },
+  "2026-08-30-corpus-chunker": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-30-corpus-chunker#c000",
+    "2026-08-30-corpus-chunker#c001",
+    "2026-08-30-corpus-chunker#c002",
+    "2026-08-30-corpus-chunker#c003",
+    "2026-08-30-corpus-chunker#c004",
+    "2026-08-30-corpus-chunker#c005",
+    "2026-08-30-corpus-chunker#c006"
+   ]
+  },
+  "2026-08-30-corpus-cite-gate": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-30-corpus-cite-gate#c000",
+    "2026-08-30-corpus-cite-gate#c001",
+    "2026-08-30-corpus-cite-gate#c002",
+    "2026-08-30-corpus-cite-gate#c003",
+    "2026-08-30-corpus-cite-gate#c004",
+    "2026-08-30-corpus-cite-gate#c005",
+    "2026-08-30-corpus-cite-gate#c006"
+   ]
+  },
+  "2026-08-30-corpus-cluster-store": {
+   "n_chunks": 9,
+   "chunk_ids": [
+    "2026-08-30-corpus-cluster-store#c000",
+    "2026-08-30-corpus-cluster-store#c001",
+    "2026-08-30-corpus-cluster-store#c002",
+    "2026-08-30-corpus-cluster-store#c003",
+    "2026-08-30-corpus-cluster-store#c004",
+    "2026-08-30-corpus-cluster-store#c005",
+    "2026-08-30-corpus-cluster-store#c006",
+    "2026-08-30-corpus-cluster-store#c007",
+    "2026-08-30-corpus-cluster-store#c008"
+   ]
+  },
+  "2026-08-30-corpus-cluster": {
+   "n_chunks": 6,
+   "chunk_ids": [
+    "2026-08-30-corpus-cluster#c000",
+    "2026-08-30-corpus-cluster#c001",
+    "2026-08-30-corpus-cluster#c002",
+    "2026-08-30-corpus-cluster#c003",
+    "2026-08-30-corpus-cluster#c004",
+    "2026-08-30-corpus-cluster#c005"
+   ]
+  },
+  "2026-08-30-corpus-contradiction-detection": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-30-corpus-contradiction-detection#c000",
+    "2026-08-30-corpus-contradiction-detection#c001",
+    "2026-08-30-corpus-contradiction-detection#c002",
+    "2026-08-30-corpus-contradiction-detection#c003",
+    "2026-08-30-corpus-contradiction-detection#c004",
+    "2026-08-30-corpus-contradiction-detection#c005",
+    "2026-08-30-corpus-contradiction-detection#c006",
+    "2026-08-30-corpus-contradiction-detection#c007"
+   ]
+  },
+  "2026-08-30-corpus-coverage": {
+   "n_chunks": 6,
+   "chunk_ids": [
+    "2026-08-30-corpus-coverage#c000",
+    "2026-08-30-corpus-coverage#c001",
+    "2026-08-30-corpus-coverage#c002",
+    "2026-08-30-corpus-coverage#c003",
+    "2026-08-30-corpus-coverage#c004",
+    "2026-08-30-corpus-coverage#c005"
+   ]
+  },
+  "2026-08-30-corpus-dedup": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-30-corpus-dedup#c000",
+    "2026-08-30-corpus-dedup#c001",
+    "2026-08-30-corpus-dedup#c002",
+    "2026-08-30-corpus-dedup#c003",
+    "2026-08-30-corpus-dedup#c004",
+    "2026-08-30-corpus-dedup#c005",
+    "2026-08-30-corpus-dedup#c006",
+    "2026-08-30-corpus-dedup#c007"
+   ]
+  },
+  "2026-08-30-corpus-diff": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-30-corpus-diff#c000",
+    "2026-08-30-corpus-diff#c001",
+    "2026-08-30-corpus-diff#c002",
+    "2026-08-30-corpus-diff#c003",
+    "2026-08-30-corpus-diff#c004",
+    "2026-08-30-corpus-diff#c005",
+    "2026-08-30-corpus-diff#c006"
+   ]
+  },
+  "2026-08-30-corpus-domain-store": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-30-corpus-domain-store#c000",
+    "2026-08-30-corpus-domain-store#c001",
+    "2026-08-30-corpus-domain-store#c002",
+    "2026-08-30-corpus-domain-store#c003",
+    "2026-08-30-corpus-domain-store#c004",
+    "2026-08-30-corpus-domain-store#c005",
+    "2026-08-30-corpus-domain-store#c006",
+    "2026-08-30-corpus-domain-store#c007"
+   ]
+  },
+  "2026-08-30-corpus-embedding-rerank": {
+   "n_chunks": 9,
+   "chunk_ids": [
+    "2026-08-30-corpus-embedding-rerank#c000",
+    "2026-08-30-corpus-embedding-rerank#c001",
+    "2026-08-30-corpus-embedding-rerank#c002",
+    "2026-08-30-corpus-embedding-rerank#c003",
+    "2026-08-30-corpus-embedding-rerank#c004",
+    "2026-08-30-corpus-embedding-rerank#c005",
+    "2026-08-30-corpus-embedding-rerank#c006",
+    "2026-08-30-corpus-embedding-rerank#c007",
+    "2026-08-30-corpus-embedding-rerank#c008"
+   ]
+  },
+  "2026-08-30-corpus-enrich": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-30-corpus-enrich#c000",
+    "2026-08-30-corpus-enrich#c001",
+    "2026-08-30-corpus-enrich#c002",
+    "2026-08-30-corpus-enrich#c003",
+    "2026-08-30-corpus-enrich#c004",
+    "2026-08-30-corpus-enrich#c005",
+    "2026-08-30-corpus-enrich#c006"
+   ]
+  },
+  "2026-08-30-corpus-export": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-30-corpus-export#c000",
+    "2026-08-30-corpus-export#c001",
+    "2026-08-30-corpus-export#c002",
+    "2026-08-30-corpus-export#c003",
+    "2026-08-30-corpus-export#c004",
+    "2026-08-30-corpus-export#c005",
+    "2026-08-30-corpus-export#c006"
+   ]
+  },
+  "2026-08-30-corpus-gaps": {
+   "n_chunks": 6,
+   "chunk_ids": [
+    "2026-08-30-corpus-gaps#c000",
+    "2026-08-30-corpus-gaps#c001",
+    "2026-08-30-corpus-gaps#c002",
+    "2026-08-30-corpus-gaps#c003",
+    "2026-08-30-corpus-gaps#c004",
+    "2026-08-30-corpus-gaps#c005"
+   ]
+  },
+  "2026-08-30-corpus-health-oracle": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-30-corpus-health-oracle#c000",
+    "2026-08-30-corpus-health-oracle#c001",
+    "2026-08-30-corpus-health-oracle#c002",
+    "2026-08-30-corpus-health-oracle#c003",
+    "2026-08-30-corpus-health-oracle#c004",
+    "2026-08-30-corpus-health-oracle#c005",
+    "2026-08-30-corpus-health-oracle#c006",
+    "2026-08-30-corpus-health-oracle#c007"
+   ]
+  },
+  "2026-08-30-corpus-license-gate": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-30-corpus-license-gate#c000",
+    "2026-08-30-corpus-license-gate#c001",
+    "2026-08-30-corpus-license-gate#c002",
+    "2026-08-30-corpus-license-gate#c003",
+    "2026-08-30-corpus-license-gate#c004",
+    "2026-08-30-corpus-license-gate#c005",
+    "2026-08-30-corpus-license-gate#c006",
+    "2026-08-30-corpus-license-gate#c007"
+   ]
+  },
+  "2026-08-30-corpus-lineage": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-30-corpus-lineage#c000",
+    "2026-08-30-corpus-lineage#c001",
+    "2026-08-30-corpus-lineage#c002",
+    "2026-08-30-corpus-lineage#c003",
+    "2026-08-30-corpus-lineage#c004",
+    "2026-08-30-corpus-lineage#c005",
+    "2026-08-30-corpus-lineage#c006"
+   ]
+  },
+  "2026-08-30-corpus-normalise": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-30-corpus-normalise#c000",
+    "2026-08-30-corpus-normalise#c001",
+    "2026-08-30-corpus-normalise#c002",
+    "2026-08-30-corpus-normalise#c003",
+    "2026-08-30-corpus-normalise#c004",
+    "2026-08-30-corpus-normalise#c005",
+    "2026-08-30-corpus-normalise#c006"
+   ]
+  },
+  "2026-08-30-corpus-outlier-store": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-30-corpus-outlier-store#c000",
+    "2026-08-30-corpus-outlier-store#c001",
+    "2026-08-30-corpus-outlier-store#c002",
+    "2026-08-30-corpus-outlier-store#c003",
+    "2026-08-30-corpus-outlier-store#c004",
+    "2026-08-30-corpus-outlier-store#c005",
+    "2026-08-30-corpus-outlier-store#c006",
+    "2026-08-30-corpus-outlier-store#c007"
+   ]
+  },
+  "2026-08-30-corpus-paper-rule": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-30-corpus-paper-rule#c000",
+    "2026-08-30-corpus-paper-rule#c001",
+    "2026-08-30-corpus-paper-rule#c002",
+    "2026-08-30-corpus-paper-rule#c003",
+    "2026-08-30-corpus-paper-rule#c004",
+    "2026-08-30-corpus-paper-rule#c005",
+    "2026-08-30-corpus-paper-rule#c006"
+   ]
+  },
+  "2026-08-30-corpus-pipeline": {
+   "n_chunks": 6,
+   "chunk_ids": [
+    "2026-08-30-corpus-pipeline#c000",
+    "2026-08-30-corpus-pipeline#c001",
+    "2026-08-30-corpus-pipeline#c002",
+    "2026-08-30-corpus-pipeline#c003",
+    "2026-08-30-corpus-pipeline#c004",
+    "2026-08-30-corpus-pipeline#c005"
+   ]
+  },
+  "2026-08-30-corpus-promote": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-30-corpus-promote#c000",
+    "2026-08-30-corpus-promote#c001",
+    "2026-08-30-corpus-promote#c002",
+    "2026-08-30-corpus-promote#c003",
+    "2026-08-30-corpus-promote#c004",
+    "2026-08-30-corpus-promote#c005",
+    "2026-08-30-corpus-promote#c006"
+   ]
+  },
+  "2026-08-30-corpus-quality-trend": {
+   "n_chunks": 9,
+   "chunk_ids": [
+    "2026-08-30-corpus-quality-trend#c000",
+    "2026-08-30-corpus-quality-trend#c001",
+    "2026-08-30-corpus-quality-trend#c002",
+    "2026-08-30-corpus-quality-trend#c003",
+    "2026-08-30-corpus-quality-trend#c004",
+    "2026-08-30-corpus-quality-trend#c005",
+    "2026-08-30-corpus-quality-trend#c006",
+    "2026-08-30-corpus-quality-trend#c007",
+    "2026-08-30-corpus-quality-trend#c008"
+   ]
+  },
+  "2026-08-30-corpus-quality": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-30-corpus-quality#c000",
+    "2026-08-30-corpus-quality#c001",
+    "2026-08-30-corpus-quality#c002",
+    "2026-08-30-corpus-quality#c003",
+    "2026-08-30-corpus-quality#c004",
+    "2026-08-30-corpus-quality#c005",
+    "2026-08-30-corpus-quality#c006"
+   ]
+  },
+  "2026-08-30-corpus-reclassify": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-30-corpus-reclassify#c000",
+    "2026-08-30-corpus-reclassify#c001",
+    "2026-08-30-corpus-reclassify#c002",
+    "2026-08-30-corpus-reclassify#c003",
+    "2026-08-30-corpus-reclassify#c004",
+    "2026-08-30-corpus-reclassify#c005",
+    "2026-08-30-corpus-reclassify#c006"
+   ]
+  },
+  "2026-08-30-corpus-row-reuse": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-30-corpus-row-reuse#c000",
+    "2026-08-30-corpus-row-reuse#c001",
+    "2026-08-30-corpus-row-reuse#c002",
+    "2026-08-30-corpus-row-reuse#c003",
+    "2026-08-30-corpus-row-reuse#c004",
+    "2026-08-30-corpus-row-reuse#c005",
+    "2026-08-30-corpus-row-reuse#c006",
+    "2026-08-30-corpus-row-reuse#c007"
+   ]
+  },
+  "2026-08-30-corpus-sample": {
+   "n_chunks": 6,
+   "chunk_ids": [
+    "2026-08-30-corpus-sample#c000",
+    "2026-08-30-corpus-sample#c001",
+    "2026-08-30-corpus-sample#c002",
+    "2026-08-30-corpus-sample#c003",
+    "2026-08-30-corpus-sample#c004",
+    "2026-08-30-corpus-sample#c005"
+   ]
+  },
+  "2026-08-30-corpus-search": {
+   "n_chunks": 6,
+   "chunk_ids": [
+    "2026-08-30-corpus-search#c000",
+    "2026-08-30-corpus-search#c001",
+    "2026-08-30-corpus-search#c002",
+    "2026-08-30-corpus-search#c003",
+    "2026-08-30-corpus-search#c004",
+    "2026-08-30-corpus-search#c005"
+   ]
+  },
+  "2026-08-30-corpus-semantic-dedup": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-30-corpus-semantic-dedup#c000",
+    "2026-08-30-corpus-semantic-dedup#c001",
+    "2026-08-30-corpus-semantic-dedup#c002",
+    "2026-08-30-corpus-semantic-dedup#c003",
+    "2026-08-30-corpus-semantic-dedup#c004",
+    "2026-08-30-corpus-semantic-dedup#c005",
+    "2026-08-30-corpus-semantic-dedup#c006",
+    "2026-08-30-corpus-semantic-dedup#c007"
+   ]
+  },
+  "2026-08-30-corpus-semantic": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-30-corpus-semantic#c000",
+    "2026-08-30-corpus-semantic#c001",
+    "2026-08-30-corpus-semantic#c002",
+    "2026-08-30-corpus-semantic#c003",
+    "2026-08-30-corpus-semantic#c004",
+    "2026-08-30-corpus-semantic#c005",
+    "2026-08-30-corpus-semantic#c006",
+    "2026-08-30-corpus-semantic#c007"
+   ]
+  },
+  "2026-08-30-corpus-similarity-store": {
+   "n_chunks": 9,
+   "chunk_ids": [
+    "2026-08-30-corpus-similarity-store#c000",
+    "2026-08-30-corpus-similarity-store#c001",
+    "2026-08-30-corpus-similarity-store#c002",
+    "2026-08-30-corpus-similarity-store#c003",
+    "2026-08-30-corpus-similarity-store#c004",
+    "2026-08-30-corpus-similarity-store#c005",
+    "2026-08-30-corpus-similarity-store#c006",
+    "2026-08-30-corpus-similarity-store#c007",
+    "2026-08-30-corpus-similarity-store#c008"
+   ]
+  },
+  "2026-08-30-corpus-staleness-sweep": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-30-corpus-staleness-sweep#c000",
+    "2026-08-30-corpus-staleness-sweep#c001",
+    "2026-08-30-corpus-staleness-sweep#c002",
+    "2026-08-30-corpus-staleness-sweep#c003",
+    "2026-08-30-corpus-staleness-sweep#c004",
+    "2026-08-30-corpus-staleness-sweep#c005",
+    "2026-08-30-corpus-staleness-sweep#c006"
+   ]
+  },
+  "2026-08-30-corpus-summarize": {
+   "n_chunks": 6,
+   "chunk_ids": [
+    "2026-08-30-corpus-summarize#c000",
+    "2026-08-30-corpus-summarize#c001",
+    "2026-08-30-corpus-summarize#c002",
+    "2026-08-30-corpus-summarize#c003",
+    "2026-08-30-corpus-summarize#c004",
+    "2026-08-30-corpus-summarize#c005"
+   ]
+  },
+  "2026-08-30-corpus-tag-store": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-30-corpus-tag-store#c000",
+    "2026-08-30-corpus-tag-store#c001",
+    "2026-08-30-corpus-tag-store#c002",
+    "2026-08-30-corpus-tag-store#c003",
+    "2026-08-30-corpus-tag-store#c004",
+    "2026-08-30-corpus-tag-store#c005",
+    "2026-08-30-corpus-tag-store#c006",
+    "2026-08-30-corpus-tag-store#c007"
+   ]
+  },
+  "2026-08-30-corpus-tagger": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-30-corpus-tagger#c000",
+    "2026-08-30-corpus-tagger#c001",
+    "2026-08-30-corpus-tagger#c002",
+    "2026-08-30-corpus-tagger#c003",
+    "2026-08-30-corpus-tagger#c004",
+    "2026-08-30-corpus-tagger#c005",
+    "2026-08-30-corpus-tagger#c006",
+    "2026-08-30-corpus-tagger#c007"
+   ]
+  },
+  "2026-08-30-corpus-unified-retrieval": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-30-corpus-unified-retrieval#c000",
+    "2026-08-30-corpus-unified-retrieval#c001",
+    "2026-08-30-corpus-unified-retrieval#c002",
+    "2026-08-30-corpus-unified-retrieval#c003",
+    "2026-08-30-corpus-unified-retrieval#c004",
+    "2026-08-30-corpus-unified-retrieval#c005",
+    "2026-08-30-corpus-unified-retrieval#c006",
+    "2026-08-30-corpus-unified-retrieval#c007"
+   ]
+  },
+  "2026-08-30-corpus-validate": {
+   "n_chunks": 6,
+   "chunk_ids": [
+    "2026-08-30-corpus-validate#c000",
+    "2026-08-30-corpus-validate#c001",
+    "2026-08-30-corpus-validate#c002",
+    "2026-08-30-corpus-validate#c003",
+    "2026-08-30-corpus-validate#c004",
+    "2026-08-30-corpus-validate#c005"
+   ]
+  },
+  "2026-08-31-corpus-artifact-adoption": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-artifact-adoption#c000",
+    "2026-08-31-corpus-artifact-adoption#c001",
+    "2026-08-31-corpus-artifact-adoption#c002",
+    "2026-08-31-corpus-artifact-adoption#c003",
+    "2026-08-31-corpus-artifact-adoption#c004",
+    "2026-08-31-corpus-artifact-adoption#c005",
+    "2026-08-31-corpus-artifact-adoption#c006",
+    "2026-08-31-corpus-artifact-adoption#c007"
+   ]
+  },
+  "2026-08-31-corpus-artifact-citation-provenance": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-artifact-citation-provenance#c000",
+    "2026-08-31-corpus-artifact-citation-provenance#c001",
+    "2026-08-31-corpus-artifact-citation-provenance#c002",
+    "2026-08-31-corpus-artifact-citation-provenance#c003",
+    "2026-08-31-corpus-artifact-citation-provenance#c004",
+    "2026-08-31-corpus-artifact-citation-provenance#c005",
+    "2026-08-31-corpus-artifact-citation-provenance#c006"
+   ]
+  },
+  "2026-08-31-corpus-artifact-domain-distribution": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-artifact-domain-distribution#c000",
+    "2026-08-31-corpus-artifact-domain-distribution#c001",
+    "2026-08-31-corpus-artifact-domain-distribution#c002",
+    "2026-08-31-corpus-artifact-domain-distribution#c003",
+    "2026-08-31-corpus-artifact-domain-distribution#c004",
+    "2026-08-31-corpus-artifact-domain-distribution#c005",
+    "2026-08-31-corpus-artifact-domain-distribution#c006"
+   ]
+  },
+  "2026-08-31-corpus-artifact-edge-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-artifact-edge-profile#c000",
+    "2026-08-31-corpus-artifact-edge-profile#c001",
+    "2026-08-31-corpus-artifact-edge-profile#c002",
+    "2026-08-31-corpus-artifact-edge-profile#c003",
+    "2026-08-31-corpus-artifact-edge-profile#c004",
+    "2026-08-31-corpus-artifact-edge-profile#c005",
+    "2026-08-31-corpus-artifact-edge-profile#c006",
+    "2026-08-31-corpus-artifact-edge-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-artifact-graph": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-artifact-graph#c000",
+    "2026-08-31-corpus-artifact-graph#c001",
+    "2026-08-31-corpus-artifact-graph#c002",
+    "2026-08-31-corpus-artifact-graph#c003",
+    "2026-08-31-corpus-artifact-graph#c004",
+    "2026-08-31-corpus-artifact-graph#c005",
+    "2026-08-31-corpus-artifact-graph#c006",
+    "2026-08-31-corpus-artifact-graph#c007"
+   ]
+  },
+  "2026-08-31-corpus-artifact-name-analysis": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-artifact-name-analysis#c000",
+    "2026-08-31-corpus-artifact-name-analysis#c001",
+    "2026-08-31-corpus-artifact-name-analysis#c002",
+    "2026-08-31-corpus-artifact-name-analysis#c003",
+    "2026-08-31-corpus-artifact-name-analysis#c004",
+    "2026-08-31-corpus-artifact-name-analysis#c005",
+    "2026-08-31-corpus-artifact-name-analysis#c006",
+    "2026-08-31-corpus-artifact-name-analysis#c007"
+   ]
+  },
+  "2026-08-31-corpus-artifact-tag-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-artifact-tag-profile#c000",
+    "2026-08-31-corpus-artifact-tag-profile#c001",
+    "2026-08-31-corpus-artifact-tag-profile#c002",
+    "2026-08-31-corpus-artifact-tag-profile#c003",
+    "2026-08-31-corpus-artifact-tag-profile#c004",
+    "2026-08-31-corpus-artifact-tag-profile#c005",
+    "2026-08-31-corpus-artifact-tag-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-artifact-version-analysis": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-artifact-version-analysis#c000",
+    "2026-08-31-corpus-artifact-version-analysis#c001",
+    "2026-08-31-corpus-artifact-version-analysis#c002",
+    "2026-08-31-corpus-artifact-version-analysis#c003",
+    "2026-08-31-corpus-artifact-version-analysis#c004",
+    "2026-08-31-corpus-artifact-version-analysis#c005",
+    "2026-08-31-corpus-artifact-version-analysis#c006",
+    "2026-08-31-corpus-artifact-version-analysis#c007"
+   ]
+  },
+  "2026-08-31-corpus-artifact-version-conflicts": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-artifact-version-conflicts#c000",
+    "2026-08-31-corpus-artifact-version-conflicts#c001",
+    "2026-08-31-corpus-artifact-version-conflicts#c002",
+    "2026-08-31-corpus-artifact-version-conflicts#c003",
+    "2026-08-31-corpus-artifact-version-conflicts#c004",
+    "2026-08-31-corpus-artifact-version-conflicts#c005",
+    "2026-08-31-corpus-artifact-version-conflicts#c006",
+    "2026-08-31-corpus-artifact-version-conflicts#c007"
+   ]
+  },
+  "2026-08-31-corpus-audit": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-audit#c000",
+    "2026-08-31-corpus-audit#c001",
+    "2026-08-31-corpus-audit#c002",
+    "2026-08-31-corpus-audit#c003",
+    "2026-08-31-corpus-audit#c004",
+    "2026-08-31-corpus-audit#c005",
+    "2026-08-31-corpus-audit#c006",
+    "2026-08-31-corpus-audit#c007"
+   ]
+  },
+  "2026-08-31-corpus-chunk-connectivity-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-chunk-connectivity-profile#c000",
+    "2026-08-31-corpus-chunk-connectivity-profile#c001",
+    "2026-08-31-corpus-chunk-connectivity-profile#c002",
+    "2026-08-31-corpus-chunk-connectivity-profile#c003",
+    "2026-08-31-corpus-chunk-connectivity-profile#c004",
+    "2026-08-31-corpus-chunk-connectivity-profile#c005",
+    "2026-08-31-corpus-chunk-connectivity-profile#c006",
+    "2026-08-31-corpus-chunk-connectivity-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-chunk-evolution": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-chunk-evolution#c000",
+    "2026-08-31-corpus-chunk-evolution#c001",
+    "2026-08-31-corpus-chunk-evolution#c002",
+    "2026-08-31-corpus-chunk-evolution#c003",
+    "2026-08-31-corpus-chunk-evolution#c004",
+    "2026-08-31-corpus-chunk-evolution#c005",
+    "2026-08-31-corpus-chunk-evolution#c006",
+    "2026-08-31-corpus-chunk-evolution#c007"
+   ]
+  },
+  "2026-08-31-corpus-chunk-kind-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-chunk-kind-profile#c000",
+    "2026-08-31-corpus-chunk-kind-profile#c001",
+    "2026-08-31-corpus-chunk-kind-profile#c002",
+    "2026-08-31-corpus-chunk-kind-profile#c003",
+    "2026-08-31-corpus-chunk-kind-profile#c004",
+    "2026-08-31-corpus-chunk-kind-profile#c005",
+    "2026-08-31-corpus-chunk-kind-profile#c006",
+    "2026-08-31-corpus-chunk-kind-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-chunk-position-analysis": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-chunk-position-analysis#c000",
+    "2026-08-31-corpus-chunk-position-analysis#c001",
+    "2026-08-31-corpus-chunk-position-analysis#c002",
+    "2026-08-31-corpus-chunk-position-analysis#c003",
+    "2026-08-31-corpus-chunk-position-analysis#c004",
+    "2026-08-31-corpus-chunk-position-analysis#c005",
+    "2026-08-31-corpus-chunk-position-analysis#c006",
+    "2026-08-31-corpus-chunk-position-analysis#c007"
+   ]
+  },
+  "2026-08-31-corpus-chunk-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-chunk-profile#c000",
+    "2026-08-31-corpus-chunk-profile#c001",
+    "2026-08-31-corpus-chunk-profile#c002",
+    "2026-08-31-corpus-chunk-profile#c003",
+    "2026-08-31-corpus-chunk-profile#c004",
+    "2026-08-31-corpus-chunk-profile#c005",
+    "2026-08-31-corpus-chunk-profile#c006",
+    "2026-08-31-corpus-chunk-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-chunk-similarity-clusters": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-chunk-similarity-clusters#c000",
+    "2026-08-31-corpus-chunk-similarity-clusters#c001",
+    "2026-08-31-corpus-chunk-similarity-clusters#c002",
+    "2026-08-31-corpus-chunk-similarity-clusters#c003",
+    "2026-08-31-corpus-chunk-similarity-clusters#c004",
+    "2026-08-31-corpus-chunk-similarity-clusters#c005",
+    "2026-08-31-corpus-chunk-similarity-clusters#c006",
+    "2026-08-31-corpus-chunk-similarity-clusters#c007"
+   ]
+  },
+  "2026-08-31-corpus-citation-age": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-citation-age#c000",
+    "2026-08-31-corpus-citation-age#c001",
+    "2026-08-31-corpus-citation-age#c002",
+    "2026-08-31-corpus-citation-age#c003",
+    "2026-08-31-corpus-citation-age#c004",
+    "2026-08-31-corpus-citation-age#c005",
+    "2026-08-31-corpus-citation-age#c006",
+    "2026-08-31-corpus-citation-age#c007"
+   ]
+  },
+  "2026-08-31-corpus-citation-analysis": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-citation-analysis#c000",
+    "2026-08-31-corpus-citation-analysis#c001",
+    "2026-08-31-corpus-citation-analysis#c002",
+    "2026-08-31-corpus-citation-analysis#c003",
+    "2026-08-31-corpus-citation-analysis#c004",
+    "2026-08-31-corpus-citation-analysis#c005",
+    "2026-08-31-corpus-citation-analysis#c006",
+    "2026-08-31-corpus-citation-analysis#c007"
+   ]
+  },
+  "2026-08-31-corpus-citation-edge-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-citation-edge-profile#c000",
+    "2026-08-31-corpus-citation-edge-profile#c001",
+    "2026-08-31-corpus-citation-edge-profile#c002",
+    "2026-08-31-corpus-citation-edge-profile#c003",
+    "2026-08-31-corpus-citation-edge-profile#c004",
+    "2026-08-31-corpus-citation-edge-profile#c005",
+    "2026-08-31-corpus-citation-edge-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-citation-graph": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-citation-graph#c000",
+    "2026-08-31-corpus-citation-graph#c001",
+    "2026-08-31-corpus-citation-graph#c002",
+    "2026-08-31-corpus-citation-graph#c003",
+    "2026-08-31-corpus-citation-graph#c004",
+    "2026-08-31-corpus-citation-graph#c005",
+    "2026-08-31-corpus-citation-graph#c006",
+    "2026-08-31-corpus-citation-graph#c007"
+   ]
+  },
+  "2026-08-31-corpus-citation-locator-analysis": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-citation-locator-analysis#c000",
+    "2026-08-31-corpus-citation-locator-analysis#c001",
+    "2026-08-31-corpus-citation-locator-analysis#c002",
+    "2026-08-31-corpus-citation-locator-analysis#c003",
+    "2026-08-31-corpus-citation-locator-analysis#c004",
+    "2026-08-31-corpus-citation-locator-analysis#c005",
+    "2026-08-31-corpus-citation-locator-analysis#c006",
+    "2026-08-31-corpus-citation-locator-analysis#c007"
+   ]
+  },
+  "2026-08-31-corpus-citation-tag-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-citation-tag-profile#c000",
+    "2026-08-31-corpus-citation-tag-profile#c001",
+    "2026-08-31-corpus-citation-tag-profile#c002",
+    "2026-08-31-corpus-citation-tag-profile#c003",
+    "2026-08-31-corpus-citation-tag-profile#c004",
+    "2026-08-31-corpus-citation-tag-profile#c005",
+    "2026-08-31-corpus-citation-tag-profile#c006",
+    "2026-08-31-corpus-citation-tag-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-citation-verification": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-citation-verification#c000",
+    "2026-08-31-corpus-citation-verification#c001",
+    "2026-08-31-corpus-citation-verification#c002",
+    "2026-08-31-corpus-citation-verification#c003",
+    "2026-08-31-corpus-citation-verification#c004",
+    "2026-08-31-corpus-citation-verification#c005",
+    "2026-08-31-corpus-citation-verification#c006",
+    "2026-08-31-corpus-citation-verification#c007"
+   ]
+  },
+  "2026-08-31-corpus-claim-consensus": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-claim-consensus#c000",
+    "2026-08-31-corpus-claim-consensus#c001",
+    "2026-08-31-corpus-claim-consensus#c002",
+    "2026-08-31-corpus-claim-consensus#c003",
+    "2026-08-31-corpus-claim-consensus#c004",
+    "2026-08-31-corpus-claim-consensus#c005",
+    "2026-08-31-corpus-claim-consensus#c006",
+    "2026-08-31-corpus-claim-consensus#c007"
+   ]
+  },
+  "2026-08-31-corpus-claim-network": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-claim-network#c000",
+    "2026-08-31-corpus-claim-network#c001",
+    "2026-08-31-corpus-claim-network#c002",
+    "2026-08-31-corpus-claim-network#c003",
+    "2026-08-31-corpus-claim-network#c004",
+    "2026-08-31-corpus-claim-network#c005",
+    "2026-08-31-corpus-claim-network#c006"
+   ]
+  },
+  "2026-08-31-corpus-classification-timeline": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-classification-timeline#c000",
+    "2026-08-31-corpus-classification-timeline#c001",
+    "2026-08-31-corpus-classification-timeline#c002",
+    "2026-08-31-corpus-classification-timeline#c003",
+    "2026-08-31-corpus-classification-timeline#c004",
+    "2026-08-31-corpus-classification-timeline#c005",
+    "2026-08-31-corpus-classification-timeline#c006",
+    "2026-08-31-corpus-classification-timeline#c007"
+   ]
+  },
+  "2026-08-31-corpus-cross-kind-analysis": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-cross-kind-analysis#c000",
+    "2026-08-31-corpus-cross-kind-analysis#c001",
+    "2026-08-31-corpus-cross-kind-analysis#c002",
+    "2026-08-31-corpus-cross-kind-analysis#c003",
+    "2026-08-31-corpus-cross-kind-analysis#c004",
+    "2026-08-31-corpus-cross-kind-analysis#c005",
+    "2026-08-31-corpus-cross-kind-analysis#c006"
+   ]
+  },
+  "2026-08-31-corpus-cross-ref-density": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-cross-ref-density#c000",
+    "2026-08-31-corpus-cross-ref-density#c001",
+    "2026-08-31-corpus-cross-ref-density#c002",
+    "2026-08-31-corpus-cross-ref-density#c003",
+    "2026-08-31-corpus-cross-ref-density#c004",
+    "2026-08-31-corpus-cross-ref-density#c005",
+    "2026-08-31-corpus-cross-ref-density#c006",
+    "2026-08-31-corpus-cross-ref-density#c007"
+   ]
+  },
+  "2026-08-31-corpus-cross-table-outlier-detector": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-cross-table-outlier-detector#c000",
+    "2026-08-31-corpus-cross-table-outlier-detector#c001",
+    "2026-08-31-corpus-cross-table-outlier-detector#c002",
+    "2026-08-31-corpus-cross-table-outlier-detector#c003",
+    "2026-08-31-corpus-cross-table-outlier-detector#c004",
+    "2026-08-31-corpus-cross-table-outlier-detector#c005",
+    "2026-08-31-corpus-cross-table-outlier-detector#c006",
+    "2026-08-31-corpus-cross-table-outlier-detector#c007"
+   ]
+  },
+  "2026-08-31-corpus-dashboard": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-dashboard#c000",
+    "2026-08-31-corpus-dashboard#c001",
+    "2026-08-31-corpus-dashboard#c002",
+    "2026-08-31-corpus-dashboard#c003",
+    "2026-08-31-corpus-dashboard#c004",
+    "2026-08-31-corpus-dashboard#c005",
+    "2026-08-31-corpus-dashboard#c006"
+   ]
+  },
+  "2026-08-31-corpus-diversity": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-diversity#c000",
+    "2026-08-31-corpus-diversity#c001",
+    "2026-08-31-corpus-diversity#c002",
+    "2026-08-31-corpus-diversity#c003",
+    "2026-08-31-corpus-diversity#c004",
+    "2026-08-31-corpus-diversity#c005",
+    "2026-08-31-corpus-diversity#c006"
+   ]
+  },
+  "2026-08-31-corpus-domain-analysis": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-domain-analysis#c000",
+    "2026-08-31-corpus-domain-analysis#c001",
+    "2026-08-31-corpus-domain-analysis#c002",
+    "2026-08-31-corpus-domain-analysis#c003",
+    "2026-08-31-corpus-domain-analysis#c004",
+    "2026-08-31-corpus-domain-analysis#c005",
+    "2026-08-31-corpus-domain-analysis#c006",
+    "2026-08-31-corpus-domain-analysis#c007"
+   ]
+  },
+  "2026-08-31-corpus-domain-balance": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-domain-balance#c000",
+    "2026-08-31-corpus-domain-balance#c001",
+    "2026-08-31-corpus-domain-balance#c002",
+    "2026-08-31-corpus-domain-balance#c003",
+    "2026-08-31-corpus-domain-balance#c004",
+    "2026-08-31-corpus-domain-balance#c005",
+    "2026-08-31-corpus-domain-balance#c006",
+    "2026-08-31-corpus-domain-balance#c007"
+   ]
+  },
+  "2026-08-31-corpus-domain-citation-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-domain-citation-profile#c000",
+    "2026-08-31-corpus-domain-citation-profile#c001",
+    "2026-08-31-corpus-domain-citation-profile#c002",
+    "2026-08-31-corpus-domain-citation-profile#c003",
+    "2026-08-31-corpus-domain-citation-profile#c004",
+    "2026-08-31-corpus-domain-citation-profile#c005",
+    "2026-08-31-corpus-domain-citation-profile#c006",
+    "2026-08-31-corpus-domain-citation-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-domain-edge-depth": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-domain-edge-depth#c000",
+    "2026-08-31-corpus-domain-edge-depth#c001",
+    "2026-08-31-corpus-domain-edge-depth#c002",
+    "2026-08-31-corpus-domain-edge-depth#c003",
+    "2026-08-31-corpus-domain-edge-depth#c004",
+    "2026-08-31-corpus-domain-edge-depth#c005",
+    "2026-08-31-corpus-domain-edge-depth#c006"
+   ]
+  },
+  "2026-08-31-corpus-domain-edge-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-domain-edge-profile#c000",
+    "2026-08-31-corpus-domain-edge-profile#c001",
+    "2026-08-31-corpus-domain-edge-profile#c002",
+    "2026-08-31-corpus-domain-edge-profile#c003",
+    "2026-08-31-corpus-domain-edge-profile#c004",
+    "2026-08-31-corpus-domain-edge-profile#c005",
+    "2026-08-31-corpus-domain-edge-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-domain-score-distribution": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-domain-score-distribution#c000",
+    "2026-08-31-corpus-domain-score-distribution#c001",
+    "2026-08-31-corpus-domain-score-distribution#c002",
+    "2026-08-31-corpus-domain-score-distribution#c003",
+    "2026-08-31-corpus-domain-score-distribution#c004",
+    "2026-08-31-corpus-domain-score-distribution#c005",
+    "2026-08-31-corpus-domain-score-distribution#c006",
+    "2026-08-31-corpus-domain-score-distribution#c007"
+   ]
+  },
+  "2026-08-31-corpus-domain-tag-affinity": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-domain-tag-affinity#c000",
+    "2026-08-31-corpus-domain-tag-affinity#c001",
+    "2026-08-31-corpus-domain-tag-affinity#c002",
+    "2026-08-31-corpus-domain-tag-affinity#c003",
+    "2026-08-31-corpus-domain-tag-affinity#c004",
+    "2026-08-31-corpus-domain-tag-affinity#c005",
+    "2026-08-31-corpus-domain-tag-affinity#c006",
+    "2026-08-31-corpus-domain-tag-affinity#c007"
+   ]
+  },
+  "2026-08-31-corpus-edge-basis-analysis": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-edge-basis-analysis#c000",
+    "2026-08-31-corpus-edge-basis-analysis#c001",
+    "2026-08-31-corpus-edge-basis-analysis#c002",
+    "2026-08-31-corpus-edge-basis-analysis#c003",
+    "2026-08-31-corpus-edge-basis-analysis#c004",
+    "2026-08-31-corpus-edge-basis-analysis#c005",
+    "2026-08-31-corpus-edge-basis-analysis#c006",
+    "2026-08-31-corpus-edge-basis-analysis#c007"
+   ]
+  },
+  "2026-08-31-corpus-edge-bridge-analysis": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-edge-bridge-analysis#c000",
+    "2026-08-31-corpus-edge-bridge-analysis#c001",
+    "2026-08-31-corpus-edge-bridge-analysis#c002",
+    "2026-08-31-corpus-edge-bridge-analysis#c003",
+    "2026-08-31-corpus-edge-bridge-analysis#c004",
+    "2026-08-31-corpus-edge-bridge-analysis#c005",
+    "2026-08-31-corpus-edge-bridge-analysis#c006",
+    "2026-08-31-corpus-edge-bridge-analysis#c007"
+   ]
+  },
+  "2026-08-31-corpus-edge-chain-analysis": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-edge-chain-analysis#c000",
+    "2026-08-31-corpus-edge-chain-analysis#c001",
+    "2026-08-31-corpus-edge-chain-analysis#c002",
+    "2026-08-31-corpus-edge-chain-analysis#c003",
+    "2026-08-31-corpus-edge-chain-analysis#c004",
+    "2026-08-31-corpus-edge-chain-analysis#c005",
+    "2026-08-31-corpus-edge-chain-analysis#c006",
+    "2026-08-31-corpus-edge-chain-analysis#c007"
+   ]
+  },
+  "2026-08-31-corpus-edge-citation-quality": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-edge-citation-quality#c000",
+    "2026-08-31-corpus-edge-citation-quality#c001",
+    "2026-08-31-corpus-edge-citation-quality#c002",
+    "2026-08-31-corpus-edge-citation-quality#c003",
+    "2026-08-31-corpus-edge-citation-quality#c004",
+    "2026-08-31-corpus-edge-citation-quality#c005",
+    "2026-08-31-corpus-edge-citation-quality#c006",
+    "2026-08-31-corpus-edge-citation-quality#c007"
+   ]
+  },
+  "2026-08-31-corpus-edge-confidence-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-edge-confidence-profile#c000",
+    "2026-08-31-corpus-edge-confidence-profile#c001",
+    "2026-08-31-corpus-edge-confidence-profile#c002",
+    "2026-08-31-corpus-edge-confidence-profile#c003",
+    "2026-08-31-corpus-edge-confidence-profile#c004",
+    "2026-08-31-corpus-edge-confidence-profile#c005",
+    "2026-08-31-corpus-edge-confidence-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-edge-confidence": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-edge-confidence#c000",
+    "2026-08-31-corpus-edge-confidence#c001",
+    "2026-08-31-corpus-edge-confidence#c002",
+    "2026-08-31-corpus-edge-confidence#c003",
+    "2026-08-31-corpus-edge-confidence#c004",
+    "2026-08-31-corpus-edge-confidence#c005",
+    "2026-08-31-corpus-edge-confidence#c006",
+    "2026-08-31-corpus-edge-confidence#c007"
+   ]
+  },
+  "2026-08-31-corpus-edge-cycle-detection": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-edge-cycle-detection#c000",
+    "2026-08-31-corpus-edge-cycle-detection#c001",
+    "2026-08-31-corpus-edge-cycle-detection#c002",
+    "2026-08-31-corpus-edge-cycle-detection#c003",
+    "2026-08-31-corpus-edge-cycle-detection#c004",
+    "2026-08-31-corpus-edge-cycle-detection#c005",
+    "2026-08-31-corpus-edge-cycle-detection#c006",
+    "2026-08-31-corpus-edge-cycle-detection#c007"
+   ]
+  },
+  "2026-08-31-corpus-edge-density": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-edge-density#c000",
+    "2026-08-31-corpus-edge-density#c001",
+    "2026-08-31-corpus-edge-density#c002",
+    "2026-08-31-corpus-edge-density#c003",
+    "2026-08-31-corpus-edge-density#c004",
+    "2026-08-31-corpus-edge-density#c005",
+    "2026-08-31-corpus-edge-density#c006",
+    "2026-08-31-corpus-edge-density#c007"
+   ]
+  },
+  "2026-08-31-corpus-edge-detection-timeline": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-edge-detection-timeline#c000",
+    "2026-08-31-corpus-edge-detection-timeline#c001",
+    "2026-08-31-corpus-edge-detection-timeline#c002",
+    "2026-08-31-corpus-edge-detection-timeline#c003",
+    "2026-08-31-corpus-edge-detection-timeline#c004",
+    "2026-08-31-corpus-edge-detection-timeline#c005",
+    "2026-08-31-corpus-edge-detection-timeline#c006",
+    "2026-08-31-corpus-edge-detection-timeline#c007"
+   ]
+  },
+  "2026-08-31-corpus-edge-reachability": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-edge-reachability#c000",
+    "2026-08-31-corpus-edge-reachability#c001",
+    "2026-08-31-corpus-edge-reachability#c002",
+    "2026-08-31-corpus-edge-reachability#c003",
+    "2026-08-31-corpus-edge-reachability#c004",
+    "2026-08-31-corpus-edge-reachability#c005",
+    "2026-08-31-corpus-edge-reachability#c006"
+   ]
+  },
+  "2026-08-31-corpus-edge-reciprocity-analysis": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-edge-reciprocity-analysis#c000",
+    "2026-08-31-corpus-edge-reciprocity-analysis#c001",
+    "2026-08-31-corpus-edge-reciprocity-analysis#c002",
+    "2026-08-31-corpus-edge-reciprocity-analysis#c003",
+    "2026-08-31-corpus-edge-reciprocity-analysis#c004",
+    "2026-08-31-corpus-edge-reciprocity-analysis#c005",
+    "2026-08-31-corpus-edge-reciprocity-analysis#c006",
+    "2026-08-31-corpus-edge-reciprocity-analysis#c007"
+   ]
+  },
+  "2026-08-31-corpus-edge-resolution": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-edge-resolution#c000",
+    "2026-08-31-corpus-edge-resolution#c001",
+    "2026-08-31-corpus-edge-resolution#c002",
+    "2026-08-31-corpus-edge-resolution#c003",
+    "2026-08-31-corpus-edge-resolution#c004",
+    "2026-08-31-corpus-edge-resolution#c005",
+    "2026-08-31-corpus-edge-resolution#c006"
+   ]
+  },
+  "2026-08-31-corpus-edge-source-temporal-lag": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-edge-source-temporal-lag#c000",
+    "2026-08-31-corpus-edge-source-temporal-lag#c001",
+    "2026-08-31-corpus-edge-source-temporal-lag#c002",
+    "2026-08-31-corpus-edge-source-temporal-lag#c003",
+    "2026-08-31-corpus-edge-source-temporal-lag#c004",
+    "2026-08-31-corpus-edge-source-temporal-lag#c005",
+    "2026-08-31-corpus-edge-source-temporal-lag#c006",
+    "2026-08-31-corpus-edge-source-temporal-lag#c007"
+   ]
+  },
+  "2026-08-31-corpus-edge-text-correlation": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-edge-text-correlation#c000",
+    "2026-08-31-corpus-edge-text-correlation#c001",
+    "2026-08-31-corpus-edge-text-correlation#c002",
+    "2026-08-31-corpus-edge-text-correlation#c003",
+    "2026-08-31-corpus-edge-text-correlation#c004",
+    "2026-08-31-corpus-edge-text-correlation#c005",
+    "2026-08-31-corpus-edge-text-correlation#c006"
+   ]
+  },
+  "2026-08-31-corpus-edge-type-transition": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-edge-type-transition#c000",
+    "2026-08-31-corpus-edge-type-transition#c001",
+    "2026-08-31-corpus-edge-type-transition#c002",
+    "2026-08-31-corpus-edge-type-transition#c003",
+    "2026-08-31-corpus-edge-type-transition#c004",
+    "2026-08-31-corpus-edge-type-transition#c005",
+    "2026-08-31-corpus-edge-type-transition#c006"
+   ]
+  },
+  "2026-08-31-corpus-enrichment-lag-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-enrichment-lag-profile#c000",
+    "2026-08-31-corpus-enrichment-lag-profile#c001",
+    "2026-08-31-corpus-enrichment-lag-profile#c002",
+    "2026-08-31-corpus-enrichment-lag-profile#c003",
+    "2026-08-31-corpus-enrichment-lag-profile#c004",
+    "2026-08-31-corpus-enrichment-lag-profile#c005",
+    "2026-08-31-corpus-enrichment-lag-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-evidence-chain-audit": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-evidence-chain-audit#c000",
+    "2026-08-31-corpus-evidence-chain-audit#c001",
+    "2026-08-31-corpus-evidence-chain-audit#c002",
+    "2026-08-31-corpus-evidence-chain-audit#c003",
+    "2026-08-31-corpus-evidence-chain-audit#c004",
+    "2026-08-31-corpus-evidence-chain-audit#c005",
+    "2026-08-31-corpus-evidence-chain-audit#c006"
+   ]
+  },
+  "2026-08-31-corpus-evidence-coverage": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-evidence-coverage#c000",
+    "2026-08-31-corpus-evidence-coverage#c001",
+    "2026-08-31-corpus-evidence-coverage#c002",
+    "2026-08-31-corpus-evidence-coverage#c003",
+    "2026-08-31-corpus-evidence-coverage#c004",
+    "2026-08-31-corpus-evidence-coverage#c005",
+    "2026-08-31-corpus-evidence-coverage#c006",
+    "2026-08-31-corpus-evidence-coverage#c007"
+   ]
+  },
+  "2026-08-31-corpus-freshness-scorer": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-freshness-scorer#c000",
+    "2026-08-31-corpus-freshness-scorer#c001",
+    "2026-08-31-corpus-freshness-scorer#c002",
+    "2026-08-31-corpus-freshness-scorer#c003",
+    "2026-08-31-corpus-freshness-scorer#c004",
+    "2026-08-31-corpus-freshness-scorer#c005",
+    "2026-08-31-corpus-freshness-scorer#c006",
+    "2026-08-31-corpus-freshness-scorer#c007"
+   ]
+  },
+  "2026-08-31-corpus-fts-citation-reachability": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-fts-citation-reachability#c000",
+    "2026-08-31-corpus-fts-citation-reachability#c001",
+    "2026-08-31-corpus-fts-citation-reachability#c002",
+    "2026-08-31-corpus-fts-citation-reachability#c003",
+    "2026-08-31-corpus-fts-citation-reachability#c004",
+    "2026-08-31-corpus-fts-citation-reachability#c005",
+    "2026-08-31-corpus-fts-citation-reachability#c006"
+   ]
+  },
+  "2026-08-31-corpus-fts-edge-reachability": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-fts-edge-reachability#c000",
+    "2026-08-31-corpus-fts-edge-reachability#c001",
+    "2026-08-31-corpus-fts-edge-reachability#c002",
+    "2026-08-31-corpus-fts-edge-reachability#c003",
+    "2026-08-31-corpus-fts-edge-reachability#c004",
+    "2026-08-31-corpus-fts-edge-reachability#c005",
+    "2026-08-31-corpus-fts-edge-reachability#c006"
+   ]
+  },
+  "2026-08-31-corpus-heading-citation-correlation": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-heading-citation-correlation#c000",
+    "2026-08-31-corpus-heading-citation-correlation#c001",
+    "2026-08-31-corpus-heading-citation-correlation#c002",
+    "2026-08-31-corpus-heading-citation-correlation#c003",
+    "2026-08-31-corpus-heading-citation-correlation#c004",
+    "2026-08-31-corpus-heading-citation-correlation#c005",
+    "2026-08-31-corpus-heading-citation-correlation#c006"
+   ]
+  },
+  "2026-08-31-corpus-heading-citation-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-heading-citation-profile#c000",
+    "2026-08-31-corpus-heading-citation-profile#c001",
+    "2026-08-31-corpus-heading-citation-profile#c002",
+    "2026-08-31-corpus-heading-citation-profile#c003",
+    "2026-08-31-corpus-heading-citation-profile#c004",
+    "2026-08-31-corpus-heading-citation-profile#c005",
+    "2026-08-31-corpus-heading-citation-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-heading-depth-analysis": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-heading-depth-analysis#c000",
+    "2026-08-31-corpus-heading-depth-analysis#c001",
+    "2026-08-31-corpus-heading-depth-analysis#c002",
+    "2026-08-31-corpus-heading-depth-analysis#c003",
+    "2026-08-31-corpus-heading-depth-analysis#c004",
+    "2026-08-31-corpus-heading-depth-analysis#c005",
+    "2026-08-31-corpus-heading-depth-analysis#c006",
+    "2026-08-31-corpus-heading-depth-analysis#c007"
+   ]
+  },
+  "2026-08-31-corpus-heading-domain-correlation": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-heading-domain-correlation#c000",
+    "2026-08-31-corpus-heading-domain-correlation#c001",
+    "2026-08-31-corpus-heading-domain-correlation#c002",
+    "2026-08-31-corpus-heading-domain-correlation#c003",
+    "2026-08-31-corpus-heading-domain-correlation#c004",
+    "2026-08-31-corpus-heading-domain-correlation#c005",
+    "2026-08-31-corpus-heading-domain-correlation#c006"
+   ]
+  },
+  "2026-08-31-corpus-heading-domain-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-heading-domain-profile#c000",
+    "2026-08-31-corpus-heading-domain-profile#c001",
+    "2026-08-31-corpus-heading-domain-profile#c002",
+    "2026-08-31-corpus-heading-domain-profile#c003",
+    "2026-08-31-corpus-heading-domain-profile#c004",
+    "2026-08-31-corpus-heading-domain-profile#c005",
+    "2026-08-31-corpus-heading-domain-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-heading-edge-correlation": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-heading-edge-correlation#c000",
+    "2026-08-31-corpus-heading-edge-correlation#c001",
+    "2026-08-31-corpus-heading-edge-correlation#c002",
+    "2026-08-31-corpus-heading-edge-correlation#c003",
+    "2026-08-31-corpus-heading-edge-correlation#c004",
+    "2026-08-31-corpus-heading-edge-correlation#c005",
+    "2026-08-31-corpus-heading-edge-correlation#c006"
+   ]
+  },
+  "2026-08-31-corpus-heading-edge-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-heading-edge-profile#c000",
+    "2026-08-31-corpus-heading-edge-profile#c001",
+    "2026-08-31-corpus-heading-edge-profile#c002",
+    "2026-08-31-corpus-heading-edge-profile#c003",
+    "2026-08-31-corpus-heading-edge-profile#c004",
+    "2026-08-31-corpus-heading-edge-profile#c005",
+    "2026-08-31-corpus-heading-edge-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-heading-kind-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-heading-kind-profile#c000",
+    "2026-08-31-corpus-heading-kind-profile#c001",
+    "2026-08-31-corpus-heading-kind-profile#c002",
+    "2026-08-31-corpus-heading-kind-profile#c003",
+    "2026-08-31-corpus-heading-kind-profile#c004",
+    "2026-08-31-corpus-heading-kind-profile#c005",
+    "2026-08-31-corpus-heading-kind-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-heading-license-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-heading-license-profile#c000",
+    "2026-08-31-corpus-heading-license-profile#c001",
+    "2026-08-31-corpus-heading-license-profile#c002",
+    "2026-08-31-corpus-heading-license-profile#c003",
+    "2026-08-31-corpus-heading-license-profile#c004",
+    "2026-08-31-corpus-heading-license-profile#c005",
+    "2026-08-31-corpus-heading-license-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-heading-liveness-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-heading-liveness-profile#c000",
+    "2026-08-31-corpus-heading-liveness-profile#c001",
+    "2026-08-31-corpus-heading-liveness-profile#c002",
+    "2026-08-31-corpus-heading-liveness-profile#c003",
+    "2026-08-31-corpus-heading-liveness-profile#c004",
+    "2026-08-31-corpus-heading-liveness-profile#c005",
+    "2026-08-31-corpus-heading-liveness-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-heading-publisher-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-heading-publisher-profile#c000",
+    "2026-08-31-corpus-heading-publisher-profile#c001",
+    "2026-08-31-corpus-heading-publisher-profile#c002",
+    "2026-08-31-corpus-heading-publisher-profile#c003",
+    "2026-08-31-corpus-heading-publisher-profile#c004",
+    "2026-08-31-corpus-heading-publisher-profile#c005",
+    "2026-08-31-corpus-heading-publisher-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-heading-simhash-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-heading-simhash-profile#c000",
+    "2026-08-31-corpus-heading-simhash-profile#c001",
+    "2026-08-31-corpus-heading-simhash-profile#c002",
+    "2026-08-31-corpus-heading-simhash-profile#c003",
+    "2026-08-31-corpus-heading-simhash-profile#c004",
+    "2026-08-31-corpus-heading-simhash-profile#c005",
+    "2026-08-31-corpus-heading-simhash-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-heading-status-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-heading-status-profile#c000",
+    "2026-08-31-corpus-heading-status-profile#c001",
+    "2026-08-31-corpus-heading-status-profile#c002",
+    "2026-08-31-corpus-heading-status-profile#c003",
+    "2026-08-31-corpus-heading-status-profile#c004",
+    "2026-08-31-corpus-heading-status-profile#c005",
+    "2026-08-31-corpus-heading-status-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-heading-tag-correlation": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-heading-tag-correlation#c000",
+    "2026-08-31-corpus-heading-tag-correlation#c001",
+    "2026-08-31-corpus-heading-tag-correlation#c002",
+    "2026-08-31-corpus-heading-tag-correlation#c003",
+    "2026-08-31-corpus-heading-tag-correlation#c004",
+    "2026-08-31-corpus-heading-tag-correlation#c005",
+    "2026-08-31-corpus-heading-tag-correlation#c006",
+    "2026-08-31-corpus-heading-tag-correlation#c007"
+   ]
+  },
+  "2026-08-31-corpus-heading-tag-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-heading-tag-profile#c000",
+    "2026-08-31-corpus-heading-tag-profile#c001",
+    "2026-08-31-corpus-heading-tag-profile#c002",
+    "2026-08-31-corpus-heading-tag-profile#c003",
+    "2026-08-31-corpus-heading-tag-profile#c004",
+    "2026-08-31-corpus-heading-tag-profile#c005",
+    "2026-08-31-corpus-heading-tag-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-health-scorecard": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-health-scorecard#c000",
+    "2026-08-31-corpus-health-scorecard#c001",
+    "2026-08-31-corpus-health-scorecard#c002",
+    "2026-08-31-corpus-health-scorecard#c003",
+    "2026-08-31-corpus-health-scorecard#c004",
+    "2026-08-31-corpus-health-scorecard#c005",
+    "2026-08-31-corpus-health-scorecard#c006",
+    "2026-08-31-corpus-health-scorecard#c007"
+   ]
+  },
+  "2026-08-31-corpus-ingestion-regression": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-ingestion-regression#c000",
+    "2026-08-31-corpus-ingestion-regression#c001",
+    "2026-08-31-corpus-ingestion-regression#c002",
+    "2026-08-31-corpus-ingestion-regression#c003",
+    "2026-08-31-corpus-ingestion-regression#c004",
+    "2026-08-31-corpus-ingestion-regression#c005",
+    "2026-08-31-corpus-ingestion-regression#c006",
+    "2026-08-31-corpus-ingestion-regression#c007"
+   ]
+  },
+  "2026-08-31-corpus-kind-citation-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-kind-citation-profile#c000",
+    "2026-08-31-corpus-kind-citation-profile#c001",
+    "2026-08-31-corpus-kind-citation-profile#c002",
+    "2026-08-31-corpus-kind-citation-profile#c003",
+    "2026-08-31-corpus-kind-citation-profile#c004",
+    "2026-08-31-corpus-kind-citation-profile#c005",
+    "2026-08-31-corpus-kind-citation-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-kind-domain-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-kind-domain-profile#c000",
+    "2026-08-31-corpus-kind-domain-profile#c001",
+    "2026-08-31-corpus-kind-domain-profile#c002",
+    "2026-08-31-corpus-kind-domain-profile#c003",
+    "2026-08-31-corpus-kind-domain-profile#c004",
+    "2026-08-31-corpus-kind-domain-profile#c005",
+    "2026-08-31-corpus-kind-domain-profile#c006",
+    "2026-08-31-corpus-kind-domain-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-kind-edge-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-kind-edge-profile#c000",
+    "2026-08-31-corpus-kind-edge-profile#c001",
+    "2026-08-31-corpus-kind-edge-profile#c002",
+    "2026-08-31-corpus-kind-edge-profile#c003",
+    "2026-08-31-corpus-kind-edge-profile#c004",
+    "2026-08-31-corpus-kind-edge-profile#c005",
+    "2026-08-31-corpus-kind-edge-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-kind-liveness-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-kind-liveness-profile#c000",
+    "2026-08-31-corpus-kind-liveness-profile#c001",
+    "2026-08-31-corpus-kind-liveness-profile#c002",
+    "2026-08-31-corpus-kind-liveness-profile#c003",
+    "2026-08-31-corpus-kind-liveness-profile#c004",
+    "2026-08-31-corpus-kind-liveness-profile#c005",
+    "2026-08-31-corpus-kind-liveness-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-kind-status-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-kind-status-profile#c000",
+    "2026-08-31-corpus-kind-status-profile#c001",
+    "2026-08-31-corpus-kind-status-profile#c002",
+    "2026-08-31-corpus-kind-status-profile#c003",
+    "2026-08-31-corpus-kind-status-profile#c004",
+    "2026-08-31-corpus-kind-status-profile#c005",
+    "2026-08-31-corpus-kind-status-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-kind-tag-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-kind-tag-profile#c000",
+    "2026-08-31-corpus-kind-tag-profile#c001",
+    "2026-08-31-corpus-kind-tag-profile#c002",
+    "2026-08-31-corpus-kind-tag-profile#c003",
+    "2026-08-31-corpus-kind-tag-profile#c004",
+    "2026-08-31-corpus-kind-tag-profile#c005",
+    "2026-08-31-corpus-kind-tag-profile#c006",
+    "2026-08-31-corpus-kind-tag-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-language-distribution": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-language-distribution#c000",
+    "2026-08-31-corpus-language-distribution#c001",
+    "2026-08-31-corpus-language-distribution#c002",
+    "2026-08-31-corpus-language-distribution#c003",
+    "2026-08-31-corpus-language-distribution#c004",
+    "2026-08-31-corpus-language-distribution#c005",
+    "2026-08-31-corpus-language-distribution#c006",
+    "2026-08-31-corpus-language-distribution#c007"
+   ]
+  },
+  "2026-08-31-corpus-license-citation-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-license-citation-profile#c000",
+    "2026-08-31-corpus-license-citation-profile#c001",
+    "2026-08-31-corpus-license-citation-profile#c002",
+    "2026-08-31-corpus-license-citation-profile#c003",
+    "2026-08-31-corpus-license-citation-profile#c004",
+    "2026-08-31-corpus-license-citation-profile#c005",
+    "2026-08-31-corpus-license-citation-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-license-domain-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-license-domain-profile#c000",
+    "2026-08-31-corpus-license-domain-profile#c001",
+    "2026-08-31-corpus-license-domain-profile#c002",
+    "2026-08-31-corpus-license-domain-profile#c003",
+    "2026-08-31-corpus-license-domain-profile#c004",
+    "2026-08-31-corpus-license-domain-profile#c005",
+    "2026-08-31-corpus-license-domain-profile#c006",
+    "2026-08-31-corpus-license-domain-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-license-edge-analysis": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-license-edge-analysis#c000",
+    "2026-08-31-corpus-license-edge-analysis#c001",
+    "2026-08-31-corpus-license-edge-analysis#c002",
+    "2026-08-31-corpus-license-edge-analysis#c003",
+    "2026-08-31-corpus-license-edge-analysis#c004",
+    "2026-08-31-corpus-license-edge-analysis#c005",
+    "2026-08-31-corpus-license-edge-analysis#c006"
+   ]
+  },
+  "2026-08-31-corpus-license-edge-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-license-edge-profile#c000",
+    "2026-08-31-corpus-license-edge-profile#c001",
+    "2026-08-31-corpus-license-edge-profile#c002",
+    "2026-08-31-corpus-license-edge-profile#c003",
+    "2026-08-31-corpus-license-edge-profile#c004",
+    "2026-08-31-corpus-license-edge-profile#c005",
+    "2026-08-31-corpus-license-edge-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-license-kind-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-license-kind-profile#c000",
+    "2026-08-31-corpus-license-kind-profile#c001",
+    "2026-08-31-corpus-license-kind-profile#c002",
+    "2026-08-31-corpus-license-kind-profile#c003",
+    "2026-08-31-corpus-license-kind-profile#c004",
+    "2026-08-31-corpus-license-kind-profile#c005",
+    "2026-08-31-corpus-license-kind-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-license-liveness-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-license-liveness-profile#c000",
+    "2026-08-31-corpus-license-liveness-profile#c001",
+    "2026-08-31-corpus-license-liveness-profile#c002",
+    "2026-08-31-corpus-license-liveness-profile#c003",
+    "2026-08-31-corpus-license-liveness-profile#c004",
+    "2026-08-31-corpus-license-liveness-profile#c005",
+    "2026-08-31-corpus-license-liveness-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-license-status-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-license-status-profile#c000",
+    "2026-08-31-corpus-license-status-profile#c001",
+    "2026-08-31-corpus-license-status-profile#c002",
+    "2026-08-31-corpus-license-status-profile#c003",
+    "2026-08-31-corpus-license-status-profile#c004",
+    "2026-08-31-corpus-license-status-profile#c005",
+    "2026-08-31-corpus-license-status-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-license-tag-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-license-tag-profile#c000",
+    "2026-08-31-corpus-license-tag-profile#c001",
+    "2026-08-31-corpus-license-tag-profile#c002",
+    "2026-08-31-corpus-license-tag-profile#c003",
+    "2026-08-31-corpus-license-tag-profile#c004",
+    "2026-08-31-corpus-license-tag-profile#c005",
+    "2026-08-31-corpus-license-tag-profile#c006",
+    "2026-08-31-corpus-license-tag-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-liveness-citation-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-liveness-citation-profile#c000",
+    "2026-08-31-corpus-liveness-citation-profile#c001",
+    "2026-08-31-corpus-liveness-citation-profile#c002",
+    "2026-08-31-corpus-liveness-citation-profile#c003",
+    "2026-08-31-corpus-liveness-citation-profile#c004",
+    "2026-08-31-corpus-liveness-citation-profile#c005",
+    "2026-08-31-corpus-liveness-citation-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-liveness-cross-analysis": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-liveness-cross-analysis#c000",
+    "2026-08-31-corpus-liveness-cross-analysis#c001",
+    "2026-08-31-corpus-liveness-cross-analysis#c002",
+    "2026-08-31-corpus-liveness-cross-analysis#c003",
+    "2026-08-31-corpus-liveness-cross-analysis#c004",
+    "2026-08-31-corpus-liveness-cross-analysis#c005",
+    "2026-08-31-corpus-liveness-cross-analysis#c006",
+    "2026-08-31-corpus-liveness-cross-analysis#c007"
+   ]
+  },
+  "2026-08-31-corpus-liveness-domain-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-liveness-domain-profile#c000",
+    "2026-08-31-corpus-liveness-domain-profile#c001",
+    "2026-08-31-corpus-liveness-domain-profile#c002",
+    "2026-08-31-corpus-liveness-domain-profile#c003",
+    "2026-08-31-corpus-liveness-domain-profile#c004",
+    "2026-08-31-corpus-liveness-domain-profile#c005",
+    "2026-08-31-corpus-liveness-domain-profile#c006",
+    "2026-08-31-corpus-liveness-domain-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-liveness-edge-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-liveness-edge-profile#c000",
+    "2026-08-31-corpus-liveness-edge-profile#c001",
+    "2026-08-31-corpus-liveness-edge-profile#c002",
+    "2026-08-31-corpus-liveness-edge-profile#c003",
+    "2026-08-31-corpus-liveness-edge-profile#c004",
+    "2026-08-31-corpus-liveness-edge-profile#c005",
+    "2026-08-31-corpus-liveness-edge-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-liveness-status-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-liveness-status-profile#c000",
+    "2026-08-31-corpus-liveness-status-profile#c001",
+    "2026-08-31-corpus-liveness-status-profile#c002",
+    "2026-08-31-corpus-liveness-status-profile#c003",
+    "2026-08-31-corpus-liveness-status-profile#c004",
+    "2026-08-31-corpus-liveness-status-profile#c005",
+    "2026-08-31-corpus-liveness-status-profile#c006",
+    "2026-08-31-corpus-liveness-status-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-liveness-tag-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-liveness-tag-profile#c000",
+    "2026-08-31-corpus-liveness-tag-profile#c001",
+    "2026-08-31-corpus-liveness-tag-profile#c002",
+    "2026-08-31-corpus-liveness-tag-profile#c003",
+    "2026-08-31-corpus-liveness-tag-profile#c004",
+    "2026-08-31-corpus-liveness-tag-profile#c005",
+    "2026-08-31-corpus-liveness-tag-profile#c006",
+    "2026-08-31-corpus-liveness-tag-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-publisher-citation-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-publisher-citation-profile#c000",
+    "2026-08-31-corpus-publisher-citation-profile#c001",
+    "2026-08-31-corpus-publisher-citation-profile#c002",
+    "2026-08-31-corpus-publisher-citation-profile#c003",
+    "2026-08-31-corpus-publisher-citation-profile#c004",
+    "2026-08-31-corpus-publisher-citation-profile#c005",
+    "2026-08-31-corpus-publisher-citation-profile#c006",
+    "2026-08-31-corpus-publisher-citation-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-publisher-domain-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-publisher-domain-profile#c000",
+    "2026-08-31-corpus-publisher-domain-profile#c001",
+    "2026-08-31-corpus-publisher-domain-profile#c002",
+    "2026-08-31-corpus-publisher-domain-profile#c003",
+    "2026-08-31-corpus-publisher-domain-profile#c004",
+    "2026-08-31-corpus-publisher-domain-profile#c005",
+    "2026-08-31-corpus-publisher-domain-profile#c006",
+    "2026-08-31-corpus-publisher-domain-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-publisher-edge-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-publisher-edge-profile#c000",
+    "2026-08-31-corpus-publisher-edge-profile#c001",
+    "2026-08-31-corpus-publisher-edge-profile#c002",
+    "2026-08-31-corpus-publisher-edge-profile#c003",
+    "2026-08-31-corpus-publisher-edge-profile#c004",
+    "2026-08-31-corpus-publisher-edge-profile#c005",
+    "2026-08-31-corpus-publisher-edge-profile#c006",
+    "2026-08-31-corpus-publisher-edge-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-publisher-kind-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-publisher-kind-profile#c000",
+    "2026-08-31-corpus-publisher-kind-profile#c001",
+    "2026-08-31-corpus-publisher-kind-profile#c002",
+    "2026-08-31-corpus-publisher-kind-profile#c003",
+    "2026-08-31-corpus-publisher-kind-profile#c004",
+    "2026-08-31-corpus-publisher-kind-profile#c005",
+    "2026-08-31-corpus-publisher-kind-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-publisher-license-distribution": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-publisher-license-distribution#c000",
+    "2026-08-31-corpus-publisher-license-distribution#c001",
+    "2026-08-31-corpus-publisher-license-distribution#c002",
+    "2026-08-31-corpus-publisher-license-distribution#c003",
+    "2026-08-31-corpus-publisher-license-distribution#c004",
+    "2026-08-31-corpus-publisher-license-distribution#c005",
+    "2026-08-31-corpus-publisher-license-distribution#c006",
+    "2026-08-31-corpus-publisher-license-distribution#c007"
+   ]
+  },
+  "2026-08-31-corpus-publisher-license-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-publisher-license-profile#c000",
+    "2026-08-31-corpus-publisher-license-profile#c001",
+    "2026-08-31-corpus-publisher-license-profile#c002",
+    "2026-08-31-corpus-publisher-license-profile#c003",
+    "2026-08-31-corpus-publisher-license-profile#c004",
+    "2026-08-31-corpus-publisher-license-profile#c005",
+    "2026-08-31-corpus-publisher-license-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-publisher-liveness-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-publisher-liveness-profile#c000",
+    "2026-08-31-corpus-publisher-liveness-profile#c001",
+    "2026-08-31-corpus-publisher-liveness-profile#c002",
+    "2026-08-31-corpus-publisher-liveness-profile#c003",
+    "2026-08-31-corpus-publisher-liveness-profile#c004",
+    "2026-08-31-corpus-publisher-liveness-profile#c005",
+    "2026-08-31-corpus-publisher-liveness-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-publisher-status-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-publisher-status-profile#c000",
+    "2026-08-31-corpus-publisher-status-profile#c001",
+    "2026-08-31-corpus-publisher-status-profile#c002",
+    "2026-08-31-corpus-publisher-status-profile#c003",
+    "2026-08-31-corpus-publisher-status-profile#c004",
+    "2026-08-31-corpus-publisher-status-profile#c005",
+    "2026-08-31-corpus-publisher-status-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-publisher-tag-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-publisher-tag-profile#c000",
+    "2026-08-31-corpus-publisher-tag-profile#c001",
+    "2026-08-31-corpus-publisher-tag-profile#c002",
+    "2026-08-31-corpus-publisher-tag-profile#c003",
+    "2026-08-31-corpus-publisher-tag-profile#c004",
+    "2026-08-31-corpus-publisher-tag-profile#c005",
+    "2026-08-31-corpus-publisher-tag-profile#c006",
+    "2026-08-31-corpus-publisher-tag-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-query-coverage": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-query-coverage#c000",
+    "2026-08-31-corpus-query-coverage#c001",
+    "2026-08-31-corpus-query-coverage#c002",
+    "2026-08-31-corpus-query-coverage#c003",
+    "2026-08-31-corpus-query-coverage#c004",
+    "2026-08-31-corpus-query-coverage#c005",
+    "2026-08-31-corpus-query-coverage#c006",
+    "2026-08-31-corpus-query-coverage#c007"
+   ]
+  },
+  "2026-08-31-corpus-readability": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-readability#c000",
+    "2026-08-31-corpus-readability#c001",
+    "2026-08-31-corpus-readability#c002",
+    "2026-08-31-corpus-readability#c003",
+    "2026-08-31-corpus-readability#c004",
+    "2026-08-31-corpus-readability#c005",
+    "2026-08-31-corpus-readability#c006",
+    "2026-08-31-corpus-readability#c007"
+   ]
+  },
+  "2026-08-31-corpus-recommend": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-recommend#c000",
+    "2026-08-31-corpus-recommend#c001",
+    "2026-08-31-corpus-recommend#c002",
+    "2026-08-31-corpus-recommend#c003",
+    "2026-08-31-corpus-recommend#c004",
+    "2026-08-31-corpus-recommend#c005",
+    "2026-08-31-corpus-recommend#c006"
+   ]
+  },
+  "2026-08-31-corpus-simhash-citation-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-simhash-citation-profile#c000",
+    "2026-08-31-corpus-simhash-citation-profile#c001",
+    "2026-08-31-corpus-simhash-citation-profile#c002",
+    "2026-08-31-corpus-simhash-citation-profile#c003",
+    "2026-08-31-corpus-simhash-citation-profile#c004",
+    "2026-08-31-corpus-simhash-citation-profile#c005",
+    "2026-08-31-corpus-simhash-citation-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-simhash-distribution": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-simhash-distribution#c000",
+    "2026-08-31-corpus-simhash-distribution#c001",
+    "2026-08-31-corpus-simhash-distribution#c002",
+    "2026-08-31-corpus-simhash-distribution#c003",
+    "2026-08-31-corpus-simhash-distribution#c004",
+    "2026-08-31-corpus-simhash-distribution#c005",
+    "2026-08-31-corpus-simhash-distribution#c006",
+    "2026-08-31-corpus-simhash-distribution#c007"
+   ]
+  },
+  "2026-08-31-corpus-simhash-domain-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-simhash-domain-profile#c000",
+    "2026-08-31-corpus-simhash-domain-profile#c001",
+    "2026-08-31-corpus-simhash-domain-profile#c002",
+    "2026-08-31-corpus-simhash-domain-profile#c003",
+    "2026-08-31-corpus-simhash-domain-profile#c004",
+    "2026-08-31-corpus-simhash-domain-profile#c005",
+    "2026-08-31-corpus-simhash-domain-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-simhash-edge-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-simhash-edge-profile#c000",
+    "2026-08-31-corpus-simhash-edge-profile#c001",
+    "2026-08-31-corpus-simhash-edge-profile#c002",
+    "2026-08-31-corpus-simhash-edge-profile#c003",
+    "2026-08-31-corpus-simhash-edge-profile#c004",
+    "2026-08-31-corpus-simhash-edge-profile#c005",
+    "2026-08-31-corpus-simhash-edge-profile#c006",
+    "2026-08-31-corpus-simhash-edge-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-simhash-kind-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-simhash-kind-profile#c000",
+    "2026-08-31-corpus-simhash-kind-profile#c001",
+    "2026-08-31-corpus-simhash-kind-profile#c002",
+    "2026-08-31-corpus-simhash-kind-profile#c003",
+    "2026-08-31-corpus-simhash-kind-profile#c004",
+    "2026-08-31-corpus-simhash-kind-profile#c005",
+    "2026-08-31-corpus-simhash-kind-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-simhash-license-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-simhash-license-profile#c000",
+    "2026-08-31-corpus-simhash-license-profile#c001",
+    "2026-08-31-corpus-simhash-license-profile#c002",
+    "2026-08-31-corpus-simhash-license-profile#c003",
+    "2026-08-31-corpus-simhash-license-profile#c004",
+    "2026-08-31-corpus-simhash-license-profile#c005",
+    "2026-08-31-corpus-simhash-license-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-simhash-liveness-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-simhash-liveness-profile#c000",
+    "2026-08-31-corpus-simhash-liveness-profile#c001",
+    "2026-08-31-corpus-simhash-liveness-profile#c002",
+    "2026-08-31-corpus-simhash-liveness-profile#c003",
+    "2026-08-31-corpus-simhash-liveness-profile#c004",
+    "2026-08-31-corpus-simhash-liveness-profile#c005",
+    "2026-08-31-corpus-simhash-liveness-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-simhash-publisher-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-simhash-publisher-profile#c000",
+    "2026-08-31-corpus-simhash-publisher-profile#c001",
+    "2026-08-31-corpus-simhash-publisher-profile#c002",
+    "2026-08-31-corpus-simhash-publisher-profile#c003",
+    "2026-08-31-corpus-simhash-publisher-profile#c004",
+    "2026-08-31-corpus-simhash-publisher-profile#c005",
+    "2026-08-31-corpus-simhash-publisher-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-simhash-status-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-simhash-status-profile#c000",
+    "2026-08-31-corpus-simhash-status-profile#c001",
+    "2026-08-31-corpus-simhash-status-profile#c002",
+    "2026-08-31-corpus-simhash-status-profile#c003",
+    "2026-08-31-corpus-simhash-status-profile#c004",
+    "2026-08-31-corpus-simhash-status-profile#c005",
+    "2026-08-31-corpus-simhash-status-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-simhash-tag-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-simhash-tag-profile#c000",
+    "2026-08-31-corpus-simhash-tag-profile#c001",
+    "2026-08-31-corpus-simhash-tag-profile#c002",
+    "2026-08-31-corpus-simhash-tag-profile#c003",
+    "2026-08-31-corpus-simhash-tag-profile#c004",
+    "2026-08-31-corpus-simhash-tag-profile#c005",
+    "2026-08-31-corpus-simhash-tag-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-similarity-analysis": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-similarity-analysis#c000",
+    "2026-08-31-corpus-similarity-analysis#c001",
+    "2026-08-31-corpus-similarity-analysis#c002",
+    "2026-08-31-corpus-similarity-analysis#c003",
+    "2026-08-31-corpus-similarity-analysis#c004",
+    "2026-08-31-corpus-similarity-analysis#c005",
+    "2026-08-31-corpus-similarity-analysis#c006",
+    "2026-08-31-corpus-similarity-analysis#c007"
+   ]
+  },
+  "2026-08-31-corpus-source-argumentation-balance": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-source-argumentation-balance#c000",
+    "2026-08-31-corpus-source-argumentation-balance#c001",
+    "2026-08-31-corpus-source-argumentation-balance#c002",
+    "2026-08-31-corpus-source-argumentation-balance#c003",
+    "2026-08-31-corpus-source-argumentation-balance#c004",
+    "2026-08-31-corpus-source-argumentation-balance#c005",
+    "2026-08-31-corpus-source-argumentation-balance#c006",
+    "2026-08-31-corpus-source-argumentation-balance#c007"
+   ]
+  },
+  "2026-08-31-corpus-source-chain": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-source-chain#c000",
+    "2026-08-31-corpus-source-chain#c001",
+    "2026-08-31-corpus-source-chain#c002",
+    "2026-08-31-corpus-source-chain#c003",
+    "2026-08-31-corpus-source-chain#c004",
+    "2026-08-31-corpus-source-chain#c005",
+    "2026-08-31-corpus-source-chain#c006",
+    "2026-08-31-corpus-source-chain#c007"
+   ]
+  },
+  "2026-08-31-corpus-source-citation-net": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-source-citation-net#c000",
+    "2026-08-31-corpus-source-citation-net#c001",
+    "2026-08-31-corpus-source-citation-net#c002",
+    "2026-08-31-corpus-source-citation-net#c003",
+    "2026-08-31-corpus-source-citation-net#c004",
+    "2026-08-31-corpus-source-citation-net#c005",
+    "2026-08-31-corpus-source-citation-net#c006",
+    "2026-08-31-corpus-source-citation-net#c007"
+   ]
+  },
+  "2026-08-31-corpus-source-composite-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-source-composite-profile#c000",
+    "2026-08-31-corpus-source-composite-profile#c001",
+    "2026-08-31-corpus-source-composite-profile#c002",
+    "2026-08-31-corpus-source-composite-profile#c003",
+    "2026-08-31-corpus-source-composite-profile#c004",
+    "2026-08-31-corpus-source-composite-profile#c005",
+    "2026-08-31-corpus-source-composite-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-source-edge-stance": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-source-edge-stance#c000",
+    "2026-08-31-corpus-source-edge-stance#c001",
+    "2026-08-31-corpus-source-edge-stance#c002",
+    "2026-08-31-corpus-source-edge-stance#c003",
+    "2026-08-31-corpus-source-edge-stance#c004",
+    "2026-08-31-corpus-source-edge-stance#c005",
+    "2026-08-31-corpus-source-edge-stance#c006"
+   ]
+  },
+  "2026-08-31-corpus-source-enrichment-completeness": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-source-enrichment-completeness#c000",
+    "2026-08-31-corpus-source-enrichment-completeness#c001",
+    "2026-08-31-corpus-source-enrichment-completeness#c002",
+    "2026-08-31-corpus-source-enrichment-completeness#c003",
+    "2026-08-31-corpus-source-enrichment-completeness#c004",
+    "2026-08-31-corpus-source-enrichment-completeness#c005",
+    "2026-08-31-corpus-source-enrichment-completeness#c006"
+   ]
+  },
+  "2026-08-31-corpus-source-impact": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-source-impact#c000",
+    "2026-08-31-corpus-source-impact#c001",
+    "2026-08-31-corpus-source-impact#c002",
+    "2026-08-31-corpus-source-impact#c003",
+    "2026-08-31-corpus-source-impact#c004",
+    "2026-08-31-corpus-source-impact#c005",
+    "2026-08-31-corpus-source-impact#c006"
+   ]
+  },
+  "2026-08-31-corpus-source-lifecycle": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-source-lifecycle#c000",
+    "2026-08-31-corpus-source-lifecycle#c001",
+    "2026-08-31-corpus-source-lifecycle#c002",
+    "2026-08-31-corpus-source-lifecycle#c003",
+    "2026-08-31-corpus-source-lifecycle#c004",
+    "2026-08-31-corpus-source-lifecycle#c005",
+    "2026-08-31-corpus-source-lifecycle#c006",
+    "2026-08-31-corpus-source-lifecycle#c007"
+   ]
+  },
+  "2026-08-31-corpus-source-overlap-analysis": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-source-overlap-analysis#c000",
+    "2026-08-31-corpus-source-overlap-analysis#c001",
+    "2026-08-31-corpus-source-overlap-analysis#c002",
+    "2026-08-31-corpus-source-overlap-analysis#c003",
+    "2026-08-31-corpus-source-overlap-analysis#c004",
+    "2026-08-31-corpus-source-overlap-analysis#c005",
+    "2026-08-31-corpus-source-overlap-analysis#c006",
+    "2026-08-31-corpus-source-overlap-analysis#c007"
+   ]
+  },
+  "2026-08-31-corpus-source-overlap": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-source-overlap#c000",
+    "2026-08-31-corpus-source-overlap#c001",
+    "2026-08-31-corpus-source-overlap#c002",
+    "2026-08-31-corpus-source-overlap#c003",
+    "2026-08-31-corpus-source-overlap#c004",
+    "2026-08-31-corpus-source-overlap#c005",
+    "2026-08-31-corpus-source-overlap#c006"
+   ]
+  },
+  "2026-08-31-corpus-source-provenance": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-source-provenance#c000",
+    "2026-08-31-corpus-source-provenance#c001",
+    "2026-08-31-corpus-source-provenance#c002",
+    "2026-08-31-corpus-source-provenance#c003",
+    "2026-08-31-corpus-source-provenance#c004",
+    "2026-08-31-corpus-source-provenance#c005",
+    "2026-08-31-corpus-source-provenance#c006",
+    "2026-08-31-corpus-source-provenance#c007"
+   ]
+  },
+  "2026-08-31-corpus-source-size-distribution": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-source-size-distribution#c000",
+    "2026-08-31-corpus-source-size-distribution#c001",
+    "2026-08-31-corpus-source-size-distribution#c002",
+    "2026-08-31-corpus-source-size-distribution#c003",
+    "2026-08-31-corpus-source-size-distribution#c004",
+    "2026-08-31-corpus-source-size-distribution#c005",
+    "2026-08-31-corpus-source-size-distribution#c006",
+    "2026-08-31-corpus-source-size-distribution#c007"
+   ]
+  },
+  "2026-08-31-corpus-status-citation-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-status-citation-profile#c000",
+    "2026-08-31-corpus-status-citation-profile#c001",
+    "2026-08-31-corpus-status-citation-profile#c002",
+    "2026-08-31-corpus-status-citation-profile#c003",
+    "2026-08-31-corpus-status-citation-profile#c004",
+    "2026-08-31-corpus-status-citation-profile#c005",
+    "2026-08-31-corpus-status-citation-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-status-domain-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-status-domain-profile#c000",
+    "2026-08-31-corpus-status-domain-profile#c001",
+    "2026-08-31-corpus-status-domain-profile#c002",
+    "2026-08-31-corpus-status-domain-profile#c003",
+    "2026-08-31-corpus-status-domain-profile#c004",
+    "2026-08-31-corpus-status-domain-profile#c005",
+    "2026-08-31-corpus-status-domain-profile#c006",
+    "2026-08-31-corpus-status-domain-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-status-edge-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-status-edge-profile#c000",
+    "2026-08-31-corpus-status-edge-profile#c001",
+    "2026-08-31-corpus-status-edge-profile#c002",
+    "2026-08-31-corpus-status-edge-profile#c003",
+    "2026-08-31-corpus-status-edge-profile#c004",
+    "2026-08-31-corpus-status-edge-profile#c005",
+    "2026-08-31-corpus-status-edge-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-status-enrichment-profile": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-status-enrichment-profile#c000",
+    "2026-08-31-corpus-status-enrichment-profile#c001",
+    "2026-08-31-corpus-status-enrichment-profile#c002",
+    "2026-08-31-corpus-status-enrichment-profile#c003",
+    "2026-08-31-corpus-status-enrichment-profile#c004",
+    "2026-08-31-corpus-status-enrichment-profile#c005",
+    "2026-08-31-corpus-status-enrichment-profile#c006",
+    "2026-08-31-corpus-status-enrichment-profile#c007"
+   ]
+  },
+  "2026-08-31-corpus-status-reason-trends": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-status-reason-trends#c000",
+    "2026-08-31-corpus-status-reason-trends#c001",
+    "2026-08-31-corpus-status-reason-trends#c002",
+    "2026-08-31-corpus-status-reason-trends#c003",
+    "2026-08-31-corpus-status-reason-trends#c004",
+    "2026-08-31-corpus-status-reason-trends#c005",
+    "2026-08-31-corpus-status-reason-trends#c006",
+    "2026-08-31-corpus-status-reason-trends#c007"
+   ]
+  },
+  "2026-08-31-corpus-status-tag-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-status-tag-profile#c000",
+    "2026-08-31-corpus-status-tag-profile#c001",
+    "2026-08-31-corpus-status-tag-profile#c002",
+    "2026-08-31-corpus-status-tag-profile#c003",
+    "2026-08-31-corpus-status-tag-profile#c004",
+    "2026-08-31-corpus-status-tag-profile#c005",
+    "2026-08-31-corpus-status-tag-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-supersession-analysis": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-supersession-analysis#c000",
+    "2026-08-31-corpus-supersession-analysis#c001",
+    "2026-08-31-corpus-supersession-analysis#c002",
+    "2026-08-31-corpus-supersession-analysis#c003",
+    "2026-08-31-corpus-supersession-analysis#c004",
+    "2026-08-31-corpus-supersession-analysis#c005",
+    "2026-08-31-corpus-supersession-analysis#c006",
+    "2026-08-31-corpus-supersession-analysis#c007"
+   ]
+  },
+  "2026-08-31-corpus-supersession-edge-orphans": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-supersession-edge-orphans#c000",
+    "2026-08-31-corpus-supersession-edge-orphans#c001",
+    "2026-08-31-corpus-supersession-edge-orphans#c002",
+    "2026-08-31-corpus-supersession-edge-orphans#c003",
+    "2026-08-31-corpus-supersession-edge-orphans#c004",
+    "2026-08-31-corpus-supersession-edge-orphans#c005",
+    "2026-08-31-corpus-supersession-edge-orphans#c006",
+    "2026-08-31-corpus-supersession-edge-orphans#c007"
+   ]
+  },
+  "2026-08-31-corpus-tag-citation-correlation": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-tag-citation-correlation#c000",
+    "2026-08-31-corpus-tag-citation-correlation#c001",
+    "2026-08-31-corpus-tag-citation-correlation#c002",
+    "2026-08-31-corpus-tag-citation-correlation#c003",
+    "2026-08-31-corpus-tag-citation-correlation#c004",
+    "2026-08-31-corpus-tag-citation-correlation#c005",
+    "2026-08-31-corpus-tag-citation-correlation#c006"
+   ]
+  },
+  "2026-08-31-corpus-tag-citation-yield": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-tag-citation-yield#c000",
+    "2026-08-31-corpus-tag-citation-yield#c001",
+    "2026-08-31-corpus-tag-citation-yield#c002",
+    "2026-08-31-corpus-tag-citation-yield#c003",
+    "2026-08-31-corpus-tag-citation-yield#c004",
+    "2026-08-31-corpus-tag-citation-yield#c005",
+    "2026-08-31-corpus-tag-citation-yield#c006"
+   ]
+  },
+  "2026-08-31-corpus-tag-cooccurrence": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-tag-cooccurrence#c000",
+    "2026-08-31-corpus-tag-cooccurrence#c001",
+    "2026-08-31-corpus-tag-cooccurrence#c002",
+    "2026-08-31-corpus-tag-cooccurrence#c003",
+    "2026-08-31-corpus-tag-cooccurrence#c004",
+    "2026-08-31-corpus-tag-cooccurrence#c005",
+    "2026-08-31-corpus-tag-cooccurrence#c006"
+   ]
+  },
+  "2026-08-31-corpus-tag-domain-correlation": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-tag-domain-correlation#c000",
+    "2026-08-31-corpus-tag-domain-correlation#c001",
+    "2026-08-31-corpus-tag-domain-correlation#c002",
+    "2026-08-31-corpus-tag-domain-correlation#c003",
+    "2026-08-31-corpus-tag-domain-correlation#c004",
+    "2026-08-31-corpus-tag-domain-correlation#c005",
+    "2026-08-31-corpus-tag-domain-correlation#c006"
+   ]
+  },
+  "2026-08-31-corpus-tag-domain-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-tag-domain-profile#c000",
+    "2026-08-31-corpus-tag-domain-profile#c001",
+    "2026-08-31-corpus-tag-domain-profile#c002",
+    "2026-08-31-corpus-tag-domain-profile#c003",
+    "2026-08-31-corpus-tag-domain-profile#c004",
+    "2026-08-31-corpus-tag-domain-profile#c005",
+    "2026-08-31-corpus-tag-domain-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-tag-edge-correlation": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-tag-edge-correlation#c000",
+    "2026-08-31-corpus-tag-edge-correlation#c001",
+    "2026-08-31-corpus-tag-edge-correlation#c002",
+    "2026-08-31-corpus-tag-edge-correlation#c003",
+    "2026-08-31-corpus-tag-edge-correlation#c004",
+    "2026-08-31-corpus-tag-edge-correlation#c005",
+    "2026-08-31-corpus-tag-edge-correlation#c006"
+   ]
+  },
+  "2026-08-31-corpus-tag-edge-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-tag-edge-profile#c000",
+    "2026-08-31-corpus-tag-edge-profile#c001",
+    "2026-08-31-corpus-tag-edge-profile#c002",
+    "2026-08-31-corpus-tag-edge-profile#c003",
+    "2026-08-31-corpus-tag-edge-profile#c004",
+    "2026-08-31-corpus-tag-edge-profile#c005",
+    "2026-08-31-corpus-tag-edge-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-tag-entropy": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-tag-entropy#c000",
+    "2026-08-31-corpus-tag-entropy#c001",
+    "2026-08-31-corpus-tag-entropy#c002",
+    "2026-08-31-corpus-tag-entropy#c003",
+    "2026-08-31-corpus-tag-entropy#c004",
+    "2026-08-31-corpus-tag-entropy#c005",
+    "2026-08-31-corpus-tag-entropy#c006",
+    "2026-08-31-corpus-tag-entropy#c007"
+   ]
+  },
+  "2026-08-31-corpus-tag-landscape": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-tag-landscape#c000",
+    "2026-08-31-corpus-tag-landscape#c001",
+    "2026-08-31-corpus-tag-landscape#c002",
+    "2026-08-31-corpus-tag-landscape#c003",
+    "2026-08-31-corpus-tag-landscape#c004",
+    "2026-08-31-corpus-tag-landscape#c005",
+    "2026-08-31-corpus-tag-landscape#c006",
+    "2026-08-31-corpus-tag-landscape#c007"
+   ]
+  },
+  "2026-08-31-corpus-tag-score-trends": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-tag-score-trends#c000",
+    "2026-08-31-corpus-tag-score-trends#c001",
+    "2026-08-31-corpus-tag-score-trends#c002",
+    "2026-08-31-corpus-tag-score-trends#c003",
+    "2026-08-31-corpus-tag-score-trends#c004",
+    "2026-08-31-corpus-tag-score-trends#c005",
+    "2026-08-31-corpus-tag-score-trends#c006",
+    "2026-08-31-corpus-tag-score-trends#c007"
+   ]
+  },
+  "2026-08-31-corpus-tag-verification-breakdown": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-tag-verification-breakdown#c000",
+    "2026-08-31-corpus-tag-verification-breakdown#c001",
+    "2026-08-31-corpus-tag-verification-breakdown#c002",
+    "2026-08-31-corpus-tag-verification-breakdown#c003",
+    "2026-08-31-corpus-tag-verification-breakdown#c004",
+    "2026-08-31-corpus-tag-verification-breakdown#c005",
+    "2026-08-31-corpus-tag-verification-breakdown#c006"
+   ]
+  },
+  "2026-08-31-corpus-temporal-distribution": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-temporal-distribution#c000",
+    "2026-08-31-corpus-temporal-distribution#c001",
+    "2026-08-31-corpus-temporal-distribution#c002",
+    "2026-08-31-corpus-temporal-distribution#c003",
+    "2026-08-31-corpus-temporal-distribution#c004",
+    "2026-08-31-corpus-temporal-distribution#c005",
+    "2026-08-31-corpus-temporal-distribution#c006",
+    "2026-08-31-corpus-temporal-distribution#c007"
+   ]
+  },
+  "2026-08-31-corpus-timeline": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-timeline#c000",
+    "2026-08-31-corpus-timeline#c001",
+    "2026-08-31-corpus-timeline#c002",
+    "2026-08-31-corpus-timeline#c003",
+    "2026-08-31-corpus-timeline#c004",
+    "2026-08-31-corpus-timeline#c005",
+    "2026-08-31-corpus-timeline#c006"
+   ]
+  },
+  "2026-08-31-corpus-topic-coherence": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-topic-coherence#c000",
+    "2026-08-31-corpus-topic-coherence#c001",
+    "2026-08-31-corpus-topic-coherence#c002",
+    "2026-08-31-corpus-topic-coherence#c003",
+    "2026-08-31-corpus-topic-coherence#c004",
+    "2026-08-31-corpus-topic-coherence#c005",
+    "2026-08-31-corpus-topic-coherence#c006",
+    "2026-08-31-corpus-topic-coherence#c007"
+   ]
+  },
+  "2026-08-31-corpus-topic-model": {
+   "n_chunks": 9,
+   "chunk_ids": [
+    "2026-08-31-corpus-topic-model#c000",
+    "2026-08-31-corpus-topic-model#c001",
+    "2026-08-31-corpus-topic-model#c002",
+    "2026-08-31-corpus-topic-model#c003",
+    "2026-08-31-corpus-topic-model#c004",
+    "2026-08-31-corpus-topic-model#c005",
+    "2026-08-31-corpus-topic-model#c006",
+    "2026-08-31-corpus-topic-model#c007",
+    "2026-08-31-corpus-topic-model#c008"
+   ]
+  },
+  "2026-08-31-corpus-upstream-provenance": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-upstream-provenance#c000",
+    "2026-08-31-corpus-upstream-provenance#c001",
+    "2026-08-31-corpus-upstream-provenance#c002",
+    "2026-08-31-corpus-upstream-provenance#c003",
+    "2026-08-31-corpus-upstream-provenance#c004",
+    "2026-08-31-corpus-upstream-provenance#c005",
+    "2026-08-31-corpus-upstream-provenance#c006",
+    "2026-08-31-corpus-upstream-provenance#c007"
+   ]
+  },
+  "2026-08-31-corpus-verification-timeline": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-verification-timeline#c000",
+    "2026-08-31-corpus-verification-timeline#c001",
+    "2026-08-31-corpus-verification-timeline#c002",
+    "2026-08-31-corpus-verification-timeline#c003",
+    "2026-08-31-corpus-verification-timeline#c004",
+    "2026-08-31-corpus-verification-timeline#c005",
+    "2026-08-31-corpus-verification-timeline#c006",
+    "2026-08-31-corpus-verification-timeline#c007"
+   ]
+  },
+  "2026-08-31-corpus-version-churn": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-version-churn#c000",
+    "2026-08-31-corpus-version-churn#c001",
+    "2026-08-31-corpus-version-churn#c002",
+    "2026-08-31-corpus-version-churn#c003",
+    "2026-08-31-corpus-version-churn#c004",
+    "2026-08-31-corpus-version-churn#c005",
+    "2026-08-31-corpus-version-churn#c006",
+    "2026-08-31-corpus-version-churn#c007"
+   ]
+  },
+  "2026-08-31-corpus-version-citation-drift": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-version-citation-drift#c000",
+    "2026-08-31-corpus-version-citation-drift#c001",
+    "2026-08-31-corpus-version-citation-drift#c002",
+    "2026-08-31-corpus-version-citation-drift#c003",
+    "2026-08-31-corpus-version-citation-drift#c004",
+    "2026-08-31-corpus-version-citation-drift#c005",
+    "2026-08-31-corpus-version-citation-drift#c006"
+   ]
+  },
+  "2026-08-31-corpus-version-claim-edge-cascade": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-version-claim-edge-cascade#c000",
+    "2026-08-31-corpus-version-claim-edge-cascade#c001",
+    "2026-08-31-corpus-version-claim-edge-cascade#c002",
+    "2026-08-31-corpus-version-claim-edge-cascade#c003",
+    "2026-08-31-corpus-version-claim-edge-cascade#c004",
+    "2026-08-31-corpus-version-claim-edge-cascade#c005",
+    "2026-08-31-corpus-version-claim-edge-cascade#c006",
+    "2026-08-31-corpus-version-claim-edge-cascade#c007"
+   ]
+  },
+  "2026-08-31-corpus-version-domain-stability": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-version-domain-stability#c000",
+    "2026-08-31-corpus-version-domain-stability#c001",
+    "2026-08-31-corpus-version-domain-stability#c002",
+    "2026-08-31-corpus-version-domain-stability#c003",
+    "2026-08-31-corpus-version-domain-stability#c004",
+    "2026-08-31-corpus-version-domain-stability#c005",
+    "2026-08-31-corpus-version-domain-stability#c006"
+   ]
+  },
+  "2026-08-31-corpus-version-edge-impact": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-version-edge-impact#c000",
+    "2026-08-31-corpus-version-edge-impact#c001",
+    "2026-08-31-corpus-version-edge-impact#c002",
+    "2026-08-31-corpus-version-edge-impact#c003",
+    "2026-08-31-corpus-version-edge-impact#c004",
+    "2026-08-31-corpus-version-edge-impact#c005",
+    "2026-08-31-corpus-version-edge-impact#c006",
+    "2026-08-31-corpus-version-edge-impact#c007"
+   ]
+  },
+  "2026-08-31-corpus-version-fts-coverage": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-version-fts-coverage#c000",
+    "2026-08-31-corpus-version-fts-coverage#c001",
+    "2026-08-31-corpus-version-fts-coverage#c002",
+    "2026-08-31-corpus-version-fts-coverage#c003",
+    "2026-08-31-corpus-version-fts-coverage#c004",
+    "2026-08-31-corpus-version-fts-coverage#c005",
+    "2026-08-31-corpus-version-fts-coverage#c006",
+    "2026-08-31-corpus-version-fts-coverage#c007"
+   ]
+  },
+  "2026-08-31-corpus-version-source-profile": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-version-source-profile#c000",
+    "2026-08-31-corpus-version-source-profile#c001",
+    "2026-08-31-corpus-version-source-profile#c002",
+    "2026-08-31-corpus-version-source-profile#c003",
+    "2026-08-31-corpus-version-source-profile#c004",
+    "2026-08-31-corpus-version-source-profile#c005",
+    "2026-08-31-corpus-version-source-profile#c006"
+   ]
+  },
+  "2026-08-31-corpus-version-tag-stability": {
+   "n_chunks": 7,
+   "chunk_ids": [
+    "2026-08-31-corpus-version-tag-stability#c000",
+    "2026-08-31-corpus-version-tag-stability#c001",
+    "2026-08-31-corpus-version-tag-stability#c002",
+    "2026-08-31-corpus-version-tag-stability#c003",
+    "2026-08-31-corpus-version-tag-stability#c004",
+    "2026-08-31-corpus-version-tag-stability#c005",
+    "2026-08-31-corpus-version-tag-stability#c006"
+   ]
+  },
+  "2026-08-31-corpus-version-timeline": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-version-timeline#c000",
+    "2026-08-31-corpus-version-timeline#c001",
+    "2026-08-31-corpus-version-timeline#c002",
+    "2026-08-31-corpus-version-timeline#c003",
+    "2026-08-31-corpus-version-timeline#c004",
+    "2026-08-31-corpus-version-timeline#c005",
+    "2026-08-31-corpus-version-timeline#c006",
+    "2026-08-31-corpus-version-timeline#c007"
+   ]
+  },
+  "2026-08-31-corpus-vocab-analysis": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-vocab-analysis#c000",
+    "2026-08-31-corpus-vocab-analysis#c001",
+    "2026-08-31-corpus-vocab-analysis#c002",
+    "2026-08-31-corpus-vocab-analysis#c003",
+    "2026-08-31-corpus-vocab-analysis#c004",
+    "2026-08-31-corpus-vocab-analysis#c005",
+    "2026-08-31-corpus-vocab-analysis#c006",
+    "2026-08-31-corpus-vocab-analysis#c007"
+   ]
+  },
+  "2026-08-31-corpus-word-count-distribution": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-word-count-distribution#c000",
+    "2026-08-31-corpus-word-count-distribution#c001",
+    "2026-08-31-corpus-word-count-distribution#c002",
+    "2026-08-31-corpus-word-count-distribution#c003",
+    "2026-08-31-corpus-word-count-distribution#c004",
+    "2026-08-31-corpus-word-count-distribution#c005",
+    "2026-08-31-corpus-word-count-distribution#c006",
+    "2026-08-31-corpus-word-count-distribution#c007"
+   ]
+  },
+  "2026-08-31-corpus-xray": {
+   "n_chunks": 8,
+   "chunk_ids": [
+    "2026-08-31-corpus-xray#c000",
+    "2026-08-31-corpus-xray#c001",
+    "2026-08-31-corpus-xray#c002",
+    "2026-08-31-corpus-xray#c003",
+    "2026-08-31-corpus-xray#c004",
+    "2026-08-31-corpus-xray#c005",
+    "2026-08-31-corpus-xray#c006",
+    "2026-08-31-corpus-xray#c007"
+   ]
+  }
+ }
+}

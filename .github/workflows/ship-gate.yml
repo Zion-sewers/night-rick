@@ -122,6 +122,9 @@ jobs:
       - name: strand.py check (doc structure + reachability)
         run: python tools/docmap/strand.py check
 
+      - name: docs-rag index check (corpus docs indexed + linked from docs/RAG.md)
+        run: python tools/docs-rag/check_index.py check
+
       - name: atlas.py selftest (corpus structure + near-duplicate detection)
         run: python tools/docmap/atlas.py selftest
 

@@ -1,14 +1,14 @@
 ---
 name: youtube-distill
-description: Analyse a YouTube video by driving Claude in Chrome to Gemini, which reads the video directly from its URL, then distil the answer into a fixed contract with search-ready takeaways. Triggers on "analyse this video", "what does this talk say", "distil this youtube", a bare YouTube URL, or /youtube-distill. Records what is quoted versus what is a model's reading.
+description: "Analyse a YouTube video via Gemini in the browser and distil it into a fixed, checkable artifact: thesis, mechanism, evidence with timestamps, disagreement, search terms, and what is quoted vs inferred. Triggers on 'analyse this video', 'distil this youtube', 'summarise this video', a bare YouTube URL, or /youtube-distill. Canonical YouTube skill (merged with youtube-gemini 2026-10-10; the repo is the canonical source)."
 ---
 
 # YouTube distill
 
 Turn a video into a small, checkable artifact instead of a summary nobody re-reads.
 
-The mechanism is a browser round trip: Claude in Chrome opens Gemini, hands it the
-YouTube URL with a fixed question, and reads the answer back. Gemini is used because it
+The mechanism is a browser round trip: open Gemini in the managed browser, hand it the
+YouTube URL with a fixed question, and read the answer back. Gemini is used because it
 reads the video itself from the URL rather than a scraped transcript, which is a
 capability the local session does not have.
 
@@ -67,19 +67,26 @@ Two corollaries worth keeping. A highly informative question is useless if the s
 cannot answer it, so weight by answerability as well as by information. And a question
 that can only be answered "yes" carries no information at all, whatever it feels like.
 
-## Step 3: run it
+## Step 3: run it (verified route, 2026-10-10)
 
-Load the browser tools in ONE ToolSearch call, then:
+Use `browser.spawn_task` (one message per round trip; wait for the handoff before
+continuing). Task template:
 
-1. `tabs_context_mcp` with `createIfEmpty: true`. If several browsers are connected you
-   MUST ask which one before acting.
-2. Navigate to `https://gemini.google.com/app`.
-3. Paste the contract below with the URL substituted, then read the answer with
-   `get_page_text` rather than screenshots. Text is cheaper and exact.
-4. If the answer is truncated or the page is still streaming, re-read rather than
-   guessing. Never fill a gap from your own knowledge of the topic: that is the failure
-   this skill exists to prevent, because a plausible sentence you wrote is
-   indistinguishable in the artifact from something the video said.
+"Open gemini.google.com. If the signed-in chat interface loads, you are ready. Locate
+the prompt input box, type the following message exactly, send it, wait for the response
+to finish generating, then report the full reply text back. Message: <THE CONTRACT
+BELOW with the URL substituted>. Do not navigate away, open other chats, or change any
+settings."
+
+Read the answer from the handoff text rather than screenshots. Text is cheaper and exact.
+If the answer is truncated or still streaming, steer the same task to re-read rather than
+guessing. Never fill a gap from your own knowledge of the topic: a plausible sentence you
+wrote is indistinguishable in the artifact from something the video said, and that is the
+failure this skill exists to prevent.
+
+Fallback (only if Gemini reports it cannot access the video): transcript extraction is
+UNVERIFIED in this environment — verify tooling first or ask the user; do not present it
+as working.
 
 ## The contract sent to Gemini
 
@@ -110,8 +117,7 @@ URL: <youtube url>
 If you cannot access the video, say exactly that. Do not answer from the title.
 ```
 
-Item 8 is the one people delete first and it is the one that matters. Without it the
-artifact cannot distinguish what the video said from what the model filled in.
+Item 8 is the one people delete first and it is the one that matters. Without it the artifact cannot distinguish what the video said from what the model filled in.
 
 ## Step 4: the artifact
 
@@ -161,3 +167,4 @@ produces agreement, not confirmation.
   error.
 - If the video is unavailable, record that and stop. Do not answer from the title, the
   channel, or prior knowledge of the topic.
+- Reply in the user's language (Hebrew for Shoval) unless asked otherwise.

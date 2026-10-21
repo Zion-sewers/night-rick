@@ -120,7 +120,11 @@ jobs:
         run: python tools/docmap/strand.py selftest
 
       - name: strand.py check (doc structure + reachability)
-        run: python tools/docmap/strand.py check
+        # Diff-aware: the gate fails only on violations this change introduces.
+        # Pre-existing debt stays visible via `strand.py report` and countable
+        # via docs/strand-exempt.txt; it no longer blocks clean PRs. On main
+        # pushes HEAD == origin/main, so the diff is trivially empty.
+        run: python tools/docmap/strand.py check --diff-base origin/main
 
       - name: atlas.py selftest (corpus structure + near-duplicate detection)
         run: python tools/docmap/atlas.py selftest

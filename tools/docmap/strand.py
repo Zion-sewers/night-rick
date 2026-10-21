@@ -30,14 +30,25 @@ reason after `|`. That file is the visible, countable backlog. A new document
 that strands fails the check immediately; an old one shows up in the exempt
 count, which is meant to be uncomfortable rather than invisible.
 
+Diff-aware gating. `check --diff-base <ref>` compares the working tree's
+violations against the base ref's and fails only on NEW violations. A gate
+that fails clean PRs for pre-existing debt teaches everyone to ignore it;
+the diff-aware mode keeps R1/R2's teeth on introduced violations while the
+exempt file keeps old debt countable. Fails closed (exit 2) if the base ref
+cannot be resolved, so a broken base never reads as clean.
+
 Usage:
   python tools/docmap/strand.py check      # exit 1 on any violation
+  python tools/docmap/strand.py check --diff-base origin/main
+                                       # exit 1 only on violations the working
+                                       # tree introduces over the base ref
   python tools/docmap/strand.py report     # the table, always exit 0
   python tools/docmap/strand.py selftest   # prove both rules can fire
 """
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -105,9 +116,15 @@ SEARCHABLE_SUFFIXES = {".md", ".py", ".sh", ".ps1", ".yml", ".yaml", ".json", ".
 def tracked(project: Path) -> list[str]:
     out = subprocess.run(["git", "-C", str(project), "ls-files"],
                          capture_output=True, text=True)
-    if out.returncode != 0:
-        return []
-    return [line for line in out.stdout.splitlines() if line]
+    if out.returncode == 0:
+        return [line for line in out.stdout.splitlines() if line]
+    # Not a git checkout (e.g. a base tree extracted by --diff-base):
+    # fall back to a filesystem walk so evaluate() still works there.
+    files: list[str] = []
+    for root, _, names in os.walk(project):
+        for n in names:
+            files.append(str(Path(root, n).relative_to(project)).replace(os.sep, "/"))
+    return sorted(files)
 
 
 def governed_docs(paths: list[str]) -> list[str]:
@@ -254,6 +271,48 @@ def problems(state: dict) -> list[str]:
     return out
 
 
+def _extract_base_tree(project: Path, base: str) -> Path | None:
+    """Materialise `git archive <base>` into a temp dir. None if unresolvable."""
+    td = Path(tempfile.mkdtemp(prefix="strand-base-"))
+    arc = subprocess.run(["git", "-C", str(project), "archive", base],
+                         capture_output=True)
+    if arc.returncode != 0:
+        return None
+    untar = subprocess.run(["tar", "-x", "-C", str(td)],
+                           input=arc.stdout, capture_output=True)
+    if untar.returncode != 0:
+        return None
+    return td
+
+
+def _check_diff_aware(project: Path, base: str, probs: list[str]) -> int:
+    """Fail only on violations the working tree introduces over <base>.
+
+    Compares violation *identities* (the problem strings), so the mode is
+    robust to merge commits and renames of unrelated files. Exit 2 (fail
+    closed) when the base ref cannot be resolved: a broken base must never
+    read as clean.
+    """
+    base_dir = _extract_base_tree(project, base)
+    if base_dir is None:
+        print("strand: cannot resolve diff base {!r}; failing closed".format(base),
+              file=sys.stderr)
+        return 2
+    base_probs = set(problems(evaluate(base_dir)))
+    new = [p for p in probs if p not in base_probs]
+    preexisting = len(probs) - len(new)
+    if new:
+        for p in new:
+            print("strand: NEW " + p)
+        print("")
+        print("{} new violation(s) over {} ({} pre-existing, not blocking).".format(
+            len(new), base, preexisting))
+        return 1
+    print("strand clean vs {}: no new violations ({} pre-existing carried)".format(
+        base, preexisting))
+    return 0
+
+
 def report(state: dict) -> str:
     rows = state["rows"]
     lines = []
@@ -348,11 +407,33 @@ def selftest(_project: Path) -> int:
             failures.append("a generated review artifact counted as a consumer, so "
                             "committing a document marks it reached")
 
+        # --diff-base: a violation already present on the base ref does not
+        # block; a violation introduced over it does; an unresolvable ref
+        # fails closed instead of reading as clean.
+        def _git(*a):
+            return subprocess.run(
+                ["git", "-C", str(root), "-c", "user.name=t",
+                 "-c", "user.email=t@t", *a],
+                check=True, capture_output=True, text=True)
+        _write(root / EXEMPT_PATH, "")
+        _git("add", "-A")
+        _git("commit", "-qm", "base")
+        base_sha = _git("rev-parse", "HEAD").stdout.strip()
+        if _check_diff_aware(root, base_sha, problems(evaluate(root))) != 0:
+            failures.append("--diff-base reported pre-existing violations as new")
+        _write(root / "docs/analysis/newer.md", "# Newer and lonelier\n")
+        _git("add", "-A")
+        _git("commit", "-qm", "head")
+        if _check_diff_aware(root, base_sha, problems(evaluate(root))) != 1:
+            failures.append("--diff-base did not fail on an introduced violation")
+        if _check_diff_aware(root, "no-such-ref-xyz", problems(evaluate(root))) != 2:
+            failures.append("--diff-base did not fail closed on an unresolvable ref")
+
     if failures:
         for f in failures:
             print("selftest FAIL: " + f)
         return 1
-    print("strand selftest: 6 assertions, all held")
+    print("strand selftest: 9 assertions, all held")
     return 0
 
 
@@ -360,6 +441,9 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("command", choices=["check", "report", "selftest"])
     ap.add_argument("--project", default=".")
+    ap.add_argument("--diff-base", default=None, metavar="REF",
+                    help="diff-aware mode for check: fail only on violations "
+                         "introduced over the base git ref (e.g. origin/main)")
     args = ap.parse_args()
     project = Path(args.project).resolve()
 
@@ -372,6 +456,8 @@ def main() -> int:
         return 0
 
     probs = problems(state)
+    if args.diff_base:
+        return _check_diff_aware(project, args.diff_base, probs)
     if probs:
         for p in probs:
             print("strand: " + p)

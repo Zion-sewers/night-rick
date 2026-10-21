@@ -39,7 +39,13 @@ BACKENDS
 USAGE
   python tools/review/panel.py run --project . [--base origin/main]
   python tools/review/panel.py run --project . --allow-external
+  python tools/review/panel.py run --project . --allow-semantic-cache
   python tools/review/panel.py selftest
+
+Decisions are memoized in tiers (tools/review/review_cache.py, issue #372):
+exact, then normalized (formatting-insensitive), then semantic (opt-in via
+--allow-semantic-cache). Every key carries the full conditioning tuple, so a
+stale or differently-conditioned entry is a miss, never a replay.
 
 The artifact lands at <project>/state/reviews/<sha>.json, which is where
 tools/gate/gate.py looks for it.
@@ -61,6 +67,7 @@ import subprocess
 import sys
 
 import e_rows
+import review_cache
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SETUP = os.path.abspath(os.path.join(HERE, ".."))
@@ -902,22 +909,75 @@ def cmd_run(args: argparse.Namespace) -> int:
     findings = None
     ext_note = "external backend not requested"
     fp = e_rows.registry_fingerprint(PERSONAS)
-    cache = None
-    if not args.allow_external:
-        # E-0003: exact-tier memoized decisions. A stale entry (registry
-        # changed since it was stored) is a miss, never a replay.
-        cache = e_rows.ReviewDecisionCache(
-            os.path.join(project, "state", "reviews", "decision-cache.json"))
-        hit = cache.lookup(lines, fp)
-        if hit is not None:
-            findings = hit["findings"]
-            print("decision cache: hit (registry {})".format(fp[:12]))
-    if findings is None:
+    # The memoized decision is a function of the REVIEWABLE lines. Machine-
+    # written state (the panel's own artifacts under state/, exempt from
+    # findings by SELF_REFERENTIAL) must not enter the key: an untracked
+    # artifact from run N would otherwise land in run N+1's diff and no
+    # lookup could ever hit twice in a row. EXEMPT paths (tests, vendor,
+    # lockfiles) contribute no findings by construction, so excluding them
+    # cannot change the verdict being replayed.
+    key_lines = [ln for ln in lines
+                 if not EXEMPT.search(ln["file"])
+                 and not SELF_REFERENTIAL.search(ln["file"])]
+    # Tiered memoized decisions (#372, tools/review/review_cache.py):
+    # exact -> normalized -> semantic (opt-in), every key under the full
+    # conditioning tuple (registry fingerprint, file-type context,
+    # external-backend mode, prior findings on the PR). A stale or
+    # differently-conditioned entry is a miss, never a replay.
+    cache = review_cache.TieredDecisionCache(
+        os.path.join(project, "state", "reviews", "decision-cache.json"))
+    cache_active = not args.allow_external and bool(key_lines)
+    langs = sorted({lang_of(ln["file"]) for ln in key_lines})
+    prior = review_cache.prior_findings_checksum(project, base,
+                                                 exclude_sha=sha)
+    ext_mode = ("external:" + str(getattr(args, "external_model", None) or "auto")
+                if args.allow_external else "local-only")
+    tier = None
+    forced_live = False
+    res = None
+    if cache_active:
+        res = cache.lookup(
+            key_lines, registry_fp=fp, langs=langs, external_mode=ext_mode,
+            prior_checksum=prior,
+            semantic_enabled=bool(getattr(args, "allow_semantic_cache", False)))
+        if res["forced_live"]:
+            forced_live = True
+            print("decision cache: anti-loop guard forced a live run "
+                  "(replay cap reached)")
+        elif res["tier"] is not None:
+            tier = res["tier"]
+            findings = res["entry"]["findings"]
+            print("decision cache: {} hit (registry {})".format(tier, fp[:12]))
+    live = findings is None
+    if live:
         findings = run_local(lines)
-        if args.allow_external:
-            ext, ext_note = run_external(lines, project, args.verbose,
-                                         getattr(args, "external_model", None))
+    # Signals are computed ONCE and shared by the external-leg gate and the
+    # cost table: the table must account for the decision it reports, never
+    # a differently-based twin. Signal lines exclude machine-written state
+    # (SELF_REFERENTIAL) but keep test files: a test file is exempt from
+    # local checks yet is real change the external leg can review, and the
+    # tests-aspect trigger needs to see it.
+    signal_lines = [ln for ln in lines
+                    if not SELF_REFERENTIAL.search(ln["file"])]
+    signals = review_cache.review_signals(
+        signal_lines, findings,
+        {ln["file"]: lang_of(ln["file"]) for ln in signal_lines})
+    trigger_eval = review_cache.evaluate_triggers(signals)
+    ext_ran = False
+    if args.allow_external and live:
+        # Trigger-conditioned aspect execution (#372): the expensive external
+        # leg runs only when at least one aspect's trigger fires; the skip is
+        # recorded, never silent. This narrows the previous always-run
+        # behavior for --allow-external (stated residual, see review_cache).
+        if review_cache.external_should_run(trigger_eval):
+            ext, ext_note = run_external(
+                lines, project, args.verbose,
+                getattr(args, "external_model", None))
             findings += ext
+            ext_ran = True
+        else:
+            ext_note = ("external skipped: no aspect triggered "
+                        "(trigger-conditioned execution, #372)")
 
     blocking = [f for f in findings if f["severity"] == HIGH]
     med = [f for f in findings if f["severity"] == MED]
@@ -943,8 +1003,26 @@ def cmd_run(args: argparse.Namespace) -> int:
     fail_at = {"high": [HIGH], "medium": [HIGH, MED], "low": [HIGH, MED, LOW]}[args.fail_on]
     blockers = [f for f in findings if f["severity"] in fail_at]
     verdict = "pass" if not blockers else "changes-requested"
-    if cache is not None:
-        cache.store(lines, fp, verdict, findings)
+    if cache_active:
+        # forced_key renews the capped entry's replay budget (anti-loop
+        # guard contract); without it the guard would ratchet shut forever.
+        cache.store(key_lines, registry_fp=fp, langs=langs,
+                    external_mode=ext_mode, prior_checksum=prior,
+                    verdict=verdict, findings=findings,
+                    reset_replays_for_key=(res or {}).get("forced_key")
+                    if forced_live else None)
+
+    # Expected-calls-per-review accounting (#372, ch.11 Table 11-3):
+    #   expected = P(triggered) x calls_when_triggered x (1 - memoized).
+    # Rows are execution legs (measured actuals), not aspects: the cheap
+    # deterministic panel is one leg, the external model pass is one leg.
+    # Per-aspect trigger detail lives in aspect_triggers. trigger_eval is
+    # the SAME evaluation that gated the external leg above, so the table
+    # accounts for the decision it reports.
+    cost_table = review_cache.expected_calls_table(
+        trigger_eval, external_possible=args.allow_external,
+        external_ran=ext_ran, local_ran=live,
+        memoized_fraction=1.0 if tier is not None else 0.0)
 
     coverage = (
         "Reviewed {} added line(s) across {} file(s) against {} pattern checks in {} "
@@ -970,6 +1048,17 @@ def cmd_run(args: argparse.Namespace) -> int:
         "counts": {"high": len(blocking), "medium": len(med), "low": len(low)},
         "findings": findings,
         "files": files,
+        "decision_cache": {
+            "tier": tier,
+            "registry_fp": fp,
+            "langs": langs,
+            "external_mode": ext_mode,
+            "prior_checksum": prior[:16],
+            "forced_live": forced_live,
+            "telemetry": cache.telemetry_snapshot(),
+        },
+        "aspect_triggers": trigger_eval,
+        "cost_table": cost_table,
     }
     dest = args.out or os.path.join(project, "state", "reviews", "{}.json".format(sha))
     os.makedirs(os.path.dirname(dest), exist_ok=True)
@@ -983,6 +1072,14 @@ def cmd_run(args: argparse.Namespace) -> int:
     print("  " + coverage)
     if args.allow_external:
         print("  external: " + ext_note)
+    print("  expected calls per review (P(triggered) x calls x (1-memoized); "
+          "actuals measured):")
+    for row in cost_table:
+        print("    {:<22} p={:.1f} calls={} memoized={:.1f} expected={} actual={} {}".format(
+            row["leg"], row["p_triggered"],
+            row["calls_when_triggered"], row["memoized"],
+            row["expected_calls"], row["actual_calls"],
+            "({})".format(row["trigger"]) if row["trigger"] else ""))
     print("  artifact: {}".format(os.path.relpath(dest, project)))
     if sh("git status --porcelain", project)[1].strip():
         print("  note: the tree is dirty, so this artifact describes uncommitted work while "
@@ -1392,11 +1489,17 @@ def main(argv: list[str]) -> int:
     r.add_argument("--fail-on", choices=("high", "medium", "low"), default="high")
     r.add_argument("--allow-external", action="store_true",
                    help="also send the change to a free OpenRouter model; refuses if the "
-                        "change contains credential-shaped content")
+                        "change contains credential-shaped content. Trigger-conditioned "
+                        "(#372): the leg runs only when an aspect trigger fires; a run "
+                        "with no fired trigger skips it and records the skip")
     r.add_argument("--external-model",
                    help="OpenRouter model id to try first, e.g. z-ai/glm-4.7-flash. "
                         "Omitted, the client picks a zero-priced model. A priced id "
                         "here bills; the daily quota counts requests, not dollars")
+    r.add_argument("--allow-semantic-cache", action="store_true",
+                   help="opt in to the semantic cache tier (token-shape similarity, "
+                        "tau 0.95, same persona scope and full conditioning). Off by "
+                        "default: a mis-memoized verdict is a hallucinated approval")
     r.add_argument("-v", "--verbose", action="store_true")
     r.set_defaults(fn=cmd_run)
     t = sub.add_parser("selftest")

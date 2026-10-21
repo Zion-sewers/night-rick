@@ -440,12 +440,26 @@ PROBE_JS = r"""
 
 # State fingerprint before and after a click. Cheap enough to run twice per
 # control, specific enough to tell "something happened" from "nothing happened".
+# The `root` field exists because of claude-setup#57: theme toggles and similar
+# controls flip attributes on <html> (e.g. documentElement.dataset.theme) without
+# touching body markup, so a fingerprint that only reads the body is blind to a
+# full repaint. Attributes are serialized canonically (sorted name=value pairs)
+# so the comparison is deterministic across reads.
 STATE_JS = r"""
 (() => ({
   url: location.href,
   nodes: document.querySelectorAll("*").length,
   text: (document.body ? (document.body.innerText || "") : "").replace(/\s+/g, " ").trim().length,
   html: (document.body ? document.body.innerHTML.length : 0),
+  root: (() => { const el = document.documentElement;
+                 if (!el || !el.attributes) return "";
+                 const out = [];
+                 for (let i = 0; i < el.attributes.length; i++) {
+                   const a = el.attributes[i];
+                   out.push(a.name + "=" + a.value);
+                 }
+                 out.sort();
+                 return out.join(";"); })(),
   focus: document.activeElement ? (document.activeElement.tagName || "") +
          "#" + (document.activeElement.id || "") : "",
   scroll: Math.round(window.scrollY),
@@ -846,6 +860,10 @@ def describe_effect(before: object, after: object) -> str | None:
     if before.get("url") != after.get("url"):
         return "navigated"
     if abs((after.get("nodes") or 0) - (before.get("nodes") or 0)) >= 1:
+        return "dom"
+    # claude-setup#57: an attribute flip on <html> (theme toggles live there)
+    # changes no body markup, so the html-length gate below cannot see it.
+    if before.get("root") != after.get("root"):
         return "dom"
     if abs((after.get("html") or 0) - (before.get("html") or 0)) > 24:
         return "dom"

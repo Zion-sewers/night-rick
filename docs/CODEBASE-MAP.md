@@ -9,7 +9,7 @@ No timestamp and no commit sha here on purpose: either would make the map drift
 on every commit and train a reader to ignore the check. Line counts are out for
 the same reason, one level down.
 
-462 directories, 2498 tracked files, 0 without a stated purpose.
+466 directories, 2509 tracked files, 0 without a stated purpose.
 
 ## .claude
 
@@ -22,9 +22,10 @@ the same reason, one level down.
 
 | dir | files | purpose | from |
 | --- | ----: | ------- | ---- |
-| `.github` | 1 | Live GitHub Actions root; workflows/ holds the 3 CI YAMLs GitHub actually runs on PRs and cron (newer commit than github/) | registry |
+| `.github` | 2 | Live GitHub Actions root; workflows/ holds the 3 CI YAMLs GitHub actually runs on PRs and cron (newer commit than github/) | registry |
 | `.github/ISSUE_TEMPLATE` | 1 | The one GitHub issue form (task.md); GitHub reads this exact path, so it is a wired location and not a docs folder | registry |
-| `.github/workflows` | 4 | The 3 live workflow files: Claude PR review (every push), Claude nightly job, and ship-gate CI check; Actions reads only this path | registry |
+| `.github/agent-coffee` | 2 | The agent coffee-break ritual: COFFEE.md defines the 4-persona deliberation format; run_coffee.py executes it (weekly Friday automation, workflow_dispatch, or the coffee-break i... | registry |
+| `.github/workflows` | 7 | The 3 live workflow files: Claude PR review (every push), Claude nightly job, and ship-gate CI check; Actions reads only this path | registry |
 
 ## anatomy
 
@@ -56,7 +57,7 @@ the same reason, one level down.
 
 | dir | files | purpose | from |
 | --- | ----: | ------- | ---- |
-| `docs` | 16 | Docs spine root: INDEX, SESSION-BOOT, charters, EXECUTION-PLAN, OPERATOR-RUNBOOK, SYSTEM-MAP, plus the adr/analysis/prd/specs subtrees | registry |
+| `docs` | 18 | Docs spine root: INDEX, SESSION-BOOT, charters, EXECUTION-PLAN, OPERATOR-RUNBOOK, SYSTEM-MAP, plus the adr/analysis/prd/specs subtrees | registry |
 | `docs/adr` | 21 | 15 dated ADRs (0001-0015) recording binding architecture decisions: repo topology, model gate, scheduler, PR-only ship gate | registry |
 | `docs/analysis` | 40 | Point-in-time analysis writeups (per docs/INDEX.md heading) feeding the TODO list: stress tests, gap audits, cost/free-tier notes | registry |
 | `docs/analysis/archive` | 37 | Analysis snapshots dated on or before 2026-08-08 that no live surface (rule, spec, PRD, tool, ADR) referenced when archived 2026-08-23; still dated-snapshot, still reachable by... | registry |
@@ -214,6 +215,7 @@ the same reason, one level down.
 | `dot-claude/skills/commit-push-pr` | 1 | Run pre-commit quality gates (ruff/mypy/tests for Python, knip/eslint for JS), commit with Conventional format, push, open PR, sweep merged branches. Auto-detects bun/uv stack a... | SKILL.md |
 | `dot-claude/skills/context-bounded-analyst` | 1 | Data analysis over large files/datasets using DuckDB/Polars lazy queries. Builds a catalog + metrics dictionary; returns compact sourced answers (number + provenance), never loa... | SKILL.md |
 | `dot-claude/skills/coverage-enforcer` | 1 | Block /commit-push-pr from pushing if the staged diff has source changes (.py/.ts/.js) without matching test changes. Closes the COVERAGE axis of Shoval's forge loop. Triggers o... | SKILL.md |
+| `dot-claude/skills/create-verification-skill` | 1 | "Generate a project-local verification skill that drives your app the way a user does — any language, framework, or platform. Use for /create-verification-skill, \"make a contro... | SKILL.md |
 | `dot-claude/skills/decision-grade` | 1 | "Claim-level linter/gate that extends LTMD. Rejects any report or deliverable where any claim lacks: a number with provenance (query/source), an interpretation (what it means fo... | SKILL.md |
 | `dot-claude/skills/deep-research` | 3 | Conducts enterprise-grade research with multi-source synthesis, citation tracking, and verification. Produces citation-backed reports through a structured pipeline with source c... | SKILL.md |
 | `dot-claude/skills/deep-research/reference` | 6 | Detailed method docs (8-phase pipeline, quality gates, continuation, HTML/PDF generation) that SKILL.md points to instead of inlining, for the agent running a research task | registry |
@@ -249,6 +251,7 @@ the same reason, one level down.
 | `dot-claude/skills/openai-agents` | 2 | Call OpenAI agents on platform.openai.com — Assistants API and AgentKit-published agents — from the CLI with step observability, streaming, and list/inspect/diff. Triggers on "/... | SKILL.md |
 | `dot-claude/skills/ops-status` | 1 | "Ops Status — System State Snapshot Skill" | SKILL.md |
 | `dot-claude/skills/persona` | 1 | Mirror-or-toggle persona/meme channel for 1:1 chat. Triggers on /persona <name>, /kyuubi, /saiyan, /jedi, /gandalf, /thanos, /mossad, /lebowski, /cinematic, /eretz-nehederet, OR... | SKILL.md |
+| `dot-claude/skills/phase-gate` | 1 | "Run multi-phase agent work with explicit transition checklists: Implementation, Review/Test, Deploy, Debug. No phase starts until the previous phase's checklist is fully verifi... | SKILL.md |
 | `dot-claude/skills/pii-scrubber` | 1 | Scan outputs, deliverables, and staged diffs for PII (names, emails, phone numbers, national-IDs, CRM fields) before they are written or committed. Pseudonymizes or blocks on de... | SKILL.md |
 | `dot-claude/skills/ponytail` | 1 | Forces the laziest solution that actually works: simplest, shortest, most minimal. Question whether the task needs to exist (YAGNI), stdlib before custom code, native platform b... | SKILL.md |
 | `dot-claude/skills/ponytail-audit` | 1 | Whole-repo audit for over-engineering. Like ponytail-review, but scans the entire codebase instead of a diff: a ranked list of what to delete, simplify, or replace with stdlib/n... | SKILL.md |
@@ -261,6 +264,7 @@ the same reason, one level down.
 | `dot-claude/skills/prove-implementation/agents` | 1 | OpenAI/Codex-platform manifest (display name, description, default prompt) so this skill can be surfaced on agent platforms other than Claude Code | registry |
 | `dot-claude/skills/prove-implementation/references` | 1 | Failure-modes reference (frequency bias, premature convergence, context rot, reward hacking) with countermeasures, linked from SKILL.md for diagnosing a failed implementation | registry |
 | `dot-claude/skills/prove-implementation/scripts` | 2 | implementation_proof.py builds/validates a verification-evidence record (claim status, risk, strong-claim detection); loop_audit.py flags loop constructs in code needing review | registry |
+| `dot-claude/skills/quiz-me` | 1 | "Socratic tutorial drill: interview the user relentlessly about a tutorial until you reach shared understanding, resolving each branch of the decision tree. Use when the user wa... | SKILL.md |
 | `dot-claude/skills/recipe-create-gmail-filter` | 1 | "Create a Gmail filter to automatically label, star, or categorize incoming messages." | SKILL.md |
 | `dot-claude/skills/recipe-label-and-archive-emails` | 1 | "Apply Gmail labels to matching messages and archive them to keep your inbox clean." | SKILL.md |
 | `dot-claude/skills/red-team` | 1 | TDD-focused quality review skill for test-first discipline, coverage depth, mutation strength, and implementation readiness. | SKILL.md |

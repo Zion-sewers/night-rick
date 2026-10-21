@@ -261,3 +261,4 @@ docs/archive | Point-in-time files that used to sit at the docs/ root: session h
 docs/analysis/archive | Analysis snapshots dated on or before 2026-08-08 that no live surface (rule, spec, PRD, tool, ADR) referenced when archived 2026-08-23; still dated-snapshot, still reachable by path, out of the inbox
 tools/eco | Ecosystem state DB CLI (ADR-0011, AUTO-06): init/migrate-jsonl/claim/log-run/approve/status/selftest over state/ecosystem.db, the single operational-state SQLite that FleetView reads
 tools/trace | OTLP-shaped run-correlation query tool: reads all state/*.jsonl for a given run_id and renders events, span trees, and recent runs; the tracing context itself lives in tools/lib/tracing.py
+.github/agent-coffee | The agent coffee-break ritual: COFFEE.md defines the 4-persona deliberation format; run_coffee.py executes it (weekly Friday automation, workflow_dispatch, or the coffee-break issue label)

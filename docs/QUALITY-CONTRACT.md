@@ -250,3 +250,8 @@ These were true when measured. Re-measure before relying on them.
   underscore. `SECRET=` fires where `SECRET_NAME=` is silent. Not widened to
   `secret\w*` on purpose: that re-flags every honest `SECRET_NAME` and a rule
   that cries wolf gets waived and then finds nothing at all.
+- 2026-10-21, main CI cleanup: `main` was red since 2026-10-13 (strand
+  reachability, skilleval routing). Fixing those unmasked latent `gate.py run`
+  failures (stale maps, expired prior-art, drifted mutation patterns) plus the
+  `night-rick` rename fallout in `render_todo`. Full account in
+  [specs/2026-10-21-main-ci-cleanup.md](specs/2026-10-21-main-ci-cleanup.md).

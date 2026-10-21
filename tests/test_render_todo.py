@@ -152,7 +152,7 @@ def test_render_never_promotes_a_ticket():
 
 def test_resolve_project_follows_a_worktree_to_its_repository():
     here = Path(__file__).resolve().parent
-    assert rt.project_key(str(rt.resolve_project(here))) == "claude-setup"
+    assert rt.project_key(str(rt.resolve_project(here))) == "night-rick"
 
 
 def test_load_of_an_absent_store_is_empty_not_an_error(tmp_path):

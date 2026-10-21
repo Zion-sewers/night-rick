@@ -335,7 +335,7 @@ def selftest() -> int:
     if project_key("/a/daily-deep-learning/daemon") == project_key("/b/other/daemon"):
         failures.append("two different `daemon` subprojects collapsed to one key")
     here = Path(__file__).resolve().parent
-    if project_key(str(resolve_project(here))) != "claude-setup":
+    if project_key(str(resolve_project(here))) != "night-rick":
         failures.append(
             f"a worktree did not resolve to its parent repository: "
             f"{project_key(str(resolve_project(here)))}")

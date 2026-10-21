@@ -9,7 +9,7 @@ from an inventory. This file measures how much of the estate that order reaches.
 
 ## Coverage
 
-- documents: **1311**
+- documents: **1312**
 - reachable from `docs/INDEX.md`: **270** (20%)
 - status UNDECLARED: **0**
 - prior-art records EXPIRED: **0**
@@ -920,7 +920,7 @@ correct for its date**. Scheme `1` means read its lane letters through
 | `dot-claude/skills/wait-what/SKILL.md` | 2026-08-23 | definition-see-skills_sync | class | n/a | - | - | - |
 | `dot-claude/skills/wizard/SKILL.md` | 2026-08-23 | definition-see-skills_sync | class | n/a | - | - | - |
 
-## spec (249)
+## spec (250)
 
 | document | date | status | from | lane scheme | in INDEX | supersedes | superseded by |
 |---|---|---|---|---|---|---|---|
@@ -1173,6 +1173,7 @@ correct for its date**. Scheme `1` means read its lane letters through
 | `docs/specs/2026-08-31-corpus-vocab-analysis.md` | 2026-08-31 | done | header | n/a | yes | - | - |
 | `docs/specs/2026-08-31-corpus-word-count-distribution.md` | 2026-08-31 | done | header | n/a | yes | - | - |
 | `docs/specs/2026-08-31-corpus-xray.md` | 2026-08-31 | done | header | n/a | yes | - | - |
+| `docs/specs/2026-10-21-main-ci-cleanup.md` | 2026-10-21 | active | header | n/a | - | - | - |
 
 ## standard (7)
 

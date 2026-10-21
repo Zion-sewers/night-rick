@@ -1,7 +1,7 @@
-# Add this job block to ~/projects/figma-4-all/azure-pipelines.yml
+# Add this job block to ~/projects/<ts-project-with-tiers>/azure-pipelines.yml
 # Insert BEFORE the "plugin_observability" job (line ~86)
 #
-# Requires: FOUNDRY-API-KEY variable linked from Azure Key Vault (kv-seekapa-apps)
+# Requires: FOUNDRY-API-KEY variable linked from Azure Key Vault (<your-key-vault-name>)
 #
 # To apply: manually paste this block into azure-pipelines.yml,
 # or temporarily disable protect-infra.sh hook and re-run /codex-ci
@@ -26,7 +26,7 @@
     - bash: |
         git diff origin/main...HEAD > /tmp/pr-diff.txt
         export OPENAI_API_KEY=$(FOUNDRY_API_KEY)
-        export OPENAI_BASE_URL="https://brn-azai.openai.azure.com/openai/v1"
+        export OPENAI_BASE_URL="https://<foundry-account>.openai.azure.com/openai/v1"
         codex exec "Review this PR diff for bugs, security, performance, test gaps. \
           ES2017 constraints. No optional chaining, nullish coalescing, async iterators. \
           Format each finding as: BLOCKING|SUGGESTION|NITPICK [file:line] description. \

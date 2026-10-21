@@ -9,7 +9,7 @@ No timestamp and no commit sha here on purpose: either would make the map drift
 on every commit and train a reader to ignore the check. Line counts are out for
 the same reason, one level down.
 
-462 directories, 2498 tracked files, 0 without a stated purpose.
+466 directories, 2510 tracked files, 1 without a stated purpose.
 
 ## .claude
 
@@ -22,9 +22,10 @@ the same reason, one level down.
 
 | dir | files | purpose | from |
 | --- | ----: | ------- | ---- |
-| `.github` | 1 | Live GitHub Actions root; workflows/ holds the 3 CI YAMLs GitHub actually runs on PRs and cron (newer commit than github/) | registry |
+| `.github` | 2 | Live GitHub Actions root; workflows/ holds the 3 CI YAMLs GitHub actually runs on PRs and cron (newer commit than github/) | registry |
 | `.github/ISSUE_TEMPLATE` | 1 | The one GitHub issue form (task.md); GitHub reads this exact path, so it is a wired location and not a docs folder | registry |
-| `.github/workflows` | 4 | The 3 live workflow files: Claude PR review (every push), Claude nightly job, and ship-gate CI check; Actions reads only this path | registry |
+| `.github/agent-coffee` | 2 | UNDOCUMENTED | none |
+| `.github/workflows` | 7 | The 3 live workflow files: Claude PR review (every push), Claude nightly job, and ship-gate CI check; Actions reads only this path | registry |
 
 ## anatomy
 
@@ -56,7 +57,7 @@ the same reason, one level down.
 
 | dir | files | purpose | from |
 | --- | ----: | ------- | ---- |
-| `docs` | 16 | Docs spine root: INDEX, SESSION-BOOT, charters, EXECUTION-PLAN, OPERATOR-RUNBOOK, SYSTEM-MAP, plus the adr/analysis/prd/specs subtrees | registry |
+| `docs` | 18 | Docs spine root: INDEX, SESSION-BOOT, charters, EXECUTION-PLAN, OPERATOR-RUNBOOK, SYSTEM-MAP, plus the adr/analysis/prd/specs subtrees | registry |
 | `docs/adr` | 21 | 15 dated ADRs (0001-0015) recording binding architecture decisions: repo topology, model gate, scheduler, PR-only ship gate | registry |
 | `docs/analysis` | 40 | Point-in-time analysis writeups (per docs/INDEX.md heading) feeding the TODO list: stress tests, gap audits, cost/free-tier notes | registry |
 | `docs/analysis/archive` | 37 | Analysis snapshots dated on or before 2026-08-08 that no live surface (rule, spec, PRD, tool, ADR) referenced when archived 2026-08-23; still dated-snapshot, still reachable by... | registry |
@@ -66,7 +67,7 @@ the same reason, one level down.
 | `docs/prior-art` | 47 | One JSON record per component over 300 lines of Python naming what third-party tool could do its job, why ours stays, and an expiry date; out-of-scope.txt lists prefixes exempte... | registry |
 | `docs/prior-art/living-codex-salvage` | 5 | Four files rescued from `C:\Users\shova\codex-sites\living-codex-build` on 2026-07-30, before | README.md |
 | `docs/reflections` | 6 | Post-task self-inspections written by the /heidegger-reflect protocol: measured failure evidence, honest completion percentages, and the concealed gaps a status report would omit | registry |
-| `docs/specs` | 243 | 4 active build specs (2026-07-23/24): autonomy implementation, command-center dashboard, persona-review economy, SLM swarm | registry |
+| `docs/specs` | 244 | 4 active build specs (2026-07-23/24): autonomy implementation, command-center dashboard, persona-review economy, SLM swarm | registry |
 | `docs/specs/archive` | 6 | Status: active | README.md |
 | `docs/standards` | 7 | Cross-repository contracts every repo the operator owns must satisfy; agentic-repo-standard.md is the reasoning behind the .alint.yml at each repo root (ADR-0020) | registry |
 
@@ -81,16 +82,16 @@ the same reason, one level down.
 | `dot-agents/skills/agent-team` | 1 | Agent team coordination protocol — spawn rules, worktree isolation, handoff protocol, quality checkpoints. Use when spawning multiple agents for parallel work. | SKILL.md |
 | `dot-agents/skills/answer-question` | 1 | Research-only mode. Read files, search code, web search. No code changes, no verify gate, no forge loop. | SKILL.md |
 | `dot-agents/skills/azd` | 1 | Azure Developer CLI (`azd`) workflow — init, provision, deploy, teardown. Use for projects with `azure.yaml` (infra-as-code + app deploy bundled). Complements `azure-devops` (AD... | SKILL.md |
-| `dot-agents/skills/azure-activity-watch` | 2 | Surface Azure Activity-Log events where someone other than the owner (default shoval.be@i-sdd.com) has stopped, restarted, deleted, or resized a resource in AZAI_group. Use afte... | SKILL.md |
+| `dot-agents/skills/azure-activity-watch` | 2 | Surface Azure Activity-Log events where someone other than the owner (default <your-email>) has stopped, restarted, deleted, or resized a resource in <resource-group>. Use after... | SKILL.md |
 | `dot-agents/skills/azure-audit` | 1 | Weekly dormancy + cost audit of Azure (functions, web apps, container apps, storage), Azure DevOps repos + wikis, and Foundry agents. Produces a dated markdown report under ~/do... | SKILL.md |
 | `dot-agents/skills/azure-devops` | 1 | Azure DevOps CLI workflow automation with explicit manual approval gates. | SKILL.md |
 | `dot-agents/skills/azure-foundry` | 1 | Azure AI Foundry agent operations — list/inspect agents, deploy via `deploy_agent.py` pattern, inspect runs, manage agent memory, sync prompts, verify SDK install (Foundry SDK 2... | SKILL.md |
 | `dot-agents/skills/azure-keyvault-secrets` | 1 | Sync MCP/project secrets from Azure Key Vault for Codex sessions. | SKILL.md |
-| `dot-agents/skills/azure-runtime` | 2 | Call Azure AI runtime from CLI — Azure OpenAI chat completions against deployed GPT models in brn-azai (gpt-5.5, gpt-4.1, etc.) AND Azure AI Foundry agents (ORM-FLAGGING-AGENT,... | SKILL.md |
+| `dot-agents/skills/azure-runtime` | 2 | Call Azure AI runtime from CLI — Azure OpenAI chat completions against deployed GPT models in your Azure AI Foundry account (gpt-5.5, gpt-4.1, etc.) AND Azure AI Foundry agents... | SKILL.md |
 | `dot-agents/skills/azure-wiki-onepager` | 1 | Authoring standard for Azure DevOps Wiki one-page articles (design tokens, component library, content spine, Mermaid flow, Q&A accordion, system-prompt blocks). Activate when wr... | SKILL.md |
 | `dot-agents/skills/azure-wiki-onepager/reference` | 4 | Reference sheets (checklist, HTML component snippets, content-spine outline, CSS design tokens) the azure-wiki-onepager skill pulls from when assembling an Azure DevOps wiki one... | registry |
 | `dot-agents/skills/blog` | 1 | Draft genuinely human long-form blog content in Shoval Benjer's voice, across platform formats (Medium, LinkedIn, Substack, Dev.to/technical, Jira-as-writeup). Anchors on the em... | SKILL.md |
-| `dot-agents/skills/blonde-designer` | 1 | Creative director + design architect for the Seekapa AR how-to video refresh (DEV-4968). Shapes each video's script and art direction to the locked production standard — real ap... | SKILL.md |
+| `dot-agents/skills/blonde-designer` | 1 | Creative director + design architect for an AR how-to video refresh (<ticket-id>). Shapes each video's script and art direction to the locked production standard — real app foot... | SKILL.md |
 | `dot-agents/skills/brainstorming` | 2 | "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design... | SKILL.md |
 | `dot-agents/skills/brainstorming/scripts` | 5 | Runtime for the brainstorming skill's local companion UI: a Node WebSocket server (server.cjs), start/stop shell scripts, an HTML frame template, and a browser-side helper script | registry |
 | `dot-agents/skills/caveman` | 1 | Ultra-compressed communication mode. Cuts token usage ~75% by dropping filler, articles, and pleasantries while keeping full technical accuracy. Use when user says "caveman mode... | SKILL.md |
@@ -108,7 +109,7 @@ the same reason, one level down.
 | `dot-agents/skills/deep-research/tests/fixtures` | 2 | Sample research reports (one passing, one deliberately deficient) used to check validate_report.py and related scripts catch real defects like TBD placeholders and missing sections | registry |
 | `dot-agents/skills/deploy-prod` | 1 | Guided pre-flight checklist for safe production deployment via CI pipeline. | SKILL.md |
 | `dot-agents/skills/design-an-interface` | 1 | Generate multiple radically different interface designs for a module using parallel sub-agents. Use when user wants to design an API, explore interface options, compare module s... | SKILL.md |
-| `dot-agents/skills/dispatch` | 1 | Sync agent-to-agent dispatch from Codex orchestrator to a registered peer (Codex executor on gpt-5.5, Foundry agents seekapa/AxiaCS, future bridges). Triggers on /dispatch, "ask... | SKILL.md |
+| `dot-agents/skills/dispatch` | 1 | Sync agent-to-agent dispatch from Codex orchestrator to a registered peer (Codex executor on gpt-5.5, Foundry agents <agent-a>/<agent-b>, future bridges). Triggers on /dispatch,... | SKILL.md |
 | `dot-agents/skills/domain-model` | 3 | Grilling session that challenges your plan against the existing domain model, sharpens terminology, and updates documentation (CONTEXT.md, ADRs) inline as decisions crystallise.... | SKILL.md |
 | `dot-agents/skills/edit-article` | 1 | Edit and improve articles by restructuring sections, improving clarity, and tightening prose. Use when user wants to edit, revise, or improve an article draft. | SKILL.md |
 | `dot-agents/skills/end-session` | 1 | End-of-session cleanup — security wipe of temp files, context compaction, lessons learned post-mortem, handover for next session. Run before /clear or exiting. | SKILL.md |
@@ -214,6 +215,7 @@ the same reason, one level down.
 | `dot-claude/skills/commit-push-pr` | 1 | Run pre-commit quality gates (ruff/mypy/tests for Python, knip/eslint for JS), commit with Conventional format, push, open PR, sweep merged branches. Auto-detects bun/uv stack a... | SKILL.md |
 | `dot-claude/skills/context-bounded-analyst` | 1 | Data analysis over large files/datasets using DuckDB/Polars lazy queries. Builds a catalog + metrics dictionary; returns compact sourced answers (number + provenance), never loa... | SKILL.md |
 | `dot-claude/skills/coverage-enforcer` | 1 | Block /commit-push-pr from pushing if the staged diff has source changes (.py/.ts/.js) without matching test changes. Closes the COVERAGE axis of Shoval's forge loop. Triggers o... | SKILL.md |
+| `dot-claude/skills/create-verification-skill` | 1 | name: create-verification-skill | SKILL.md |
 | `dot-claude/skills/decision-grade` | 1 | "Claim-level linter/gate that extends LTMD. Rejects any report or deliverable where any claim lacks: a number with provenance (query/source), an interpretation (what it means fo... | SKILL.md |
 | `dot-claude/skills/deep-research` | 3 | Conducts enterprise-grade research with multi-source synthesis, citation tracking, and verification. Produces citation-backed reports through a structured pipeline with source c... | SKILL.md |
 | `dot-claude/skills/deep-research/reference` | 6 | Detailed method docs (8-phase pipeline, quality gates, continuation, HTML/PDF generation) that SKILL.md points to instead of inlining, for the agent running a research task | registry |
@@ -249,6 +251,7 @@ the same reason, one level down.
 | `dot-claude/skills/openai-agents` | 2 | Call OpenAI agents on platform.openai.com — Assistants API and AgentKit-published agents — from the CLI with step observability, streaming, and list/inspect/diff. Triggers on "/... | SKILL.md |
 | `dot-claude/skills/ops-status` | 1 | "Ops Status — System State Snapshot Skill" | SKILL.md |
 | `dot-claude/skills/persona` | 1 | Mirror-or-toggle persona/meme channel for 1:1 chat. Triggers on /persona <name>, /kyuubi, /saiyan, /jedi, /gandalf, /thanos, /mossad, /lebowski, /cinematic, /eretz-nehederet, OR... | SKILL.md |
+| `dot-claude/skills/phase-gate` | 1 | "Run multi-phase agent work with explicit transition checklists: Implementation, Review/Test, Deploy, Debug. No phase starts until the previous phase's checklist is fully verifi... | SKILL.md |
 | `dot-claude/skills/pii-scrubber` | 1 | Scan outputs, deliverables, and staged diffs for PII (names, emails, phone numbers, national-IDs, CRM fields) before they are written or committed. Pseudonymizes or blocks on de... | SKILL.md |
 | `dot-claude/skills/ponytail` | 1 | Forces the laziest solution that actually works: simplest, shortest, most minimal. Question whether the task needs to exist (YAGNI), stdlib before custom code, native platform b... | SKILL.md |
 | `dot-claude/skills/ponytail-audit` | 1 | Whole-repo audit for over-engineering. Like ponytail-review, but scans the entire codebase instead of a diff: a ranked list of what to delete, simplify, or replace with stdlib/n... | SKILL.md |
@@ -261,6 +264,7 @@ the same reason, one level down.
 | `dot-claude/skills/prove-implementation/agents` | 1 | OpenAI/Codex-platform manifest (display name, description, default prompt) so this skill can be surfaced on agent platforms other than Claude Code | registry |
 | `dot-claude/skills/prove-implementation/references` | 1 | Failure-modes reference (frequency bias, premature convergence, context rot, reward hacking) with countermeasures, linked from SKILL.md for diagnosing a failed implementation | registry |
 | `dot-claude/skills/prove-implementation/scripts` | 2 | implementation_proof.py builds/validates a verification-evidence record (claim status, risk, strong-claim detection); loop_audit.py flags loop constructs in code needing review | registry |
+| `dot-claude/skills/quiz-me` | 1 | "Socratic tutorial drill: interview the user relentlessly about a tutorial until you reach shared understanding, resolving each branch of the decision tree. Use when the user wa... | SKILL.md |
 | `dot-claude/skills/recipe-create-gmail-filter` | 1 | "Create a Gmail filter to automatically label, star, or categorize incoming messages." | SKILL.md |
 | `dot-claude/skills/recipe-label-and-archive-emails` | 1 | "Apply Gmail labels to matching messages and archive them to keep your inbox clean." | SKILL.md |
 | `dot-claude/skills/red-team` | 1 | TDD-focused quality review skill for test-first discipline, coverage depth, mutation strength, and implementation readiness. | SKILL.md |
@@ -363,7 +367,7 @@ the same reason, one level down.
 | `dot-codex/skills/property-test-gen` | 1 | Codex-side skill definition for property-based tests: assert invariants over all inputs (bounds, ranges, enumerated tiers) instead of enumerating examples | registry |
 | `dot-codex/skills/red-team` | 3 | Codex-side TDD enforcement skill, explicitly NOT security testing despite the name: it checks that a failing test preceded the implementation. Carries its own .mcp.json | registry |
 | `dot-codex/skills/red-team-review` | 5 | Multi-persona project review using parallel agent teams (security, architecture, performance, UX, eval). Spawns subagents in worktrees, aggregates findings into a unified report... | SKILL.md |
-| `dot-codex/skills/shoval-voice-draft` | 1 | Draft messages in Shoval Benjer's natural work style for review before sending. Per-recipient tone (Yasha / Liron / Ali / Adnan / Daniel / Vlad, including Vlad's ultra-compact s... | SKILL.md |
+| `dot-codex/skills/shoval-voice-draft` | 1 | Draft messages in Shoval Benjer's natural work style for review before sending. Per-recipient tone (technical peer / manager / casual teammate / requirements-first teammate / fo... | SKILL.md |
 | `dot-codex/skills/triage-tests` | 1 | "/triage-tests" | SKILL.md |
 | `dot-codex/skills/voice-explainer` | 1 | Generate short audio narration via ElevenLabs eleven_multilingual_v2 and auto-play it. Triggers on out-of-focus / tired / "read it to me" signals (en/he/ar) detected by the User... | SKILL.md |
 | `dot-codex/skills/watchdog` | 1 | "Watchdog Agent - Quality Gatekeeper" | SKILL.md |

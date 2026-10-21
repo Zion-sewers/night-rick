@@ -32,15 +32,15 @@ az account show --query name -o tsv  # fail if empty
 az devops configure --list           # fail if no organization/project defaults
 ```
 
-If either fails, stop and tell the user to run `az login` and `az devops configure --defaults organization=https://dev.azure.com/Corp-domain project=Corp-AI`.
+If either fails, stop and tell the user to run `az login` and `az devops configure --defaults organization=https://dev.azure.com/<devops-org> project=<devops-project>`.
 
 ### 1. Resource snapshot
 
-For the subscription's RGs (today only `AZAI_group` matters, but iterate `az group list`):
+For the subscription's RGs (today only `<resource-group>` matters, but iterate `az group list`):
 
 ```bash
 SUB=$(az account show --query id -o tsv)
-RG=AZAI_group
+RG=<resource-group>
 az functionapp list -g $RG -o json
 az webapp list -g $RG -o json
 az containerapp list -g $RG -o json
@@ -68,7 +68,7 @@ Health-probe floor is ~11–12 `Requests`/30d on every site — discount that.
 
 ### 3. Storage backing map
 
-Map every function app to its `AzureWebJobsStorage` account so the report can warn about shared storage (today: 12 of 13 funcs share `stsentimarkv2` — MUST NOT delete that storage).
+Map every function app to its `AzureWebJobsStorage` account so the report can warn about shared storage (today: 12 of 13 funcs share `<shared-storage-account>` — MUST NOT delete that storage).
 
 ```bash
 for fn in $(az functionapp list -g $RG --query "[].name" -o tsv); do
@@ -80,14 +80,14 @@ done
 
 ### 4. DevOps repos
 
-For both `Corp-AI` and `Corp-domain`, list every repo and the timestamp of the latest commit on the default branch. Flag repos with last commit > 180 days ago. Also list size-0 repos (placeholders).
+For both `<devops-project>` and `<devops-org>`, list every repo and the timestamp of the latest commit on the default branch. Flag repos with last commit > 180 days ago. Also list size-0 repos (placeholders).
 
 ```bash
-ORG=https://dev.azure.com/Corp-domain
+ORG=https://dev.azure.com/<devops-org>
 TOKEN=$(az account get-access-token --resource 499b84ac-1321-427f-aa17-267ca6975798 --query accessToken -o tsv)
-az repos list --project Corp-domain --query "sort_by([], &name) | [].[id,name]" -o tsv | while IFS=$'\t' read -r id name; do
+az repos list --project <devops-project> --query "sort_by([], &name) | [].[id,name]" -o tsv | while IFS=$'\t' read -r id name; do
   date=$(curl -s -H "Authorization: Bearer $TOKEN" \
-    "$ORG/Corp-domain/_apis/git/repositories/$id/commits?searchCriteria.%24top=1&api-version=7.1" \
+    "$ORG/<devops-project>/_apis/git/repositories/$id/commits?searchCriteria.%24top=1&api-version=7.1" \
     | python3 -c "import sys,json; d=json.load(sys.stdin); v=d.get('value',[{}])[0]; print(v.get('committer',{}).get('date','-'))" 2>/dev/null)
   printf "%-45s %s\n" "$name" "$date"
 done
@@ -95,17 +95,17 @@ done
 
 ### 5. Wiki activity
 
-Wiki repo IDs equal the wiki IDs. Query the same `commits?$top=1` endpoint against `repositoryId` = wiki id. Wikis themselves rarely go dormant; instead look for whole subtrees prefixed `/Archived/`, `/Oded - Archived work/`, etc., and report them as candidates for export-and-delete.
+Wiki repo IDs equal the wiki IDs. Query the same `commits?$top=1` endpoint against `repositoryId` = wiki id. Wikis themselves rarely go dormant; instead look for whole subtrees prefixed `/Archived/`, `/<teammate> - Archived work/`, etc., and report them as candidates for export-and-delete.
 
 ### 6. Foundry agents
 
 ```bash
 TOKEN=$(az account get-access-token --resource https://ai.azure.com --query accessToken -o tsv)
 curl -s -H "Authorization: Bearer $TOKEN" \
-  "https://brn-azai.services.ai.azure.com/api/projects/seekapa_ai/assistants?api-version=v1"
+  "https://<foundry-account>.services.ai.azure.com/api/projects/<foundry-project>/assistants?api-version=v1"
 ```
 
-For every agent, capture: id, name, model, `created_at`. If user's AGENTS.md mentions prod agents (`seekapa`, `AxiaCS`) that are absent from the listing, flag the gap.
+For every agent, capture: id, name, model, `created_at`. If user's AGENTS.md mentions named prod agents that are absent from the listing, flag the gap.
 
 ### 7. Diff vs previous report
 
@@ -120,9 +120,9 @@ Find the most recent prior `~/docs/audits/*-dormancy-audit.md`. Diff the "verdic
 Same template as `~/docs/audits/2026-05-03-dormancy-audit.md`. End every recommendation with the Phase X command block, but do **not** execute it. Always include the section:
 
 > **Hard rules (do not violate)**
-> - Never delete `stsentimarkv2` — shared backing store for 12 prod function apps.
-> - Never delete `sentimarkregistry` — pulled by `COMP-AEO` + `COMP-SEEKAPAAITRAININGAPI-PROD`.
-> - Never delete `kv-seekapa-apps`.
+> - Never delete `<shared-storage-account>` — shared backing store for 12 prod function apps.
+> - Never delete `<container-registry>` — pulled by multiple prod apps (name them from the current audit).
+> - Never delete `<key-vault-name>`.
 > - Per-action explicit OK required for every deletion.
 
 ### 9. Notify
@@ -148,10 +148,10 @@ Adjust thresholds inline in this file as policy evolves.
 - `az` token expired → run `az login`.
 - `az repos list` fails with 401 → run `az devops login` (it asks for a PAT; do not store).
 - Foundry endpoint returns 401 → token resource is `https://ai.azure.com`, not `https://management.azure.com`.
-- Subscription scoping changed → re-confirm `az account show` matches `U-BTech - CSP (Z-Online)`.
+- Subscription scoping changed → re-confirm `az account show` matches the expected subscription name.
 
 ## Related
 
 - Master plan: `~/Codex-MASTER-PLAN-2026-05-03.md`
 - Last audit: `~/docs/audits/2026-05-03-dormancy-audit.md`
-- Foundry endpoint: `https://brn-azai.services.ai.azure.com/api/projects/seekapa_ai`
+- Foundry endpoint: `https://<foundry-account>.services.ai.azure.com/api/projects/<foundry-project>`

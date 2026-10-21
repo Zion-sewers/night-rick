@@ -21,15 +21,16 @@ Pre-filter test output (never ingest full logs), extract failure index (name, er
 
 ## Args
 
-- `[project]` — optional: figma-4-all | siu | seekapa-video (auto-detect from cwd)
+- `[project]` — optional: name of the subproject to target (auto-detect from cwd)
 - `[test-name]` — optional: specific test to investigate
 
 ## Steps
 
-1. **Detect project** from cwd or arg. Determine runner:
-   - figma-4-all: `bun run test:p0`
-   - seekapa-video: `bun test`
-   - SIU: `uv run pytest tests/unit/ -x --tb=short`
+1. **Detect project** from cwd or arg. Determine runner from the project's own
+   test config (e.g. a `package.json` script or a documented pytest path):
+   - JS/TS project with a dedicated fast-path script (e.g. `test:p0`): `bun run test:p0`
+   - JS/TS project with a standard test script: `bun test`
+   - Python project: `uv run pytest tests/unit/ -x --tb=short`
 
 2. **Run tests with minimal output** (short traceback, no captures):
 ```bash

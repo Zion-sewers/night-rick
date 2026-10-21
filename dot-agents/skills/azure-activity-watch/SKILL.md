@@ -1,21 +1,21 @@
 ---
 name: azure-activity-watch
-description: Surface Azure Activity-Log events where someone other than the owner (default shoval.be@i-sdd.com) has stopped, restarted, deleted, or resized a resource in AZAI_group. Use after a service goes unexpectedly cold, on the weekly audit, or any time you suspect a teammate touched your stuff without telling you.
+description: Surface Azure Activity-Log events where someone other than the owner (default <your-email>) has stopped, restarted, deleted, or resized a resource in <resource-group>. Use after a service goes unexpectedly cold, on the weekly audit, or any time you suspect a teammate touched your stuff without telling you.
 ---
 
 # azure-activity-watch
 
-Forensic skill — answers "who stopped my app?" and "did anyone touch AZAI_group resources I didn't authorize?".
+Forensic skill — answers "who stopped my app?" and "did anyone touch resources in my resource group that I didn't authorize?".
 
 ## When to invoke
 
-- **Reactive**: a Shoval-owned app/function/container is suddenly Stopped or missing, and you don't remember stopping it.
-- **Proactive**: weekly cadence, alongside `azure-audit`. Catch quiet cleanups (e.g. the 2026-05-03 Yasha incident — see `~/.Codex/projects/-home-shovalbe/memory/project_yasha_stop_incident.md`).
+- **Reactive**: an app/function/container you own is suddenly Stopped or missing, and you don't remember stopping it.
+- **Proactive**: weekly cadence, alongside `azure-audit`. Catch quiet cleanups by a teammate (log any such incident locally, e.g. under your own project memory, so recurring actors are easy to recognize next time).
 - **Pre-deletion sanity**: before deprovisioning a "dormant" resource, confirm someone else didn't already stop or migrate it the same day.
 
 ## What it does
 
-Calls `az monitor activity-log list` over the last N days (default 7) on `AZAI_group`, filters to a hand-curated set of "interesting" operation names (stop / restart / delete / serverfarm-write), keeps only EndRequest + Succeeded entries, and excludes events whose `caller` equals the owner. Anything left is a delete/stop you didn't perform yourself.
+Calls `az monitor activity-log list` over the last N days (default 7) on your resource group, filters to a hand-curated set of "interesting" operation names (stop / restart / delete / serverfarm-write), keeps only EndRequest + Succeeded entries, and excludes events whose `caller` equals the owner. Anything left is a delete/stop you didn't perform yourself.
 
 ## Run
 
@@ -31,20 +31,20 @@ Inputs:
 | Flag | Default | Purpose |
 |---|---|---|
 | `--since` | `7d` | Window. Accepts `Nd` / `Nh`. |
-| `--owner` | `shoval.be@i-sdd.com` | Caller to *exclude* (you). |
-| `--rg` | `AZAI_group` | Resource group to scope to. |
+| `--owner` | `<your-email>` | Caller to *exclude* (you). Set via the `OWNER` env var or `--owner`. |
+| `--rg` | `<resource-group>` | Resource group to scope to. Set via the `RG` env var or `--rg`. |
 | `--json` | (off) | Switch to JSON output. Includes correlationId, clientApp (Portal vs CLI vs SP), MFA flag. |
 
 ## Reading the output
 
 For each row you should ask:
 - **Was this expected?** (planned migration, on-call rotation, owner-coordinated cleanup, etc.)
-- **Was it announced?** (Slack / DM / Yasha-style portal raid?)
+- **Was it announced?** (Slack / DM / an unannounced portal cleanup by a teammate?)
 - **Did it break anything?** (cross-check `azure-audit` Tier-2 or `app-realtime-monitor`-style critical apps.)
 
 If the answer to any is "no", surface the row to the user with:
 1. The forensic detail (timestamp, caller, IP, correlationId, clientApp).
-2. A draft of a polite reply to the actor — *do not auto-send*. The user prefers to send the message themselves.
+2. A draft of a polite reply to the actor — *do not auto-send*. Let the user send the message themselves.
 
 ## Forensic columns (JSON mode)
 
@@ -63,7 +63,7 @@ If the answer to any is "no", surface the row to the user with:
 
 ## Known signal-of-concern actors
 
-- `yashako@zonlineltd.com` (Yasha Kohut) — historically performs unannounced portal cleanups. Default to flagging any ops by Yasha on Shoval-owned services. See incident memory.
+- Keep a short local watchlist of callers who have historically performed unannounced portal cleanups (e.g. `<teammate-email>` in your own notes). Default to flagging any ops by a watchlisted caller on resources you own. See your incident memory for details of past occurrences.
 
 ## Not in scope
 
@@ -77,20 +77,20 @@ If the answer to any is "no", surface the row to the user with:
 If you want an email or Teams ping the moment someone stops an app, add a native alert. The CLI:
 
 ```bash
-RG=AZAI_group
-EMAIL=shoval.be@i-sdd.com
+RG=<resource-group>
+EMAIL=<your-email>
 
 # Action group — receives the alert
-az monitor action-group create -g $RG -n ag-azai-stop-watch \
-  --short-name azai-stop \
-  --action email shoval-email "$EMAIL"
+az monitor action-group create -g $RG -n ag-stop-watch \
+  --short-name stop-watch \
+  --action email owner-email "$EMAIL"
 
 # Activity Log Alert — fires on every Microsoft.Web/sites/stop/action in the RG
 az monitor activity-log alert create -g $RG -n alert-stop-webapp \
   --scope "/subscriptions/$(az account show --query id -o tsv)/resourceGroups/$RG" \
   --condition category=Administrative \
   --condition operationName=Microsoft.Web/sites/stop/action \
-  --action-group ag-azai-stop-watch
+  --action-group ag-stop-watch
 ```
 
 You'll get an email per stop event, including the caller. Caveat: Activity Log Alerts can't natively filter `caller != me`, so you'll get notified about your own stops too. The skill above is the right tool for "exclude me" forensics.
@@ -103,6 +103,6 @@ You'll get an email per stop event, including the caller. Caveat: Activity Log A
 
 ## Related memories / references
 
-- Incident: `~/.Codex/projects/-home-shovalbe/memory/project_yasha_stop_incident.md`
+- Incident notes: keep your own local incident memory (e.g. under `~/.Codex/projects/<your-project>/memory/`) describing any past unannounced-stop incidents.
 - Audit skill: `~/.Codex/skills/azure-audit/SKILL.md`
-- Last forensic report on Yasha's stops: rendered inline in the conversation that created this skill.
+- The first forensic report this skill produced was rendered inline in the conversation that created it; keep a copy in your incident memory if you want it as a reference example.

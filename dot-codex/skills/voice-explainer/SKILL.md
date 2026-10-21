@@ -39,7 +39,7 @@ Do NOT use:
 ```
 
 The helper:
-1. Fetches `ComplianceExam-ElevenLabsApiKey` from `kv-seekapa-apps` via az.
+1. Fetches `<your-secret-name>-ElevenLabsApiKey` from `<your-key-vault-name>` via az.
 2. POSTs to `https://api.elevenlabs.io/v1/text-to-speech/<voice_id>` with `eleven_multilingual_v2`.
 3. Saves MP3 to `~/.claude/assets/voice/<slug>-<unix>.mp3`.
 4. Auto-plays via `ffplay -nodisp -autoexit` (no window, exits when done).
@@ -60,7 +60,7 @@ Pass `--no-pop` to skip auto-play (just save the file).
 
 ElevenLabs charges ~$0.30 per 1000 characters. The user has rich credits (per them) — be generous on quality, careful on volume. One audio per response unless explicitly requested otherwise.
 
-## Voice profiles (Oded's pattern)
+## Voice profiles
 
 | Profile | Use for | Voice |
 |---|---|---|
@@ -80,7 +80,7 @@ Edit voice IDs in `~/.claude/bin/generate-voice.py` if you want different voices
 `eleven_multilingual_v2` auto-detects Hebrew, English, Arabic. Match the user's language:
 - They wrote Hebrew → narrate in Hebrew
 - English → English
-- Arabic → Arabic (limited utility today; Sentimark / Brokershub markets)
+- Arabic → Arabic (limited utility today; depends on which markets your work touches)
 
 For technical nouns (deployment names, repo names, file paths), keep them in English even within Hebrew narration — that matches the user's natural code-switch pattern (per `shoval-voice-draft` SKILL).
 
@@ -95,7 +95,7 @@ These are the ways audio earns its keep beyond the obvious narration.
 4. **Mode-change announcement** — entering autonomic mode: "switching to autonomic mode now, will stop at 06:00 sharp." Two seconds of audio.
 
 ### Tier 2 — high leverage, easy
-5. **Credit-guard freeze trip** — 15-word alert: "credit guard tripped: AZAI day-over-day delta exceeded 2x. all routines frozen until you unfreeze." Authoritative voice.
+5. **Credit-guard freeze trip** — 15-word alert: "credit guard tripped: spend day-over-day delta exceeded 2x. all routines frozen until you unfreeze." Authoritative voice.
 6. **Build-failed announcement** — "build 11711 on master failed: docker push unauthorized. logs in PR comments." Authoritative voice.
 7. **Morning brief read-aloud** — daily 09:00 IDT, the routine #4 brief gets auto-narrated to a podcast-mode MP3 saved to `~/.claude/assets/voice/morning-brief-YYYY-MM-DD.mp3`. User listens during coffee.
 8. **Walking commute mode** — `~/.claude/bin/walking-mode "topic"` reads the relevant SPEC sections + recent rollouts as continuous audio (5-10 min). For when the user is walking.
@@ -103,7 +103,7 @@ These are the ways audio earns its keep beyond the obvious narration.
 ### Tier 3 — niche but valuable
 9. **TL;DR mode** — paste a long doc, get a 30-second audio summary. Useful for vendor whitepapers, vibe-coder slop submissions.
 10. **Voice handoff between sessions** — when one session ends in autonomic mode, write a `handoff.mp3` alongside `handoff.md`. Next session start plays it as preamble.
-11. **Khaleeji Arabic narration** — for Sentimark/Brokershub content, generate marketing-spec narration in Khaleeji (Oded's original use case). Use `eleven_multilingual_v2` with Arabic input; voice profile may need re-cast for that dialect specifically.
+11. **Khaleeji Arabic narration** — for regional-market marketing content, generate narration in Khaleeji dialect. Use `eleven_multilingual_v2` with Arabic input; voice profile may need re-cast for that dialect specifically.
 12. **Pair-programming "thinking out loud" mode** — every time a substantive plan or decision is reached, narrate it in 1 sentence. Good for the user feeling like they're pairing with a real person.
 13. **Eyes-tired accessibility mode** — explicit toggle (`touch /tmp/.claude-voice-everything`) makes every assistant response also generate audio. For neck/eye fatigue moments. Off by default.
 

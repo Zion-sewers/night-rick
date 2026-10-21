@@ -1,6 +1,6 @@
 {
   "name": "azure-devops",
-  "description": "Azure DevOps integration for Figma4All - manage branches, commits, and pull requests",
+  "description": "Azure DevOps integration - manage branches, commits, and pull requests",
   "version": "1.0.0",
   "author": "Claude Code",
   "permissions": [

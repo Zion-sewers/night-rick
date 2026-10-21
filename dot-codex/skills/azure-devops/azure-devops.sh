@@ -13,9 +13,9 @@
 set -e
 
 PROJECT_ROOT="${PROJECT_ROOT:-.}"
-DEVOPS_ORG="https://dev.azure.com/Corp-domain"
-DEVOPS_PROJECT="Corp-AI"
-DEVOPS_REPO="figma-4-all"
+DEVOPS_ORG="${DEVOPS_ORG:?set DEVOPS_ORG, e.g. https://dev.azure.com/your-org}"
+DEVOPS_PROJECT="${DEVOPS_PROJECT:?set DEVOPS_PROJECT to your Azure DevOps project name}"
+DEVOPS_REPO="${DEVOPS_REPO:?set DEVOPS_REPO to your repo name}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -230,7 +230,7 @@ CRITICAL POINTS:
 ✓ This prevents accidental merges to production branches
 
 NEXT STEPS:
-1. Review PR in Azure DevOps (figma-4-all repository)
+1. Review PR in Azure DevOps (your configured DEVOPS_REPO repository)
 2. Address any review comments
 3. Approve when ready
 4. DO NOT merge automatically

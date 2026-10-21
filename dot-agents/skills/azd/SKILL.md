@@ -74,11 +74,11 @@ Environment state lives under `.azure/<env-name>/`. Do NOT commit `.azure/` — 
 - `azd up` creates resources that cost money. Run `azd provision --preview` first on unfamiliar templates.
 - `azd auth` uses the same token cache as `az`. If `az login` MFA timed out, `azd` will too — re-auth once, both are back.
 
-## Integration with Seekapa patterns
+## Integration with our own deploy patterns
 
 - Our production deploys go through **Azure DevOps pipelines**, not `azd`. Use `azd` for local/dev iteration.
-- Projects that DO use azd: none in production scope today. Candidates: new Foundry agent projects, SIU Container App migration.
-- Service connections for ADO (`managecorpairegistry` for deploy, `U-BTech - CSP` for KV) are NOT used by `azd` — azd uses your `az login` identity directly.
+- Projects that DO use azd: none in production scope today. Candidates: new Foundry agent projects, a future Container App migration.
+- Service connections for ADO (name your own deploy connection and KV connection) are NOT used by `azd` — azd uses your `az login` identity directly.
 
 ## Common failure modes
 

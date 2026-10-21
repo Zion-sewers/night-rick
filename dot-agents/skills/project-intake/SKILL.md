@@ -5,7 +5,7 @@ description: Project intake gate — structure, git hygiene, code quality, testi
 
 # /project-intake
 
-Mandatory checklist for any project entering ~/projects/. The Sentimark lesson: 21K-line monolith, 4 backend copies, 42 MB of images. Never again.
+Mandatory checklist for any project entering ~/projects/. The lesson from a past project: 21K-line monolith, 4 backend copies, 42 MB of images. Never again.
 See archived full protocol: `~/.Codex/rules/.archive-project-intake.md`
 
 ## Checklist (all must pass)

@@ -6,20 +6,18 @@ allowed-tools: ["Bash", "Read", "Write"]
 
 ## When to use
 - MCP/API keys are missing in the current session.
-- You need consistent secrets loading across `/home/shovalbe`, `social-intelligence-unit`, and `figma-4-all`.
+- You need consistent secrets loading across your global config and multiple per-project scopes.
 - You want lazy loading (fetch only when needed) instead of manual ad-hoc exports.
 
 ## Runtime Components
 - Sync utility: `~/.codex/bin/codex-secrets-sync`
 - Vault config: `~/.codex/secrets/keyvault.conf`
 - Global map: `~/.codex/secrets/global.map`
-- SIU map: `/home/shovalbe/projects/social-intelligence-unit/.codex/secrets.map`
-- figma map: `/home/shovalbe/projects/figma-4-all/.codex/secrets.map`
+- Per-project map: `~/projects/<project-name>/.codex/secrets.map` (one per project that needs secrets)
 
 ## Common Commands
 - MCP keys only (auto scope): `~/.codex/bin/codex-secrets-sync --project auto --mcp-only`
-- SIU full scope: `~/.codex/bin/codex-secrets-sync --project siu`
-- figma full scope: `~/.codex/bin/codex-secrets-sync --project figma4all`
+- Per-project full scope: `~/.codex/bin/codex-secrets-sync --project <project-name>`
 - Require specific vars: `~/.codex/bin/codex-secrets-sync --project auto --require PERPLEXITY_API_KEY --require APIFY_API_KEY`
 
 ## Notes

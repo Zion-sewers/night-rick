@@ -9,7 +9,7 @@ Headed browser automation via `playwright-cli` with isolated profile. No MCP ove
 
 ## When to Use
 
-- Explore/test your own dev/stage apps (SIU dashboard, figma plugin preview, seekapa renders)
+- Explore/test your own dev/stage apps (a dashboard app, a Figma plugin preview, a rendering pipeline preview)
 - Debug UI issues, fill forms, validate flows, take screenshots
 - Generate or fix E2E tests from observed browser behavior
 
@@ -32,9 +32,9 @@ playwright-cli fill e5 "user@example.com"  # Fill input
 playwright-cli screenshot --filename=debug.png
 
 # Named sessions for longer workflows
-playwright-cli -s=siu open https://localhost:3002/intelligence --persistent --profile=.pw-userdata/siu
-playwright-cli -s=siu snapshot
-playwright-cli -s=siu close
+playwright-cli -s=<project> open https://localhost:3002/intelligence --persistent --profile=.pw-userdata/<project>
+playwright-cli -s=<project> snapshot
+playwright-cli -s=<project> close
 
 # Cleanup
 playwright-cli close          # Close default session
@@ -48,9 +48,9 @@ Only automate these domains:
 
 | Project | Dev URL | Stage URL |
 |---------|---------|-----------|
-| SIU | `localhost:3002` | `siu-stage.vercel.app` |
-| figma-4-all | Figma plugin (localhost:1234) | N/A |
-| seekapa-video | `localhost:3000` | N/A |
+| `<project-a>` | `localhost:3002` | `<project-a>-stage.vercel.app` |
+| `<figma-plugin-project>` | Figma plugin (localhost:1234) | N/A |
+| `<render-preview-project>` | `localhost:3000` | N/A |
 
 For external sites, use Perplexity MCP or WebSearch.
 
@@ -60,10 +60,10 @@ Each project gets an isolated browser profile. Cookies, localStorage, and auth p
 
 ```
 .pw-userdata/
-  siu/         # SIU dashboard auth, cookies
-  figma/       # Figma plugin preview
-  seekapa/     # seekapa-video local preview
-  dev/         # General dev/test profile
+  <project-a>/  # project-a dashboard auth, cookies
+  figma/        # Figma plugin preview
+  <project-b>/  # project-b local preview
+  dev/          # General dev/test profile
 ```
 
 Add `.pw-userdata/` to `.gitignore` (and `.claudeignore` if you still use Claude Code).
@@ -82,14 +82,14 @@ When asked to explore and fix UI issues, follow this loop:
 8. **Stop** after 3 iterations or when green
 
 ```bash
-# Example: debug SIU intelligence dashboard
-playwright-cli -s=siu open http://localhost:3002/intelligence --browser=chrome --persistent --profile=.pw-userdata/siu
-playwright-cli -s=siu snapshot
+# Example: debug a project's intelligence dashboard
+playwright-cli -s=<project> open http://localhost:3002/intelligence --browser=chrome --persistent --profile=.pw-userdata/<project>
+playwright-cli -s=<project> snapshot
 # ... interact, observe, diagnose ...
-playwright-cli -s=siu console     # Check for JS errors
-playwright-cli -s=siu network     # Check API calls
-playwright-cli -s=siu screenshot --filename=debug-siu.png
-playwright-cli -s=siu close
+playwright-cli -s=<project> console     # Check for JS errors
+playwright-cli -s=<project> network     # Check API calls
+playwright-cli -s=<project> screenshot --filename=debug-<project>.png
+playwright-cli -s=<project> close
 ```
 
 ## Safety Rules

@@ -81,17 +81,17 @@ If Path A step 2 produces a plan without a failure-modes section, that's a forge
 
 ### Good — concrete, mitigated, spread across categories
 
-> 1. **Stale Foundry token at run time** — `az cognitiveservices account keys list` returns a key that's been rotated since session start; deploy_seekapa_prompt.py 401s mid-run.
+> 1. **Stale Foundry token at run time** — `az cognitiveservices account keys list` returns a key that's been rotated since session start; `deploy_agent_prompt.py` 401s mid-run.
 >    *Mitigation:* fetch token immediately before the API call, not at script start; retry once on 401.
 >
-> 2. **PandaTS MySQL outage during deploy** — agent prompt change requires KB sanity test; if the DB is down at deploy time, the test passes vacuously and the bad prompt ships.
+> 2. **Backing database outage during deploy** — agent prompt change requires KB sanity test; if the DB is down at deploy time, the test passes vacuously and the bad prompt ships.
 >    *Mitigation:* test connector returns BLOCKED status (not PASS) when DB is unreachable; deploy gate treats BLOCKED as fail.
 >
-> 3. **LiveAgent department ID still placeholder** — `ticket_categories.py` has `""` for some departments; escalation silently no-ops.
+> 3. **Helpdesk department ID still placeholder** — `ticket_categories.py` has `""` for some departments; escalation silently no-ops.
 >    *Mitigation:* `pre-ship-clean` hook greps for empty department IDs and blocks deploy if any escalation tier is unwired.
 >
-> 4. **Multilingual OTP message renders RTL incorrectly in WhatsApp** — Hebrew OTP gets mirrored, customer can't read the code.
->    *Mitigation:* qa_scenarios includes RTL-rendering test against actual WhatsApp Sandbox; manual visual check in PR if scenario file changed.
+> 4. **Multilingual OTP message renders RTL incorrectly in the messaging channel** — Hebrew OTP gets mirrored, customer can't read the code.
+>    *Mitigation:* qa_scenarios includes RTL-rendering test against the actual messaging sandbox; manual visual check in PR if scenario file changed.
 >
-> 5. **Yasha changes Foundry agent config concurrently** — model swap or vector store update lands while my deploy is mid-flight; merge clobbers his change.
+> 5. **A teammate changes Foundry agent config concurrently** — model swap or vector store update lands while my deploy is mid-flight; merge clobbers their change.
 >    *Mitigation:* fetch agent state immediately before update, diff vs my plan; abort if diff includes fields outside my scope.

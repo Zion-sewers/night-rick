@@ -1,6 +1,6 @@
 ---
 name: azure-runtime
-description: Call Azure AI runtime from CLI — Azure OpenAI chat completions against deployed GPT models in brn-azai (gpt-5.5, gpt-4.1, etc.) AND Azure AI Foundry agents (ORM-FLAGGING-AGENT, seekapa, AxiaCS) with thread/run streaming and step observability. Auth via az login (DefaultAzureCredential) — no API keys handled. Triggers on "/azure-runtime", "/foundry-runtime", "chat with gpt-5.5", "call my Foundry agent", "run agent_xxx via Foundry", "stream foundry run", any reference to brn-azai or services.ai.azure.com runtime calls. SKIP when authoring/creating agents (use agent-builder), running eval pipelines (use eval-runner), doing raw az resource ops (use Bash directly), or talking to OpenAI's platform.openai.com (no key, not supported).
+description: Call Azure AI runtime from CLI — Azure OpenAI chat completions against deployed GPT models in your Azure AI Foundry account (gpt-5.5, gpt-4.1, etc.) AND Azure AI Foundry agents (any named agent, e.g. <agent-id>) with thread/run streaming and step observability. Auth via az login (DefaultAzureCredential) — no API keys handled. Triggers on "/azure-runtime", "/foundry-runtime", "chat with gpt-5.5", "call my Foundry agent", "run agent_xxx via Foundry", "stream foundry run", any reference to a Foundry account or services.ai.azure.com runtime calls. SKIP when authoring/creating agents (use agent-builder), running eval pipelines (use eval-runner), doing raw az resource ops (use Bash directly), or talking to OpenAI's platform.openai.com (no key, not supported).
 model: opus
 ---
 
@@ -16,7 +16,7 @@ model: opus
 az account show --query "{user:user.name, sub:name}" -o tsv
 ```
 
-If empty → `az login`. Tenant must have access to `AZAI_group` / `brn-azai`.
+If empty → `az login`. Tenant must have access to your `<resource-group>` / `<foundry-account>`.
 
 ## Two surfaces
 
@@ -27,7 +27,7 @@ Same `openai` Python lib, but `AzureOpenAI` client class. For raw chat against `
 **List your deployments first:**
 ```bash
 az cognitiveservices account deployment list \
-  --resource-group AZAI_group --name brn-azai \
+  --resource-group <resource-group> --name <foundry-account> \
   --query "[].{name:name, model:properties.model.name, version:properties.model.version}" -o table
 ```
 
@@ -43,7 +43,7 @@ token_provider = get_bearer_token_provider(
     "https://cognitiveservices.azure.com/.default",
 )
 client = AzureOpenAI(
-    azure_endpoint="https://brn-azai.openai.azure.com/",
+    azure_endpoint="https://<foundry-account>.openai.azure.com/",
     azure_ad_token_provider=token_provider,
     api_version="2025-04-01-preview",
 )
@@ -59,13 +59,13 @@ PY
 
 ### B. Foundry agents (deployed)
 
-For `ORM-FLAGGING-AGENT:7`, `seekapa`, `AxiaCS`, etc. Uses `azure-ai-projects` SDK against a project endpoint.
+For any named agent (e.g. `<agent-id>:7`), any project. Uses `azure-ai-projects` SDK against a project endpoint.
 
 **Stream a run with full observability** (tool calls + reasoning + message deltas):
 ```bash
 ~/.Codex/skills/azure-runtime/agent_run.py \
-  "https://brn-azai.services.ai.azure.com/api/projects/seekapa_ai" \
-  "ORM-FLAGGING-AGENT" \
+  "https://<foundry-account>.services.ai.azure.com/api/projects/<project-name>" \
+  "<agent-id>" \
   "your prompt"
 ```
 
@@ -77,7 +77,7 @@ uv run --quiet --with "azure-ai-projects>=1.0" --with "azure-identity>=1.21" pyt
 from azure.ai.projects import AIProjectClient
 from azure.identity import DefaultAzureCredential
 p = AIProjectClient(
-    endpoint="https://brn-azai.services.ai.azure.com/api/projects/seekapa_ai",
+    endpoint="https://<foundry-account>.services.ai.azure.com/api/projects/<project-name>",
     credential=DefaultAzureCredential(),
 )
 for a in p.agents.list_agents():
@@ -87,15 +87,15 @@ PY
 
 **Get an existing agent:**
 ```python
-agent = p.agents.get_agent("ORM-FLAGGING-AGENT")  # latest version
-# pinned version: "ORM-FLAGGING-AGENT:7"
+agent = p.agents.get_agent("<agent-id>")  # latest version
+# pinned version: "<agent-id>:7"
 ```
 
 ## Project endpoints (house catalog)
 
 | Project | Endpoint |
 |---|---|
-| seekapa_ai | `https://brn-azai.services.ai.azure.com/api/projects/seekapa_ai` |
+| `<project-name>` | `https://<foundry-account>.services.ai.azure.com/api/projects/<project-name>` |
 
 ## Boundaries
 
@@ -108,6 +108,6 @@ agent = p.agents.get_agent("ORM-FLAGGING-AGENT")  # latest version
 
 ```bash
 az account show --query name -o tsv
-az cognitiveservices account deployment list --resource-group AZAI_group --name brn-azai --query "[0].name" -o tsv
+az cognitiveservices account deployment list --resource-group <resource-group> --name <foundry-account> --query "[0].name" -o tsv
 [ -x ~/.Codex/skills/azure-runtime/agent_run.py ] && echo "runner ok"
 ```

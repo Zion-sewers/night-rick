@@ -24,59 +24,62 @@ without needing to parse raw terminal output (saving tokens).
 
 ## Project-Specific Commands
 
-### social-intelligence-unit
+### \<python-project\> (uv-managed Python)
 
 ```bash
 # Unit tests (fast)
-cd ~/projects/social-intelligence-unit && uv run pytest tests/ -x --tb=short -q
+cd ~/projects/<python-project> && uv run pytest tests/ -x --tb=short -q
 
 # Type checking
-cd ~/projects/social-intelligence-unit && uv run mypy src/ --ignore-missing-imports
+cd ~/projects/<python-project> && uv run mypy src/ --ignore-missing-imports
 
 # Linting
-cd ~/projects/social-intelligence-unit && uv run ruff check src/
+cd ~/projects/<python-project> && uv run ruff check src/
 
 # Security scan
-cd ~/projects/social-intelligence-unit && uv run bandit -r src/ -ll
+cd ~/projects/<python-project> && uv run bandit -r src/ -ll
 
 # Full quality gate
-cd ~/projects/social-intelligence-unit && uv run pytest && uv run mypy src/ && uv run ruff check src/
+cd ~/projects/<python-project> && uv run pytest && uv run mypy src/ && uv run ruff check src/
 ```
 
-### figma-4-all
+### \<ts-project-with-tiers\> (Bun-managed TypeScript, staged test tiers)
 
 ```bash
 # P0 (pre-commit)
-cd ~/projects/figma-4-all && bun run test:p0
+cd ~/projects/<ts-project-with-tiers> && bun run test:p0
 
 # Staged (PR-level)
-cd ~/projects/figma-4-all && bun run test:staged
+cd ~/projects/<ts-project-with-tiers> && bun run test:staged
 
-# QA (VABB metrics on 232 hard cases)
-cd ~/projects/figma-4-all && bun run qa
+# QA (metrics against a fixed hard-case set)
+cd ~/projects/<ts-project-with-tiers> && bun run qa
 
-# Syntax validation (ES2017)
-cd ~/projects/figma-4-all && bun run validate:syntax
+# Syntax validation
+cd ~/projects/<ts-project-with-tiers> && bun run validate:syntax
 
 # Full quality gate
-cd ~/projects/figma-4-all && bun run validate:syntax && bun run test:p0 && bunx eslint . --fix
+cd ~/projects/<ts-project-with-tiers> && bun run validate:syntax && bun run test:p0 && bunx eslint . --fix
 ```
 
-### seekapa-video
+### \<ts-project\> (Bun-managed TypeScript, typecheck/lint/test)
 
 ```bash
 # TypeScript validation
-cd ~/projects/seekapa-video && bun run typecheck
+cd ~/projects/<ts-project> && bun run typecheck
 
 # Linting (ESLint 9 flat config)
-cd ~/projects/seekapa-video && bun run lint
+cd ~/projects/<ts-project> && bun run lint
 
 # Unit & integration tests
-cd ~/projects/seekapa-video && bun run test
+cd ~/projects/<ts-project> && bun run test
 
 # Full quality gate
-cd ~/projects/seekapa-video && bun run typecheck && bun run lint && bun run test
+cd ~/projects/<ts-project> && bun run typecheck && bun run lint && bun run test
 ```
+
+Add one section like this per project you actually work in, named after that
+project's own folder under `~/projects/`.
 
 ## How to Report Results
 

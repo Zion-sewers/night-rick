@@ -22,28 +22,31 @@ expensive multi-file searches across every repo under `~/projects`.
 
 ## Active Hive Rigs
 
-Use `/home/shovalbe/.hive/rigs.yaml` as the live active-project list. Each rig
+Use `~/.hive/rigs.yaml` as the live active-project list. Each rig
 must also have a project-level `.codex/hive.yaml` and `AGENTS.md`. When a
 project has `.claude/`, it should include `.claude/hive.yaml` pointing Claude
 agents back to the canonical Codex/Hive manifest.
 
-### seekapa-training-platform
+Fill in one section like the templates below per project you actually run,
+named after that project's own folder under `~/projects/`.
 
-- **Location:** `/home/shovalbe/projects/seekapa-training-platform`
+### \<voice-training-platform\>
+
+- **Location:** `~/projects/<voice-training-platform>`
 - **Domain:** Voice-based sales training platform with ElevenLabs agents,
   Azure Functions, PostgreSQL, scoring, reports, and multilingual training.
 - **Key Contracts:**
-  - `training_app_user` is isolated to the `seekapa_training` database.
+  - The training-app DB user is isolated to its own dedicated database.
   - ElevenLabs sessions complete through timer/webhook sync.
   - User-facing training data and reports are sensitive.
 - **Source of Truth:** `AGENTS.md`, `.codex/hive.yaml`, then `CLAUDE.md`
 - **Automation Focus:** timers/webhooks, report reliability, HMAC validation,
   Key Vault usage, session-completion regression tests.
 
-### cs-agent
+### \<agent-project\>
 
-- **Location:** `/home/shovalbe/projects/cs-agent`
-- **Domain:** Seekapa/Axia customer-service agent for production Chatwoot
+- **Location:** `~/projects/<agent-project>`
+- **Domain:** Customer-service agent for production Chatwoot
   channels and Foundry prompt/eval workflows.
 - **Key Contracts:**
   - CRM access is read-only.
@@ -53,9 +56,9 @@ agents back to the canonical Codex/Hive manifest.
 - **Automation Focus:** Foundry prompt drift, Chatwoot/CRM boundaries,
   deterministic classifiers, multilingual evals, output sanitization.
 
-### qc-telephony-api
+### \<qc-project\>
 
-- **Location:** `/home/shovalbe/projects/qc/qc-telephony-api`
+- **Location:** `~/projects/<qc-project>`
 - **Domain:** Azure Functions API for transcript translation and grounded Q&A
   over telephony call segments.
 - **Key Contracts:**
@@ -66,9 +69,9 @@ agents back to the canonical Codex/Hive manifest.
 - **Automation Focus:** API contracts, `QAResponse` shape, target-language
   behavior, Azure OpenAI/Key Vault drift, no-storage guarantees.
 
-### video-understanding
+### \<video-project\>
 
-- **Location:** `/home/shovalbe/projects/video-understanding`
+- **Location:** `~/projects/<video-project>`
 - **Domain:** Short-form video analysis app: STT, OCR, vision, synthesis, and
   standalone report rendering.
 - **Key Contracts:**
@@ -79,9 +82,9 @@ agents back to the canonical Codex/Hive manifest.
 - **Automation Focus:** ACA/Bicep deploy path, Streamlit upload, Telegram bot
   roadmap, no-network tests, render/schema smoke checks.
 
-### campaign-analysis
+### \<campaign-scoring-project\>
 
-- **Location:** `/home/shovalbe/projects/campaign-analysis`
+- **Location:** `~/projects/<campaign-scoring-project>`
 - **Domain:** Marketing campaign, CRM/call-analysis, MCP/reporting, workbook,
   Foundry, and evaluation workspace.
 - **Key Contracts:**
@@ -101,7 +104,7 @@ agents back to the canonical Codex/Hive manifest.
 - **Python:** uv (NEVER direct pip/poetry/pipenv unless a project explicitly
   requires it)
 - **Quality:** ESLint + Knip (JS), Ruff (Python)
-- **Policy:** `/home/shovalbe/AGENTS.md`
+- **Policy:** `~/AGENTS.md`
 
 ### Shared Testing Standards
 
@@ -109,14 +112,14 @@ agents back to the canonical Codex/Hive manifest.
 - Property-based tests for invariants
 - Regression suite for every prod bug
 - Coverage targets: >90% (Python), >80% (JavaScript)
-- Policy: `/home/shovalbe/docs/testing_practices.txt`
+- Policy: `~/docs/testing_practices.txt`
 
 ### Shared Security Policy
 
 - Sandbox ON, network OFF by default
 - Secrets isolation, MCP authorization
 - DOMPurify for HTML, parameterized SQL only
-- Policy: `/home/shovalbe/docs/research/2026-05-07-ai-bot-security-best-practices.md`
+- Policy: `~/docs/research/2026-05-07-ai-bot-security-best-practices.md`
 
 ## How to Use This Skill
 
@@ -126,8 +129,8 @@ When a cross-project question arrives:
 2. If the index covers it, answer directly
 3. If the index is insufficient, read the specific project's CLAUDE.md or
    MEMORY.md and then UPDATE this index with the new information
-4. Do not scan every repo under `~/projects`; start with the five active rigs
-   unless the user explicitly widens scope.
+4. Do not scan every repo under `~/projects`; start with the active rigs
+   listed above unless the user explicitly widens scope.
 
 ## Maintenance
 

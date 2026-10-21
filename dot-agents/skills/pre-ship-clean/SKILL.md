@@ -40,10 +40,10 @@ Determine project type from CWD:
 
 | CWD matches | Stack | Dead code tool | Lint tool |
 |-------------|-------|---------------|-----------|
-| `*/cs-agent*` or `*/axia-seekapa*` | Python | `ruff check --select F401,F811,F841` | `ruff check .` |
-| `*/siu*` | Python + JS | ruff (Python) + knip (JS) | `ruff check src/` + `bun run lint` |
-| `*/figma-4-all*` | JS/TS | `bunx knip` | `bun run lint` |
-| `*/qc*` | Python | `ruff check --select F401,F811,F841` | `ruff check .` |
+| `*/<agent-project>*` | Python | `ruff check --select F401,F811,F841` | `ruff check .` |
+| `*/<python-project>*` | Python + JS | ruff (Python) + knip (JS) | `ruff check src/` + `bun run lint` |
+| `*/<ts-project-with-tiers>*` | JS/TS | `bunx knip` | `bun run lint` |
+| `*/<qc-project>*` | Python | `ruff check --select F401,F811,F841` | `ruff check .` |
 | `package.json` found | JS/TS | `npx knip` | `npx eslint .` |
 | `pyproject.toml` found | Python | `ruff check --select F401,F811,F841` | `ruff check .` |
 

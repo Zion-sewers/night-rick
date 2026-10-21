@@ -113,7 +113,7 @@ Count em dashes (---) per paragraph. Max 1 per paragraph.
 - **Heading per paragraph**: Only use headings for navigation, not decoration
 - **Summary paragraphs**: Delete recap paragraphs (except in exec summaries of 15+ page docs)
 - **Cautious openings**: First sentence must state a fact, problem, or instruction. No scene-setting.
-- **Passive voice**: Name the actor. "Yasha confirmed the schema." not "The schema has been confirmed."
+- **Passive voice**: Name the actor. "The reviewer confirmed the schema." not "The schema has been confirmed."
 
 ### Step 6: Sentence Quality
 

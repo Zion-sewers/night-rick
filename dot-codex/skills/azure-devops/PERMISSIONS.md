@@ -232,7 +232,7 @@ node_modules/      # Dependencies (properly ignored)
 - ✅ No credentials in commit messages
 
 ### Access Control
-- ✅ PAT scope limited to figma-4-all repo
+- ✅ PAT scope limited to the target repo (configured via DEVOPS_REPO)
 - ✅ No personal email or credentials in commits
 - ✅ Co-authored commits show proper attribution
 - ✅ All operations audit-logged by Azure DevOps
@@ -247,7 +247,7 @@ node_modules/      # Dependencies (properly ignored)
 - **Usage:** See `README.md` in this directory
 - **Troubleshooting:** See `TROUBLESHOOTING.md`
 - **Implementation:** See `azure-devops.sh` comments
-- **Figma4All:** See root `CLAUDE.md` for git workflow
+- **Project-specific rules:** See root `CLAUDE.md` for git workflow
 
 ## Approval Checklist
 

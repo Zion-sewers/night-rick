@@ -150,7 +150,7 @@ Skill verifies releases/ is NOT tracked before each commit.
 Changes:
 - Apply aspect ratio lock BEFORE constraint solving
 - Add regression test for image preservation
-- Verify with QA metrics (VABB)"
+- Verify with QA metrics"
 
 # Output:
 # ✓ PR created

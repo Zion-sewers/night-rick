@@ -588,6 +588,53 @@ PERSONAS: dict[str, dict] = {
              "form this check can actually see"),
         ],
     },
+    # SEVENTH PERSONA, added 2026-09-26. The panel reviewed code for security,
+    # correctness, UX, release hygiene, IO contracts, and data cost — but nothing
+    # asked what a change COSTS to run. An agent loop that retries forever, an
+    # HTTP call with no timeout, or an LLM call with no max_tokens is not a
+    # correctness defect; it is an operations defect, and in an agent fleet it is
+    # the defect that shows up on the invoice. Every check here is line-scoped
+    # and deterministic, in the panel's existing style. What it cannot see —
+    # retry loops that span lines, budgets enforced one layer up — is stated in
+    # each message rather than guessed at, the same honesty the boundary persona
+    # uses for its try-block caveat.
+    "operator": {
+        "owns": "runaway spend and hung workers: timeouts, unbounded calls, pricey defaults",
+        "checks": [
+            # requests.get(url) with no timeout= hangs the worker until the OS
+            # gives up. The negative lookahead only covers the single-line call
+            # form; a multi-line call is past what this line sees, and the
+            # message says so instead of pretending.
+            ("http-no-timeout", MED, ["py"],
+             r"\brequests\.(?:get|post|put|delete|patch|head)\s*\((?![^)\n]*\btimeout\s*=)",
+             "an HTTP call with no timeout hangs the worker on a dead peer; "
+             "confirm a timeout= on the multi-line form this line cannot see"),
+            # A child process with no timeout= can hang the agent worker forever,
+            # and unlike a hung HTTP call there is no OS-level default to save it.
+            ("subprocess-no-timeout", MED, ["py"],
+             r"\bsubprocess\.(?:run|call|check_output|check_call)\s*\((?![^)\n]*\btimeout\s*=)",
+             "a child process with no timeout= can hang the worker indefinitely; "
+             "Popen without communicate(timeout=) needs the same check by eye"),
+            # No max_tokens means the spend per call is whatever the model feels
+            # like. Scoped to the two SDK entry points rather than any bare
+            # `complete(`, which would also match futures and promises.
+            ("llm-no-max-tokens", LOW, ["py", "ts", "js"],
+             r"\b(?:chat\.completions\.create|messages\.create)\s*\((?![^)\n]*\bmax_tokens\s*=)",
+             "an LLM call with no max_tokens is unbounded spend per call; the "
+             "multi-line form needs a check by eye"),
+            # Hardcoding the flagship tier as the default model means every call
+            # site pays flagship price unless someone remembers to override it.
+            # The gpt-4 branch excludes the cheap siblings with a word-char/dash
+            # lookahead, so gpt-4-turbo, gpt-4-mini and gpt-4o-mini stay clean.
+            ("pricey-default-model", LOW, ["py", "ts", "js"],
+             r"\bmodel\s*[=:]\s*[\"'](?:gpt-4(?![\w-])|claude-opus|o1-preview)",
+             "the expensive tier is the default; confirm a cheaper route or an "
+             "override exists for the calls that do not need it"),
+            ("curl-no-max-time", LOW, ["sh"],
+             r"(?<!\S)\bcurl\b(?![^|;&\n]*--max-time)",
+             "curl with no --max-time hangs a shell step on a dead peer"),
+        ],
+    },
 }
 
 # Findings inside these paths are noise: a test may legitimately use eval, and a
@@ -1089,6 +1136,16 @@ def cmd_selftest(args: argparse.Namespace) -> int:
             "        work()",
             "    except:",                                                  # bare-except-pass
             "        pass",
+            "    requests.post(url, json=body)",                          # http-no-timeout
+            "    subprocess.run(cmd, shell=False)",                       # subprocess-no-timeout
+            "    chat.completions.create(model=m, messages=msgs)",        # llm-no-max-tokens
+            "    model = \"claude-opus-4-6\"",                              # pricey-default-model
+        ],
+        # Shell had no fixture file until now, because no check declared it. The
+        # operator persona added 2026-09-26 is the first, so the language arrives
+        # with its own positive case rather than being asserted to work.
+        "deploy.sh": [
+            "curl -s https://internal/health",                            # curl-no-max-time
         ],
         # Go has no fixture file until now, because no check declared it. The
         # boundary persona added 2026-08-05 is the first, so the language arrives
@@ -1161,6 +1218,18 @@ def cmd_selftest(args: argparse.Namespace) -> int:
             "ok.css": [
                 ".btn:focus-visible { outline: 2px solid var(--ring); }",
                 ".card { max-width: 100%; font-size: 1rem; }",
+            ],
+            # The operator checks must leave the bounded forms alone: a timeout
+            # present, a cheap-tier model, a curl with --max-time. Each of these
+            # lines was verified to produce no finding.
+            "ok.py": [
+                "requests.get(u, timeout=10)",
+                "subprocess.run(cmd, timeout=30)",
+                "chat.completions.create(model=m, messages=msgs, max_tokens=512)",
+                "model = \"gpt-4o-mini\"",
+            ],
+            "ok.sh": [
+                "curl --max-time 10 https://internal/health",
             ],
             # Prose that happens to contain the English noun "eval". The first line
             # is verbatim from new-recruit's 00001061-AUDIT_DASHBOARD.html:333, which

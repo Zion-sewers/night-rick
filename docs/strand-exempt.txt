@@ -39,3 +39,36 @@
 # The middle step is not wasted motion: without the strand.py fix, a real link
 # and a generated artifact are indistinguishable, and these rows would churn on
 # every commit.
+
+# --- imported corpus specs, 2026-08-31 ---
+# Same class as the 2026-08-05 import above: corpus analysis profiles imported
+# as EVIDENCE, not documents this repo maintains. They are read by tooling,
+# not by humans; linking 27 profiles from the read surface would add noise,
+# not reach. Exempt from reachability, not exempt from being read.
+docs/specs/2026-08-31-corpus-artifact-tag-profile.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-artifact-version-conflicts.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-chunk-connectivity-profile.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-chunk-similarity-clusters.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-citation-edge-profile.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-cross-kind-analysis.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-edge-confidence-profile.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-edge-reciprocity-analysis.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-edge-source-temporal-lag.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-edge-text-correlation.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-edge-type-transition.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-heading-citation-correlation.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-heading-simhash-profile.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-kind-edge-profile.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-language-distribution.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-publisher-license-profile.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-simhash-citation-profile.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-source-argumentation-balance.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-source-composite-profile.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-source-edge-stance.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-source-overlap-analysis.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-status-domain-profile.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-tag-domain-correlation.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-tag-verification-breakdown.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-version-claim-edge-cascade.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-version-domain-stability.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface
+docs/specs/2026-08-31-corpus-version-fts-coverage.md | corpus analysis profile, imported as evidence; read by tooling, intentionally not linked from the read surface

@@ -1,3 +1,9 @@
+---
+name: doesnt-add-up
+description: Check a SQL-derived number before it reaches a human. Denominator, definition, join fan-out, NULL drops, reconciliation, Fermi, re-derivation, selection, subgroups, with CONFIRMED, REFUTED, or ABSTAINED verdicts.
+license: MIT
+---
+
 # Doesnt-Add-Up
 
 ## Purpose
@@ -55,7 +61,7 @@ triggers this skill, never a defense of the query.
 - Claim restated with numerator, denominator, population, window, definition.
 - Table of checks run, each PASS/FAIL, with the query or count that settles it.
 - Verdict: CONFIRMED / REFUTED / ABSTAINED (same three states as
-  triple-verdict). A number that fails any of checks 2-6 is REFUTED, not
+  triple-verdict). A number that fails any check is REFUTED, not
   "approximately right". ABSTAINED when the data that would settle it is not
   accessible.
 - Never report the number without its denominator, definition, and window in

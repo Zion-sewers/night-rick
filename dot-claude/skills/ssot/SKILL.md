@@ -1,3 +1,9 @@
+---
+name: ssot
+description: One metric, one definition, one place. Reconcile divergent definitions before comparing numbers.
+license: MIT
+---
+
 # SSOT
 
 Single Source of Truth.

@@ -1,3 +1,9 @@
+---
+name: fermi
+description: Order-of-magnitude plausibility. Convert a percentage to an absolute and check it against known totals.
+license: MIT
+---
+
 # Fermi
 
 Fermi estimation: order-of-magnitude plausibility.

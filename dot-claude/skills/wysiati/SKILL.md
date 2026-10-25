@@ -1,3 +1,9 @@
+---
+name: wysiati
+description: State the denominator, the base rate, and the unseen population before believing a percentage.
+license: MIT
+---
+
 # WYSIATI
 
 What You See Is All There Is.

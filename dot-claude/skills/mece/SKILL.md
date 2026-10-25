@@ -1,3 +1,9 @@
+---
+name: mece
+description: Breakdowns must be mutually exclusive and collectively exhaustive. Segments sum to the whole or the breakdown is refuted.
+license: MIT
+---
+
 # MECE
 
 Mutually Exclusive, Collectively Exhaustive.

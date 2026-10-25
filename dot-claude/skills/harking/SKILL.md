@@ -1,3 +1,9 @@
+---
+name: harking
+description: Do not tune a query until a juicy number appears and report it as a finding. Count the tries and hold out a fresh slice.
+license: MIT
+---
+
 # HARKing
 
 Hypothesizing After the Results are Known.

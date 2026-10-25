@@ -1,3 +1,9 @@
+---
+name: yagni
+description: Do not slice, dashboard, or drill into a number before the core number passes the smell test.
+license: MIT
+---
+
 # YAGNI
 
 You Aren't Gonna Need It.

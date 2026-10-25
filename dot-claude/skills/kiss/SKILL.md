@@ -1,3 +1,9 @@
+---
+name: kiss
+description: The simplest query that answers the question. Every join is a fan-out risk, every filter a silent drop.
+license: MIT
+---
+
 # KISS
 
 Keep It Simple, Stupid.

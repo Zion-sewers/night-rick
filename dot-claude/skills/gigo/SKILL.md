@@ -1,3 +1,9 @@
+---
+name: gigo
+description: Verify inputs before trusting outputs. Definitions, source tables, joins, and filters, or abstain.
+license: MIT
+---
+
 # GIGO
 
 Garbage In, Garbage Out.

@@ -443,8 +443,11 @@ PROBE_JS = r"""
 # The `root` field exists because of claude-setup#57: theme toggles and similar
 # controls flip attributes on <html> (e.g. documentElement.dataset.theme) without
 # touching body markup, so a fingerprint that only reads the body is blind to a
-# full repaint. Attributes are serialized canonically (sorted name=value pairs)
-# so the comparison is deterministic across reads.
+# full repaint. Attributes are serialized canonically (sorted [name, value]
+# pairs as JSON) so the comparison is deterministic across reads and injective:
+# two different attribute sets can never serialize identically, which the
+# obvious `name=value` joined by `;` encoding allowed (a value containing `;`
+# followed by a `name=`-shaped fragment collides with a separate attribute).
 STATE_JS = r"""
 (() => ({
   url: location.href,
@@ -453,13 +456,14 @@ STATE_JS = r"""
   html: (document.body ? document.body.innerHTML.length : 0),
   root: (() => { const el = document.documentElement;
                  if (!el || !el.attributes) return "";
-                 const out = [];
+                 const pairs = [];
                  for (let i = 0; i < el.attributes.length; i++) {
                    const a = el.attributes[i];
-                   out.push(a.name + "=" + a.value);
+                   pairs.push([a.name, a.value]);
                  }
-                 out.sort();
-                 return out.join(";"); })(),
+                 pairs.sort((x, y) => x[0] === y[0] ? (x[1] < y[1] ? -1 : (x[1] > y[1] ? 1 : 0))
+                                                     : (x[0] < y[0] ? -1 : 1));
+                 return pairs.length ? JSON.stringify(pairs) : ""; })(),
   focus: document.activeElement ? (document.activeElement.tagName || "") +
          "#" + (document.activeElement.id || "") : "",
   scroll: Math.round(window.scrollY),
@@ -863,7 +867,10 @@ def describe_effect(before: object, after: object) -> str | None:
         return "dom"
     # claude-setup#57: an attribute flip on <html> (theme toggles live there)
     # changes no body markup, so the html-length gate below cannot see it.
-    if before.get("root") != after.get("root"):
+    # A missing field counts as empty, so an old fingerprint (no root key)
+    # compared against a new one (root="") does not read as a change; values
+    # are coerced to str so a non-string root cannot read as a change either.
+    if str(before.get("root") or "") != str(after.get("root") or ""):
         return "dom"
     if abs((after.get("html") or 0) - (before.get("html") or 0)) > 24:
         return "dom"
@@ -1017,6 +1024,7 @@ SELFTEST_PAGE = """<!doctype html>
 <html><head><title>flow selftest</title></head><body style="margin:0">
 <div style="width:1200px;background:#eee">wide block that forces horizontal scroll</div>
 <button id="works" onclick="document.getElementById('o').textContent='changed'">Works</button>
+<button id="themeToggle" onclick="var d=document.documentElement; d.dataset.theme = d.dataset.theme === 'dark' ? 'light' : 'dark'">Theme</button>
 <button id="dead">Dead</button>
 <button id="unnamed" style="width:10px;height:10px"></button>
 <input id="free" type="text">
@@ -1035,7 +1043,11 @@ def cmd_selftest(args: argparse.Namespace) -> int:
     A checker nobody has shown to fail is indistinguishable from a checker that
     always passes, which is the failure mode this whole tool exists to stop. So
     the selftest serves a page with nine known defects and asserts each is
-    caught, and serves a clean page and asserts silence.
+    caught, and serves a clean page and asserts silence. It also plants a theme
+    toggle whose only effect is an attribute flip on <html> (claude-setup#57)
+    and asserts the flow report marks it live: a fingerprint that only reads
+    the body is blind to it, so without this case the selftest would report
+    its planted defects detected while the blind spot stayed wide open.
     """
     import http.server
     import threading
@@ -1109,6 +1121,18 @@ def cmd_selftest(args: argparse.Namespace) -> int:
             print("  {}  {:<9} {}".format("ok  " if hit else "MISS", kind, needle))
             if not hit:
                 rc = 1
+
+        # claude-setup#57: the planted theme toggle's only effect is a
+        # data-theme flip on <html>. It must be reported live (effect "dom"),
+        # not as a dead control: if the fingerprint ever goes blind to <html>
+        # attributes again, this is the assertion that turns red.
+        theme = [fl for fl in bad.get("flows", [])
+                 if fl.get("sel") == "#themeToggle"]
+        theme_live = len(theme) == 1 and theme[0].get("effect") == "dom"
+        print("  {}  flow      theme toggle marked live (effect=dom)".format(
+            "ok  " if theme_live else "MISS"))
+        if not theme_live:
+            rc = 1
 
         gf = [f for f in all_findings(good) if f["sev"] == FAIL]
         print("\nclean page produced {} fail-level findings".format(len(gf)))

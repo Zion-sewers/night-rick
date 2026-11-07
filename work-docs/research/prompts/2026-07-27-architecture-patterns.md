@@ -1,7 +1,7 @@
 # RESEARCH PROMPT: System architecture and design patterns SOTA (2026)
 
 Run in /deep-research (ultradeep). Recency: "now" is July 2026; latest-stable, 2025-2026 sources.
-Output lands in ~/docs/research/.
+Output lands in work-docs/research/.
 
 ## Who is asking (context)
 Solo senior engineer / small team, polyglot, building services that must scale from POC to production
@@ -35,4 +35,4 @@ Structurizr / diagrams-as-code. Which minimal set pays off for a solo dev.
 - A macro-architecture decision tree (inputs: team size, scale, latency, domain volatility -> choice).
 - A pattern catalog table: pattern | when to use | avoid when | enforcement tool | citation.
 - A "minimal architecture-governance kit for a solo dev" (ADR + one fitness function + one diagram tool).
-- Full bibliography. Land as ~/docs/research/2026-07-architecture-patterns.md.
+- Full bibliography. Land as work-docs/research/2026-07-architecture-patterns.md.

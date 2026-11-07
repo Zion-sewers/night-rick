@@ -51,6 +51,7 @@ open ticket, not a promise made here: nothing currently fails when it drifts.
 - [specs/2026-08-30-prose-fit-gate.md](specs/2026-08-30-prose-fit-gate.md): Spec: prose_fit gate domain, fitted prose-quality thresholds from score corpus *(status: done)*
 - [specs/2026-08-30-lesson-check-gate.md](specs/2026-08-30-lesson-check-gate.md): Spec: lesson_check gate domain, lessons ledger structural integrity validation *(status: done)*
 - [specs/2026-08-30-gate-health-gate.md](specs/2026-08-30-gate-health-gate.md): Spec: gate_health gate domain, gate-run ledger structural integrity validation *(status: done)*
+- [specs/2026-11-07-repoclear-gate-domain.md](specs/2026-11-07-repoclear-gate-domain.md): Spec: repoclear gate domain, duplicate/empty-dir/artifact/stale-destination ratchet for the Repo Clear standard (night-rick#35) *(status: active)*
 - [specs/2026-08-30-corpus-contradiction-detection.md](specs/2026-08-30-corpus-contradiction-detection.md): Spec: corpus contradiction detection, three mechanical detectors for conflicting claims in the research corpus *(status: done)*
 - [specs/2026-08-30-corpus-artifact-extraction.md](specs/2026-08-30-corpus-artifact-extraction.md): Spec: corpus artifact extraction, populates the artifacts table from chunk text with disk evidence *(status: done)*
 - [specs/2026-08-30-corpus-row-reuse.md](specs/2026-08-30-corpus-row-reuse.md): Spec: corpus row-reuse write-back, derived source and chunk creation with one-hop provenance cap *(status: done)*

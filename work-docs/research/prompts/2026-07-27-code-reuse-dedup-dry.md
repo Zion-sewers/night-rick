@@ -1,7 +1,7 @@
 # RESEARCH PROMPT: Code reuse, deduplication, and the DRY/AHA/WET balance (2026)
 
 Run in /deep-research (deep). Recency: "now" is July 2026; latest-stable, 2025-2026 sources.
-Output lands in ~/docs/research/.
+Output lands in work-docs/research/.
 
 ## Who is asking (context)
 Solo senior engineer, polyglot, who wants to control duplication across a multi-repo/monorepo estate
@@ -34,4 +34,4 @@ to avoid a dedup refactor introducing regressions.
 - A decision guide: given a duplication instance, dedup now / extract at rule-of-three / leave it.
 - Tool table: tool | detects (token/AST/semantic) | languages | CI wiring | citation.
 - A short "dedup review checklist" and an "over-abstraction smells" list.
-- Full bibliography. Land as ~/docs/research/2026-07-code-reuse-dedup-dry.md.
+- Full bibliography. Land as work-docs/research/2026-07-code-reuse-dedup-dry.md.

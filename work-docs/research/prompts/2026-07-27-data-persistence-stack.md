@@ -1,7 +1,7 @@
 # RESEARCH PROMPT: Data and persistence layer SOTA, polyglot (2026)
 
 Run in /deep-research (deep). Recency: "now" is July 2026; latest-stable, 2025-2026 sources.
-Output lands in ~/docs/research/.
+Output lands in work-docs/research/.
 
 ## Who is asking (context)
 Solo senior engineer, polyglot. Existing ~/docs covers SQL engineering and Text2SQL deeply; this
@@ -33,4 +33,4 @@ dbt tests).
 - A datastore decision matrix (inputs: shape, scale, query pattern, latency -> store).
 - A per-language access-layer table: language | ORM | query-builder | raw+codegen | when to pick which.
 - A migrations tool table + a zero-downtime migration checklist.
-- Full bibliography. Land as ~/docs/research/2026-07-data-persistence-stack.md.
+- Full bibliography. Land as work-docs/research/2026-07-data-persistence-stack.md.

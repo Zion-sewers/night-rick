@@ -198,6 +198,12 @@
       "timeout": 60,
       "cmd": "python tools/audit/gate_health.py check --project .",
       "_note": "state/gate-runs.jsonl is the meta-record of every quality gate run (19K+ rows). This domain validates its structural integrity: every row parses as valid JSON, required fields (ts, project, commit, verdict, domains) are present, and verdict values are recognised. Data quality issues in existing rows (non-string domain verdicts from a gate.py builtin handler bug) are warnings because the ledger is append-only."
+    },
+    "repoclear": {
+      "required": true,
+      "timeout": 300,
+      "cmd": "python tools/repoclear/scan.py check",
+      "_note": "Repo Clear, night-rick#35: the enforced half of the repo-clear standard. tools/repoclear/scan.py counts duplicate-doc groups + duplicate copies (detection owned by tools/audit/pile.py, read from its manifest), identical/forked skills, empty dirs, tracked build artifacts, and research prompts naming a nonexistent destination directory; check fails when any count grows past state/repoclear-baseline.json. The baseline is a RATCHET, not a cleanup demand: measured on main 2026-11-07 it records 2 duplicate-doc groups (2 redundant copies), 19 identical skills, 38 forked skills, 0 empty dirs, 0 tracked artifacts, 0 stale destinations. Collapsing the existing duplicate/fork backlog is follow-up work (#92 / PR #444 and a dedup unit); this domain stops the pile growing. A missing baseline file fails closed (exit 2), never passes. Falsifier: tools/repoclear/scan.py selftest plants one of each finding in a synthetic git repo and asserts each is counted; tools/audit/mutations/repoclear.py holds 5 mutants, all caught by mutate.py --spec all."
     }
   }
 }

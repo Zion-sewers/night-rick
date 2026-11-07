@@ -1,0 +1,12 @@
+{
+  "schema": "repoclear-baseline.v1",
+  "counts": {
+    "duplicate_doc_groups": 2,
+    "duplicate_doc_copies": 2,
+    "identical_skills": 19,
+    "forked_skills": 38,
+    "empty_dirs": 0,
+    "artifacts": 0,
+    "stale_destinations": 0
+  }
+}

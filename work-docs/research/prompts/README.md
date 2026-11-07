@@ -6,7 +6,7 @@ stack, and SOTA architecture / API / design practices. Polyglot by design, not P
 
 ## How to run
 For each file: open `/deep-research` (deep or ultradeep mode) and paste the file's contents, or
-point it at the path. Output lands in `~/docs/research/2026-07-<topic>.md`. Run them in any order;
+point it at the path. Output lands in `work-docs/research/2026-07-<topic>.md`. Run them in any order;
 they are independent. Recency anchor inside each: treat "now" as July 2026, latest-stable only.
 
 ## The prompts (missing domains)

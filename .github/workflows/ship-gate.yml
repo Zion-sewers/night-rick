@@ -356,6 +356,14 @@ jobs:
       - name: pile.py selftest (duplicate and fork manifest)
         run: python tools/audit/pile.py selftest
 
+      # repoclear.py selftest (night-rick#35): proves the ratchet can fail,
+      # not just that it reads clean against this repo's current tree. Plants
+      # one of each finding (duplicate docs, empty dir, tracked artifact,
+      # stale prompt destination) in a synthetic git repo and asserts each
+      # is counted, the check passes at the baseline and fails on growth.
+      - name: repoclear selftest (empty dirs, artifacts, stale destinations, duplicate ratchet)
+        run: python tools/repoclear/scan.py selftest
+
       # This runner has no ~/.claude/rules, which is the exact condition that turned
       # the rules domain red on 2026-08-05 and the condition this selftest now asserts
       # is a NARROWED run rather than a failure. Named as its own step so the two

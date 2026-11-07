@@ -1,7 +1,7 @@
 # RESEARCH PROMPT: Code maturity ladder, POC to production (2026)
 
 Run in /deep-research (deep). Recency: "now" is July 2026; latest-stable, 2025-2026 sources.
-Output lands in ~/docs/research/.
+Output lands in work-docs/research/.
 
 ## Who is asking (context)
 Solo senior engineer who builds at different maturity levels (throwaway POC through hardened
@@ -34,4 +34,4 @@ transition (POC->MVP, MVP->prod, prod->hardened).
 - A stage-by-stage rubric table (stage | testing | errors | observability | CI | security | docs | perf).
 - A "must-never-skip even at POC" hard list.
 - Two checklists: graduation gates, and a fast repo maturity scorecard (0-5 per axis).
-- Full bibliography. Land as ~/docs/research/2026-07-code-maturity-ladder.md.
+- Full bibliography. Land as work-docs/research/2026-07-code-maturity-ladder.md.

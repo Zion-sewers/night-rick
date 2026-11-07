@@ -1,7 +1,7 @@
 # RESEARCH PROMPT: Polyglot stack selection + per-stack SOTA libraries (2026)
 
 Run in /deep-research (ultradeep). Recency: treat "now" as July 2026; only latest-stable releases
-and 2025-2026 primary sources. Output lands in ~/docs/research/.
+and 2025-2026 primary sources. Output lands in work-docs/research/.
 
 ## Who is asking (context, do not re-explain)
 Solo senior solution engineer, comfortable polyglot, explicitly does NOT want to be locked to Python.
@@ -38,4 +38,4 @@ discipline to avoid accidental sprawl.
 - A workload x language decision matrix.
 - Per-language "reach-for-these defaults" tables: concern | library | version | POC or prod | why | citation.
 - A one-page "if unsure, start here" shortlist per language.
-- Full bibliography, no placeholder citations. Land as ~/docs/research/2026-07-polyglot-stack-selection.md.
+- Full bibliography, no placeholder citations. Land as work-docs/research/2026-07-polyglot-stack-selection.md.

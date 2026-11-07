@@ -228,6 +228,20 @@ builtin handler bug recording exit code 2 instead of `"N/A"`) are warnings
 because the ledger is append-only. See
 [specs/2026-08-30-gate-health-gate.md](specs/2026-08-30-gate-health-gate.md).
 
+## Repoclear
+
+The `repoclear` domain runs `python tools/repoclear/scan.py check`, which
+fails when any repo-clear count grows past `state/repoclear-baseline.json`:
+duplicate-doc groups and redundant copies (detection owned by
+`tools/audit/pile.py`, read from its manifest), identical and forked skills,
+empty dirs, tracked build artifacts, and research prompts naming an output
+destination whose directory does not exist. The baseline is a ratchet, not a
+cleanup demand: it records the measured counts on main and fails only on
+growth, so the existing duplicate and fork backlog can be collapsed by
+follow-up work without holding this domain red meanwhile. A missing baseline
+fails closed. See
+[specs/2026-11-07-repoclear-gate-domain.md](specs/2026-11-07-repoclear-gate-domain.md).
+
 
 ## Known gaps, dated
 

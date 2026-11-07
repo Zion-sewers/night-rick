@@ -1,7 +1,7 @@
 # RESEARCH PROMPT: Rust vs Python selection + trusted SOTA OSS libraries with metrics (2026)
 
 Run in /deep-research (ultradeep). Recency: "now" is July 2026; only latest-stable releases and
-2025-2026 primary sources. Output lands in ~/docs/research/. Deep-dive companion to
+2025-2026 primary sources. Output lands in work-docs/research/. Deep-dive companion to
 2026-07-27-polyglot-stack-selection.md.
 
 ## Who is asking (context)
@@ -44,4 +44,4 @@ over a proven one. Include the cost side honestly.
 - A Rust-vs-Python decision matrix with numeric thresholds/signals per workload.
 - A "hybrid playbook": how to profile, then wrap the hot path in Rust via PyO3/maturin, with exemplars.
 - Two "trusted SOTA libs" tables (Rust, Python): lib | leads on metric | benchmark citation | maturity.
-- An anti-pattern list. Full bibliography. Land as ~/docs/research/2026-07-rust-vs-python.md.
+- An anti-pattern list. Full bibliography. Land as work-docs/research/2026-07-rust-vs-python.md.

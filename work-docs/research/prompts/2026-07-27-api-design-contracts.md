@@ -1,7 +1,7 @@
 # RESEARCH PROMPT: API design and contracts SOTA (2026)
 
 Run in /deep-research (deep). Recency: "now" is July 2026; latest-stable, 2025-2026 sources.
-Output lands in ~/docs/research/.
+Output lands in work-docs/research/.
 
 ## Who is asking (context)
 Solo senior engineer, polyglot, building HTTP/RPC/event and agent-tool APIs. The house already has a
@@ -35,4 +35,4 @@ style guide, and the smallest set of gates that actually prevents drift.
   tRPC/events/MCP).
 - A "production API checklist" (versioning, errors, pagination, idempotency, auth, rate limit, validation).
 - A tool/lib table with current versions per language + citations.
-- Full bibliography. Land as ~/docs/research/2026-07-api-design-contracts.md.
+- Full bibliography. Land as work-docs/research/2026-07-api-design-contracts.md.

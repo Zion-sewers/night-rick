@@ -30,6 +30,7 @@ open ticket, not a promise made here: nothing currently fails when it drifts.
 - [ESTATE-DIRECTORY-CATALOG.md](ESTATE-DIRECTORY-CATALOG.md): directory and repository catalog for the estate.
 - [dir-purpose.txt](dir-purpose.txt), [doc-status.txt](doc-status.txt): the two registries `codemap.py` and `docmap.py` read.
 - [CODEBASE-MAP.md](CODEBASE-MAP.md), [DOCMAP.md](DOCMAP.md): GENERATED. A hand edit reads as drift and fails the gate.
+- [archive/root-pile-2026-11-07/README.md](archive/root-pile-2026-11-07/README.md): the root pile archived 2026-11-07 (#92): provenance of the nine files that had piled up at the repo root, and where things live. Root holds only the canonical entry points now; `tools/docmap/strand.py` R3 enforces it.
 
 ## PRDs
 

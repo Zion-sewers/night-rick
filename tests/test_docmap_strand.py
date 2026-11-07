@@ -135,3 +135,44 @@ def test_generated_inventories_are_not_consumers(tmp_path):
     subprocess.run(["git", "-C", str(tmp_path), "add", "-A"], check=True, capture_output=True)
     probs = strand.problems(strand.evaluate(tmp_path))
     assert any("lonely.md" in p and "nothing outside" in p for p in probs), probs
+
+
+def _init_tree(tmp_path):
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    subprocess.run(["git", "-C", str(tmp_path), "add", "-A"], check=True, capture_output=True)
+
+
+def test_r3_fires_on_stray_root_markdown(tmp_path):
+    """R3: a .md at the root that is not allowlisted fails the check.
+
+    Measured 2026-11-07: nine doc files landed at the root between 2026-08-31
+    and 2026-10-15, months after #92 filed the same complaint, because nothing
+    failed when they landed.
+    """
+    (tmp_path / "stray-note.md").write_text("# Stray\n", encoding="utf8")
+    _init_tree(tmp_path)
+    probs = strand.problems(strand.evaluate(tmp_path))
+    assert any("stray-note.md" in p and "R3 allowlist" in p for p in probs), probs
+
+
+def test_r3_fires_on_extensionless_text(tmp_path):
+    """R3: an extensionless text file at the root is a stray too.
+
+    The case that proved the suffix-only form wrong: gem07-10, a Gemini research
+    note with no suffix, sat at the root from 2026-10-08.
+    """
+    (tmp_path / "gem-note").write_text("a research note with no suffix\n", encoding="utf8")
+    _init_tree(tmp_path)
+    probs = strand.problems(strand.evaluate(tmp_path))
+    assert any("gem-note" in p and "R3 allowlist" in p for p in probs), probs
+
+
+def test_r3_silent_on_allowlisted_and_config(tmp_path):
+    """R3: canonical entry points, LICENSE, dotfiles and binaries stay silent."""
+    (tmp_path / "TODO.md").write_text("# Roadmap\n", encoding="utf8")
+    (tmp_path / "LICENSE").write_text("MIT License\n", encoding="utf8")
+    (tmp_path / ".gitignore").write_text("*.pyc\n", encoding="utf8")
+    (tmp_path / "photo.jpg").write_bytes(b"\xff\xd8\xff\xe0not text")
+    _init_tree(tmp_path)
+    probs = strand.problems(strand.evaluate(tmp_path))
+    assert not any("R3 allowlist" in p for p in probs), probs

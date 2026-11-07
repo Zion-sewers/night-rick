@@ -176,3 +176,57 @@ def test_r3_silent_on_allowlisted_and_config(tmp_path):
     _init_tree(tmp_path)
     probs = strand.problems(strand.evaluate(tmp_path))
     assert not any("R3 allowlist" in p for p in probs), probs
+
+
+def test_r3_fires_on_mdx_and_txt(tmp_path):
+    """R3: the enforced suffix set is .md, .mdx and .txt, not .md alone.
+
+    Two of the nine files in the 2026-11-07 pile were .mdx; one was .txt.
+    """
+    (tmp_path / "note.mdx").write_text("# Note\n", encoding="utf8")
+    (tmp_path / "note.txt").write_text("a note\n", encoding="utf8")
+    _init_tree(tmp_path)
+    probs = strand.problems(strand.evaluate(tmp_path))
+    assert any("note.mdx" in p and "R3 allowlist" in p for p in probs), probs
+    assert any("note.txt" in p and "R3 allowlist" in p for p in probs), probs
+
+
+def test_r3_silent_on_codeowners_and_extensionless_binary(tmp_path):
+    """R3: CODEOWNERS is allowlisted; an extensionless binary is not text.
+
+    The binary case exercises the `_is_text_file` negative branch: a
+    non-UTF-8 extensionless file must stay silent, unlike the `gem-note`
+    firing case above.
+    """
+    (tmp_path / "CODEOWNERS").write_text("* @owner\n", encoding="utf8")
+    (tmp_path / "gem-blob").write_bytes(b"\xff\xd8\xff\xe0not text")
+    _init_tree(tmp_path)
+    probs = strand.problems(strand.evaluate(tmp_path))
+    assert not any("R3 allowlist" in p for p in probs), probs
+
+
+def test_r3_silent_on_build_files(tmp_path):
+    """R3: known non-document build files at the root stay silent.
+
+    A Makefile or Dockerfile reads as UTF-8 text, so without the
+    ROOT_NON_DOCUMENT exemption the extensionless branch would flag them
+    and tell the operator to move a build file into a docs subtree.
+    requirements.txt is the suffixed half of the same case. Every name in
+    the set is exercised, so a future removal fails here first.
+    """
+    (tmp_path / "Makefile").write_text("all:\n\techo hi\n", encoding="utf8")
+    (tmp_path / "Dockerfile").write_text("FROM python:3.12\n", encoding="utf8")
+    (tmp_path / "Containerfile").write_text("FROM python:3.12\n", encoding="utf8")
+    (tmp_path / "Jenkinsfile").write_text("pipeline {}\n", encoding="utf8")
+    (tmp_path / "Vagrantfile").write_text('Vagrant.configure("2") do end\n', encoding="utf8")
+    (tmp_path / "Brewfile").write_text('brew "python"\n', encoding="utf8")
+    (tmp_path / "Procfile").write_text("web: python app.py\n", encoding="utf8")
+    (tmp_path / "Earthfile").write_text("VERSION 0.8\n", encoding="utf8")
+    (tmp_path / "Justfile").write_text("default:\n\techo hi\n", encoding="utf8")
+    (tmp_path / "Gemfile").write_text('source "https://rubygems.org"\n', encoding="utf8")
+    (tmp_path / "Rakefile").write_text("task default: %w[test]\n", encoding="utf8")
+    (tmp_path / "requirements.txt").write_text("pytest\n", encoding="utf8")
+    (tmp_path / "CMakeLists.txt").write_text("cmake_minimum_required(VERSION 3.20)\n", encoding="utf8")
+    _init_tree(tmp_path)
+    probs = strand.problems(strand.evaluate(tmp_path))
+    assert not any("R3 allowlist" in p for p in probs), probs

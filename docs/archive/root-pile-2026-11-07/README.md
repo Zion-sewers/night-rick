@@ -40,3 +40,79 @@ ship-gate runs on every PR.
 - New documents go in the subtree above that matches their kind, never at the
   root and never in a new top-level directory without a row in
   `docs/coverage-map.txt` and a purpose in `docs/dir-purpose.txt`.
+
+## What DOCMAP does and does not index
+
+DOCMAP inventories `.md` documents only, so it indexes 6 of the 9 files
+archived here (the five moved `.md` files plus this README). The other four
+(`gem07-10`, `slop14.10.mdx`, `zlop-12.10.mdx`, `mikewithai-slop.txt`)
+resolve via this manifest and via `docs/CODEBASE-MAP.md`, which counts all
+tracked files. A DOCMAP-based search for one of the four finds nothing; this
+manifest is the complete "where things live" index for the pile.
+
+## T02 ticket dispositions (night-rick #92)
+
+All 17 prompt boxes from the issue, closed by this PR via the ledger's own
+locked append (`TRIAGED -> OPEN -> IN_PROGRESS -> CLOSED_*`, 51 chained rows
+in `state/prompt-tickets.jsonl`). One line per box: the ask in the operator's
+words (truncated), the disposition, and the reason or the evidence. The
+ledger rows themselves carry no reason field by design (they commit to id /
+state / text hash only, no prompt text), so this table is the audit record
+for the drops.
+
+Authority note, stated plainly: the lifecycle spec
+(`docs/specs/2026-07-29-prompt-to-ticket-lifecycle.md`, guard table) reserves
+the `CLOSED_WONTDO` edge to the human operator (`actor == 'shoval'`,
+`len(reason) >= 20`). The 8 drops below are office-recorded with their
+reasons here, not operator-signed: Shoval may overturn any drop per the #92
+routing comment ("if the box contents turn out to belong elsewhere on
+inspection"), and a drop overturned is re-opened through the ledger's
+`CLOSED_WONTDO -> OPEN` edge. The 9 VERIFIED closes rest on the work in this
+PR (archive + R3 + this manifest + regenerated maps), with one contest
+recorded below the table: closeout review holds that 7 of the 9 VERIFIED
+labels overclaim, because the diff does not do the merge/unify work those
+boxes ask for.
+
+| ticket | ask (truncated) | disposition | reason / evidence |
+|---|---|---|---|
+| `PT-d2093bcce27f` | move research_2907_proactivity.txt somewhere fit | CLOSED_WONTDO | source file is not in the repo (operator-machine path); not verifiable here |
+| `PT-812531245f89` | ensure a place to reboot on linux as part of todo | CLOSED_WONTDO | linux-setup TODO item, not docs consolidation |
+| `PT-5b8bdec58f42` | scope bigger than claude-setup; archived dirs mess, .md scattered | CLOSED_VERIFIED | root pile archived + R3 stops re-piling |
+| `PT-372a480bd863` | consent to kill/delete/isolate to garbage dir | CLOSED_VERIFIED | isolated to docs/archive (deletion declined per archive-never-delete) |
+| `PT-c09b445611a0` | where are the research papers of my setup? | CLOSED_VERIFIED | "where things live" above names research-papers/ (corpus class) |
+| `PT-42b0b4ef25c5` | standard for reviews.md/agent.md from websearch of popular OSS repos | CLOSED_WONTDO | no websearch was performed and no next-gen standard is defined in this unit; the ask needs a research pass, not a docs move; dropped from #92, not done |
+| `PT-be807a017ccd` | fix collision, /reground, handle the mess; first goal organized/structured | CLOSED_VERIFIED | archive + R3 + this manifest |
+| `PT-5a21e3acb46f` | lost+found dir not found (WSL paths); cp runs carry the organization task | CLOSED_WONTDO | WSL path lookup on the operator machine, not repo-verifiable; the organization task itself is delivered by this PR |
+| `PT-11c470cef0ca` | where are topics/subdomains research + past workflows stored; merge scattered docs | CLOSED_VERIFIED | homes named above (research-papers/, work-docs/, docs/archive/) |
+| `PT-c9a9427b4e37` | find the ~21 July topics/subdomains research/workflow in dirs | CLOSED_WONTDO | no such research found in the repo tree (content grep over research-papers/, work-docs/) |
+| `PT-c0c781f12d94` | drowning in .md; are we done planning and specing? | CLOSED_VERIFIED | the pile-up mechanism ends with enforced R3; the waterfall question is answered by the flow |
+| `PT-0e5165110ef7` | handle all files/research/specs; merge/squash logically; inspect what we got | CLOSED_VERIFIED | archive + flow + regenerated DOCMAP |
+| `PT-b4c4b7fdefe5` | dir sparsity/unconnected; is standards.md enforced on new recruit; code pipeline repo | CLOSED_WONTDO | whether standards .md is enforced was not verified in this unit; enforcement is a separate anatomy question; dropped from #92, not confirmed |
+| `PT-cedb9cc13833` | 3 dirs bad; one unified way; no redundancy in skills; accepted-vs-rejected status | CLOSED_VERIFIED | one unified way (root allowlist + archive); accepted/rejected = strand STATUS_VOCAB + doc-status registry; skills redundancy is pile.py (already shipped) |
+| `PT-16339f840b13` | merge all dirs; iterate over past work dirs | CLOSED_VERIFIED | root pile merged into archive + R3 stops re-piling |
+| `PT-7e378243fada` | explore/audit this project + other projects with standards.md | CLOSED_WONTDO | audit request, not consolidation |
+| `PT-2a4bdf843e26` | download all books; what shifting is needed; visit all relevant specs | CLOSED_WONTDO | books work (books-index/books-ingest), not consolidation |
+
+## Contested closes (closeout review, 2026-11-07)
+
+Three isolated reviewers (implementation, architecture, product) on PR #444
+all FAIL on the same point: 7 of the 9 CLOSED_VERIFIED rows above
+(`5b8bdec58f42`, `be807a017ccd`, `11c470cef0ca`, `c0c781f12d94`,
+`0e5165110ef7`, `cedb9cc13833`, `16339f840b13`) record as verified done work
+the diff does not do. Those boxes ask to merge, squash, or unify
+directories, specs, and research; the diff archives the root pile and
+enforces the root layout, and merges nothing. The two VERIFIED rows nobody
+contests are `372a480bd863` (isolate to archive) and `c09b445611a0`
+(research-papers/ location).
+
+The labels stand in the ledger anyway, because the ledger gives no lawful
+way to change them. `CLOSED_VERIFIED` is terminal in the shipped lifecycle
+(`tools/intent/tickets.py`, `TICKET_LIFECYCLE`: no outgoing edge), the
+ledgers are append-only, and the reopen path the lifecycle spec describes
+(`REOPENED`) was never implemented in the code. Flipping the rows would
+mean appending transitions the repo's own rules forbid, which would trade
+one integrity violation for another. The only resolutions are the
+operator's ruling that the root pile plus R3 is the intended close of #92,
+or a follow-up unit that does the merge/unify work, or a lifecycle change
+that implements the reopen path. Until one of those lands, a reader of the
+closed issue should treat those 7 boxes as contested, not verified.

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Structure and reachability oracle for design documents.
 
-Two rules, both mechanical, both cheap:
+Three rules, all mechanical, all cheap:
 
   R1 STRUCTURE   every doc under docs/specs/, docs/prd/ and docs/standards/
                  declares a status
@@ -12,12 +12,19 @@ Two rules, both mechanical, both cheap:
                  docs/standards/ is
                  referenced by at least one file that is NOT docs/INDEX.md.
 
-  R3 ROOT LAYOUT  every document-like file at the repo root is on the
-                 allowlist (README, CLAUDE, CLAUDE-OS, AGENTS, CONTRIBUTING,
-                 TODO, REVIEW, LICENSE, CODEOWNERS). A .md / .mdx / .txt, or
-                 an extensionless file that reads as UTF-8 text, anywhere else
-                 at the root is a stray: it belongs in the subtree matching its
-                 kind, and the check fails until it moves.
+  R3 ROOT LAYOUT  every .md / .mdx / .txt file, and every extensionless
+                 file that reads as UTF-8 text without NUL bytes, at the
+                 repo root is on the allowlist (README, CLAUDE, CLAUDE-OS,
+                 AGENTS, CONTRIBUTING, TODO, REVIEW, LICENSE, CODEOWNERS).
+                 Anything else in that set at the root is a stray: it
+                 belongs in the subtree matching its kind, and the check
+                 fails until it moves. Tracked files only (git ls-files),
+                 like R1/R2: an unstaged stray is invisible until `git add`.
+                 Other suffixes (.rst, .markdown, .md.bak), dotfiles, empty
+                 files and binaries are out of scope for this rule. Known
+                 non-document build files (Makefile, Dockerfile,
+                 requirements.txt and the like) are exempt by name: they
+                 are not documents, and moving one would break the build.
 
 Why R2 excludes the index. `docs/INDEX.md` links every document by construction,
 so counting it as a reference makes the rule vacuous. A catalogue entry is not a
@@ -56,20 +63,38 @@ STRUCTURED = ("docs/specs/", "docs/prd/", "docs/standards/")
 INDEX_PATH = "docs/INDEX.md"
 EXEMPT_PATH = "docs/strand-exempt.txt"
 # R3 ROOT LAYOUT. A document at the repo root is an entry point, not a pile.
-# The root holds the canonical entry points only (ROOT_ALLOWED); anything else is
-# a stray that belongs in the subtree matching its kind. Measured 2026-11-07:
-# nine doc files and one extensionless note landed at the root between 2026-08-31
-# and 2026-10-15, months after #92 filed the same complaint, because no check
-# failed when they landed. They now live in docs/archive/root-pile-2026-11-07/,
-# whose README.md is the "where things live" note. An extensionless file counts
-# as a document here when it reads as UTF-8 text: the one that proved the rule
-# (gem07-10, a Gemini research note with no suffix) would otherwise slip past a
-# suffix-only check. LICENSE and CODEOWNERS are allowlisted for the same reason.
+# The root holds the canonical entry points only (ROOT_ALLOWED); anything else
+# in the enforced set is a stray that belongs in the subtree matching its
+# kind. Measured 2026-11-07: nine doc files and one extensionless note landed
+# at the root between 2026-08-31 and 2026-10-15, months after #92 filed the
+# same complaint, because no check failed when they landed. They now live in
+# docs/archive/root-pile-2026-11-07/, whose README.md is the "where things
+# live" note; docs/INDEX.md links it, and the violation strings below point
+# there (a stable pointer, not the dated archive path). An extensionless file
+# counts as a document here when it reads as UTF-8 text without NUL bytes:
+# the one that proved the rule (gem07-10, a Gemini research note with no
+# suffix) would otherwise slip past a suffix-only check. The allowlist IS the
+# exemption mechanism, by design: a future legitimate root document lands by
+# editing this checker, which is itself gated, so the exemption cannot be
+# gamed from the tree. The same list appears in prose in the archive manifest
+# and on the INDEX.md line; this frozenset is the enforcing copy.
 ROOT_ALLOWED = frozenset({
     "README.md", "CLAUDE.md", "CLAUDE-OS.md", "AGENTS.md", "CONTRIBUTING.md",
     "TODO.md", "REVIEW.md", "LICENSE", "CODEOWNERS",
 })
 ROOT_DOC_SUFFIXES = (".md", ".mdx", ".txt")
+# Known non-document files that conventionally live at a repo root. A Makefile
+# or Dockerfile reads as UTF-8 text, so without this set the extensionless and
+# .txt branches below would flag them and the violation message would tell the
+# operator to move a build file into a docs subtree. Measured 2026-11-07:
+# Makefile, Dockerfile and requirements.txt all fired before this exemption.
+# The set is closed and named here, not inferred: a new build file lands by
+# editing this checker, which is itself gated. Documents stay on ROOT_ALLOWED.
+ROOT_NON_DOCUMENT = frozenset({
+    "Makefile", "Dockerfile", "Containerfile", "Jenkinsfile", "Vagrantfile",
+    "Brewfile", "Procfile", "Earthfile", "Justfile", "Gemfile", "Rakefile",
+    "requirements.txt", "CMakeLists.txt",
+})
 # A bookkeeping surface is never a consumer. Three instances of one rule, all found by
 # the rule failing to fire:
 #   INDEX_PATH        links every document by construction
@@ -212,12 +237,12 @@ def build_reference_index(project: Path, paths: list[str]) -> dict[str, set[str]
 
 
 def _is_text_file(project: Path, path: str) -> bool:
-    """True when an extensionless root file reads as UTF-8 text."""
+    """True when an extensionless root file reads as UTF-8 text without NULs."""
     try:
         raw = (project / path).read_bytes()
     except OSError:
         return False
-    if not raw:
+    if not raw or b"\x00" in raw:
         return False
     try:
         raw.decode("utf-8")
@@ -240,17 +265,19 @@ def root_layout_violations(project: Path, paths: list[str]) -> list[str]:
         # the tooling needs there.
         if name.startswith("."):
             continue
+        # Known non-document build files are not documents; flagging one
+        # would misdirect the operator into moving a build file.
+        if name in ROOT_NON_DOCUMENT:
+            continue
         suffix = Path(p).suffix.lower()
         if suffix in ROOT_DOC_SUFFIXES:
             out.append("{}: document at the repo root and not on the R3 allowlist. "
-                       "Move it to the subtree matching its kind; see "
-                       "docs/archive/root-pile-2026-11-07/README.md for where things "
-                       "live.".format(p))
+                       "Move it to the subtree matching its kind; see docs/INDEX.md "
+                       "for where things live.".format(p))
         elif not suffix and _is_text_file(project, p):
             out.append("{}: extensionless text file at the repo root and not on the "
                        "R3 allowlist. Move it to the subtree matching its kind; see "
-                       "docs/archive/root-pile-2026-11-07/README.md for where things "
-                       "live.".format(p))
+                       "docs/INDEX.md for where things live.".format(p))
     return out
 
 
@@ -357,7 +384,7 @@ def _write(p: Path, text: str) -> None:
 
 
 def selftest(_project: Path) -> int:
-    """Both rules must be able to fire, and both must be able to stay silent."""
+    """All three rules must be able to fire, and all must be able to stay silent."""
     failures = []
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
@@ -424,28 +451,32 @@ def selftest(_project: Path) -> int:
         # caught the 2026-11-07 pile is suffix-based plus extensionless-text, so
         # both halves need a firing case and a silence case.
         _write(root / "stray-note.md", "# Stray\n")
+        _write(root / "stray-note.mdx", "# Stray\n")
         _write(root / "TODO.md", "# Roadmap\n")
         _write(root / "LICENSE", "MIT License\n")
         _write(root / "gem-note", "a research note with no suffix\n")
         (root / "photo.jpg").write_bytes(b"\xff\xd8\xff\xe0not text")
+        (root / "gem-blob").write_bytes(b"\xff\xd8\xff\xe0not text")
         subprocess.run(["git", "-C", str(root), "add", "-A"], check=True,
                        capture_output=True)
         probs5 = problems(evaluate(root))
         joined5 = "\n".join(probs5)
         if "stray-note.md" not in joined5:
             failures.append("R3 did not fire on a stray .md at the repo root")
+        if "stray-note.mdx" not in joined5:
+            failures.append("R3 did not fire on a stray .mdx at the repo root")
         if "gem-note" not in joined5:
             failures.append("R3 did not fire on an extensionless text file at the root")
         if "TODO.md" in joined5 or "LICENSE" in joined5:
             failures.append("R3 fired on an allowlisted root file")
-        if "photo.jpg" in joined5:
+        if "photo.jpg" in joined5 or "gem-blob" in joined5:
             failures.append("R3 fired on a binary file at the root")
 
     if failures:
         for f in failures:
             print("selftest FAIL: " + f)
         return 1
-    print("strand selftest: 10 assertions, all held")
+    print("strand selftest: 12 assertions, all held")
     return 0
 
 

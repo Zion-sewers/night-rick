@@ -867,10 +867,18 @@ def describe_effect(before: object, after: object) -> str | None:
         return "dom"
     # claude-setup#57: an attribute flip on <html> (theme toggles live there)
     # changes no body markup, so the html-length gate below cannot see it.
+    # Exact value comparison is deliberate: the dark-to-dork same-length flip
+    # is invisible to any length gate, so only comparing values closes it.
+    # The trade is a narrow false-live direction: ambient <html> attribute
+    # churn between the two samples reads as a live control.
     # A missing field counts as empty, so an old fingerprint (no root key)
     # compared against a new one (root="") does not read as a change; values
-    # are coerced to str so a non-string root cannot read as a change either.
-    if str(before.get("root") or "") != str(after.get("root") or ""):
+    # are coerced with str() (missing counts as empty), so a non-string root
+    # cannot read as a change either.
+    before_root = before.get("root")
+    after_root = after.get("root")
+    if ("" if before_root is None else str(before_root)) != \
+            ("" if after_root is None else str(after_root)):
         return "dom"
     if abs((after.get("html") or 0) - (before.get("html") or 0)) > 24:
         return "dom"

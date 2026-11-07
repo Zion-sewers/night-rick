@@ -35,9 +35,12 @@ against a stub DOM, so a refactor that guts the JS while keeping its tokens
 fails here too.
 """
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools" / "e2e"))
 import flow  # noqa: E402
@@ -154,8 +157,12 @@ class TestIssue57BlindSpot:
 
     def test_non_string_root_is_coerced(self):
         """A non-string root value must not read as a change against its
-        own string form."""
+        own string form, including falsy values (0, False, []) that
+        `x or ""` would collapse to "" before str() runs."""
         assert flow.describe_effect(_fp(root=1), _fp(root="1")) is None
+        assert flow.describe_effect(_fp(root=0), _fp(root="0")) is None
+        assert flow.describe_effect(_fp(root=False), _fp(root="False")) is None
+        assert flow.describe_effect(_fp(root=[]), _fp(root="[]")) is None
 
     def test_root_change_beats_text_change(self):
         """Precedence is a decision, not an accident: a control that flips
@@ -195,14 +202,22 @@ def _run_state_js(attrs, tmp_path):
     """Execute STATE_JS in node against a stub DOM whose <html> carries
     `attrs` (a list of [name, value] pairs, in the given order) and return
     the fingerprint dict. This is the producer-side proof the hand-built
-    dict tests cannot give: it runs the real JS, not a substring of it."""
+    dict tests cannot give: it runs the real JS, not a substring of it.
+
+    The stub's `documentElement.attributes` is shaped like a real
+    NamedNodeMap (numeric indices + length, no array methods), not a plain
+    JS array, so a future refactor that used an array-only API would fail
+    here instead of passing in test and breaking in a real page."""
+    attrs_obj = {str(i): {"name": n, "value": v}
+                 for i, (n, v) in enumerate(attrs)}
+    attrs_obj["length"] = len(attrs)
     probe = tmp_path / "fp_exec.mjs"
     probe.write_text(
         "const document = {\n"
         "  querySelectorAll: () => new Array(180),\n"
         "  body: { innerText: 'x'.repeat(5000), innerHTML: 'y'.repeat(144999) },\n"
         "  documentElement: { attributes: "
-        + json.dumps([{"name": n, "value": v} for n, v in attrs]) + " },\n"
+        + json.dumps(attrs_obj) + " },\n"
         "  activeElement: null,\n"
         "};\n"
         "const location = { href: 'http://127.0.0.1:9999/route' };\n"
@@ -216,6 +231,14 @@ def _run_state_js(attrs, tmp_path):
     return json.loads(p.stdout)
 
 
+# The STATE_JS execution tests shell out to node, which no CI step
+# installs; on a node-less runner they skip (reported in pytest's skipped
+# count) instead of erroring the whole suite for an environment reason.
+requires_node = pytest.mark.skipif(
+    shutil.which("node") is None, reason="node is required to execute STATE_JS")
+
+
+@requires_node
 class TestStateJsExecution:
     def test_state_js_runs_and_reports_measured_fields(self, tmp_path):
         """The stub wiring is not vacuous: the executed snippet returns the
@@ -268,6 +291,7 @@ class TestFingerprintStructure:
         assert "documentElement" in flow.STATE_JS
         assert "root:" in flow.STATE_JS
 
+    @requires_node
     def test_state_js_is_syntactically_valid_js(self, tmp_path):
         """The snippet is an expression; wrap it in a temp file so node can
         parse it. A syntax slip here would break every flow audit at runtime."""

@@ -312,6 +312,27 @@ class TestStaleDestinations(unittest.TestCase):
             self.assertEqual(len(stale), 1)
             self.assertEqual(stale[0]["reason"], "outside_repo")
 
+    def test_symlink_loop_destination_is_stale_not_a_crash(self):
+        # F2: a destination through a symlink loop used to raise
+        # RuntimeError out of resolve() and crash the whole scan. It is
+        # stale (reason unresolvable), and the scan completes.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            prompts = proj / "work-docs" / "research" / "prompts"
+            prompts.mkdir(parents=True)
+            (proj / "__pycache__" / "loop").mkdir(parents=True)
+            os.symlink(proj / "__pycache__" / "loop" / "b",
+                       proj / "__pycache__" / "loop" / "a")
+            os.symlink(proj / "__pycache__" / "loop" / "a",
+                       proj / "__pycache__" / "loop" / "b")
+            (prompts / "p1.md").write_text(
+                "Output lands in __pycache__/loop/a/.\n")
+            _commit(proj)
+            stale = scan.find_stale_destinations(proj)
+            self.assertEqual(len(stale), 1)
+            self.assertEqual(stale[0]["reason"], "unresolvable")
+
 
 class TestDuplicateReuse(unittest.TestCase):
     def test_identical_docs_counted_via_pile(self):
@@ -519,6 +540,24 @@ class TestRatchet(unittest.TestCase):
                 if saved is not None:
                     os.environ["CI"] = saved
 
+    def test_update_baseline_refuses_with_no_commits(self):
+        # F4: with no commits, the payload records base_commit "unknown",
+        # which its own loader rejects as not a 40-hex sha. The update
+        # refuses instead of writing a file the loader rejects.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            (proj / "docs").mkdir()
+            (proj / "docs" / "a.md").write_text("same body\n")
+            baseline = proj / "state" / "repoclear-baseline.json"
+            saved = os.environ.pop("CI", None)
+            try:
+                self.assertEqual(self._check(proj, baseline, update=True), 2)
+                self.assertFalse(baseline.is_file())
+            finally:
+                if saved is not None:
+                    os.environ["CI"] = saved
+
     def test_malformed_baseline_is_exit_2(self):
         with tempfile.TemporaryDirectory() as td:
             proj = Path(td)
@@ -586,6 +625,37 @@ class TestBaselineGuard(unittest.TestCase):
             base = self._setup(proj)
             (proj / "state" / "repoclear-baseline.json").write_text("{}\n ")
             (proj / "a.py").write_text("x = 2\n")
+            _commit(proj)
+            self.assertEqual(guard.guard(proj, base, self._head(proj)), 1)
+
+    def test_baseline_modified_with_added_file_fails(self):
+        # Round-4 product M1: --diff-filter=M let a baseline raise ride
+        # along with an ADDED companion. The guard reads --name-status, so
+        # any companion change trips it, whatever its status letter.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            base = self._setup(proj)
+            (proj / "state" / "repoclear-baseline.json").write_text("{}\n ")
+            (proj / "b.py").write_text("y = 1\n")
+            _commit(proj)
+            self.assertEqual(guard.guard(proj, base, self._head(proj)), 1)
+
+    def test_baseline_modified_with_deleted_file_fails(self):
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            base = self._setup(proj)
+            (proj / "state" / "repoclear-baseline.json").write_text("{}\n ")
+            (proj / "a.py").unlink()
+            _commit(proj)
+            self.assertEqual(guard.guard(proj, base, self._head(proj)), 1)
+
+    def test_baseline_modified_with_renamed_file_fails(self):
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            base = self._setup(proj)
+            (proj / "state" / "repoclear-baseline.json").write_text("{}\n ")
+            subprocess.run(["git", "-C", str(proj), "mv", "a.py", "b.py"],
+                           check=True)
             _commit(proj)
             self.assertEqual(guard.guard(proj, base, self._head(proj)), 1)
 

@@ -61,7 +61,9 @@ or delete anything):
   as stale (it is never expanded against the runner's home), and so does any
   destination that resolves outside the repo (an absolute path, or a `..`
   path that escapes it): destinations must name a directory inside the repo.
-  A prompt with no machine-readable destination counts as stale too: a
+  A destination through a symlink loop counts as stale too (reason
+  `unresolvable`): it cannot be resolved at all, and the resolver reports
+  it rather than crashing the scan. A prompt with no machine-readable destination counts as stale too: a
   prompt the check cannot parse is a prompt the check cannot verify.
 
 Detector scopes, stated so they can be argued with: duplicates and tracked
@@ -71,7 +73,10 @@ ignored alike, minus `SKIP_DIRS`). A clean CI checkout and a dirty
 developer tree therefore measure the same tracked counts but can differ on
 empty dirs: run the gate and the pin test on a clean tree, because an empty
 directory can never be committed, so the empty-dir half of the gate polices
-working-tree state, not the commit.
+working-tree state, not the commit. The same limit holds at baseline-write
+time: `--update-baseline` measures the working tree's empty dirs, so an
+untracked empty dir present at update time is baked into the baseline; the
+dirty-tracked-tree refusal covers tracked dirt only.
 
 ### The ratchet, not the cleanup
 
@@ -83,13 +88,17 @@ baseline fails closed (exit 2), never passes. The baseline file carries
 provenance (`measured_on`, `base_commit`, `recheck_after`, `follow_up`),
 validated on load, so a bump is distinguishable from the original
 measurement. A baseline increase is a reviewed decision, never a drive-by
-line in a feature PR: `check --update-baseline` refuses under CI and on a
-dirty tracked tree, the baseline file carries provenance validated on load
+line in a feature PR: `check --update-baseline` refuses under CI, on a
+dirty tracked tree, and in a repo with no commits (there is no commit for
+`base_commit` to name, and the loader would reject the file it wrote), the baseline file carries provenance validated on load
 for shape (dates must parse as dates, `base_commit` must be a 40-hex sha),
 and CI runs `tools/repoclear/baseline_guard.py`, which fails a PR that
 modifies the committed baseline alongside other files (a baseline that is
 newly added, or changed alone, passes: that is the reviewed decision). The
-guard closes the drive-by path, not the reviewed path: a hand-edit that
+guard reads the diff with `--name-status`, so any companion change trips
+it, whether the companion was added, deleted, renamed, or modified; a
+`--diff-filter=M` read would have let the raise ride along with a
+non-modified companion. The guard closes the drive-by path, not the reviewed path: a hand-edit that
 lands alone still relies on review, and the spec says so rather than
 claiming otherwise. The PASS line names the outstanding backlog every time
 ("ratchet held (no growth); known outstanding: ..."), so green never reads
@@ -134,7 +143,7 @@ Mutation coverage, stated honestly: `mutate.py --spec repoclear` runs with
 detector going blind, the comparison inverting and off by one, the copies
 arithmetic, the identical/forked drops, the artifact suffix drop, the
 sentence-punctuation strip, the outside-repo containment drop, the empty
-skipped child counting as content). It does not cover `check
+skipped child counting as content, the symlink-loop resolution drop). It does not cover `check
 --update-baseline` or `scan --json`, which the selftest does not reach;
 those paths are covered by `tests/test_repoclear.py` instead. It also does
 not cover the pile-seam validation itself (schema/kind/copies checks): a
@@ -151,14 +160,14 @@ unit-test-covered only (`test_manifest_validation_fails_closed`,
   runtime, about 2s total). No gate.py change: extra contract domains run by
   the "DOMAINS is the floor, not the ceiling" rule, same as `dashboard` /
   `coverage_map`.
-- `tools/audit/mutations/repoclear.py`: 13 mutants, each caught by
+- `tools/audit/mutations/repoclear.py`: 14 mutants, each caught by
   `mutate.py --spec all` (empty-dir blind, artifact blind, baseline
   comparison inverted, ratchet comparison off by one, stale-destination
   resolver accepting missing paths, sentence punctuation not stripped,
   artifact suffix dropped, duplicate groups dropped, identical skills
   dropped, forked skills dropped, duplicate copies arithmetic off by one,
   outside-repo containment dropped, empty skipped child counting as
-  content).
+  content, symlink-loop destination resolution dropped).
 - `tests/test_repoclear.py`: detectors on planted synthetic git repos
   (including identical/forked skill fixtures), the ratchet (pass at baseline,
   fail on growth in duplicates and in empty dirs, exit 2 on missing or

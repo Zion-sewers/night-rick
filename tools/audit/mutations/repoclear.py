@@ -109,4 +109,12 @@ MUTATIONS = [
         "        skipped_with_files = [d for d in skipped if _subtree_has_file(Path(root) / d)]",
         "        skipped_with_files = list(skipped)",
     ),
+    (
+        "symlink-loop destination resolution dropped",
+        "A prompt names a destination through a symlink loop and the whole "
+        "scan crashes, because the resolve() failure is uncaught: the gate "
+        "dies instead of reporting one stale destination.",
+        "    except (OSError, RuntimeError):",
+        "    except (OSError):",
+    ),
 ]

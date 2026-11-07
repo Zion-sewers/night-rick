@@ -349,12 +349,13 @@ def _destination_dir(project: Path, raw: str) -> Path | None:
 def find_stale_destinations(project: Path) -> list[dict]:
     """Prompt references whose destination directory does not exist.
 
-    Four ways to be stale: the destination directory is missing
+    Five ways to be stale: the destination directory is missing
     (reason missing_dir), the destination is a home path (reason home_path:
     destinations must name a directory inside the repo), the destination
     resolves outside the repo (reason outside_repo: an absolute path, or a
     .. path that escapes the project, names a place the repo cannot verify,
-    even when it happens to exist on this machine), or the prompt
+    even when it happens to exist on this machine), the destination cannot
+    be resolved at all (reason unresolvable: a symlink loop), or the prompt
     carries no machine-readable destination at all (reason no_destination:
     a prompt the check cannot parse is a prompt the check cannot verify).
     Every destination on a line is examined (finditer, not search), and the
@@ -409,7 +410,21 @@ def _check_one(project: Path, path: Path, lineno: int, raw: str,
     # be a valid in-repo destination, even when it happens to exist on this
     # machine. Existence alone would bless /tmp/research/ on a machine where
     # it exists and fail it in CI where it does not: machine-dependent.
-    resolved = checked.resolve(strict=False)
+    # A destination through a symlink loop cannot be resolved at all:
+    # resolve() raises RuntimeError, and an uncaught raise would crash the
+    # whole scan instead of reporting one stale destination. It is stale
+    # (reason unresolvable), and the gate still fails closed on it.
+    try:
+        resolved = checked.resolve(strict=False)
+    except (OSError, RuntimeError):
+        stale.append({
+            "file": str(path.relative_to(project)),
+            "line": lineno,
+            "destination": destination,
+            "missing_dir": f"destination cannot be resolved: {checked}",
+            "reason": "unresolvable",
+        })
+        return
     if not resolved.is_relative_to(project.resolve()):
         stale.append({
             "file": str(path.relative_to(project)),
@@ -613,6 +628,14 @@ def cmd_check(a: argparse.Namespace) -> int:
                 return 2
         result = collect(project)
         payload = _baseline_payload(result["counts"], project)
+        if payload["base_commit"] == "unknown":
+            # A baseline measures a commit (the loader requires a 40-hex
+            # base_commit), so writing one in a repo with no commits would
+            # produce a file its own loader rejects.
+            print("repoclear check: FAIL: --update-baseline refuses in a "
+                  "repo with no commits; commit first so the baseline "
+                  "measures a commit", file=sys.stderr)
+            return 2
         baseline_path.parent.mkdir(parents=True, exist_ok=True)
         baseline_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
         print(f"wrote baseline {baseline_path}: {result['counts']} "
@@ -713,6 +736,20 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
         (proj / "real" / "f.txt").write_text("x\n")
         (proj / "holder").mkdir()
         os.symlink(proj / "real", proj / "holder" / "link")
+        # F2 fixture: a destination through a symlink loop. The loop is two
+        # symlinks pointing at each other (a -> b, b -> a): a single
+        # self-pointing link resolves cleanly, this one raises RuntimeError
+        # out of resolve(). It lives under __pycache__/ (a skipped
+        # directory) so the empty-dir walk never descends into it; only the
+        # destination resolver sees it, and resolve() must report it stale
+        # (unresolvable), not crash the whole scan.
+        (proj / "__pycache__" / "loop").mkdir()
+        os.symlink(proj / "__pycache__" / "loop" / "b",
+                   proj / "__pycache__" / "loop" / "a")
+        os.symlink(proj / "__pycache__" / "loop" / "a",
+                   proj / "__pycache__" / "loop" / "b")
+        (prompts / "p8.md").write_text(
+            "Output lands in __pycache__/loop/a/.\n")
 
         result = collect(proj)
         counts = result["counts"]
@@ -730,15 +767,16 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
             fails.append(f"empty_dirs {result['empty_dirs']}: holder/onlycache must never be reported")
         if counts["artifacts"] != 2 or result["artifacts"] != ["__pycache__/x.pyc", "stray.pyc"]:
             fails.append(f"artifacts {result['artifacts']}, want ['__pycache__/x.pyc', 'stray.pyc']")
-        if counts["stale_destinations"] != 5:
-            fails.append(f"stale_destinations {counts['stale_destinations']}, want 5")
+        if counts["stale_destinations"] != 6:
+            fails.append(f"stale_destinations {counts['stale_destinations']}, want 6")
         else:
             reasons = [(s["file"], s.get("reason")) for s in result["stale_destinations"]]
             want = [(str(PROMPTS_DIR / "p1.md"), "missing_dir"),
                     (str(PROMPTS_DIR / "p3.md"), "no_destination"),
                     (str(PROMPTS_DIR / "p4.md"), "home_path"),
                     (str(PROMPTS_DIR / "p6.md"), "outside_repo"),
-                    (str(PROMPTS_DIR / "p7.md"), "outside_repo")]
+                    (str(PROMPTS_DIR / "p7.md"), "outside_repo"),
+                    (str(PROMPTS_DIR / "p8.md"), "unresolvable")]
             if reasons != want:
                 fails.append(f"stale reasons {reasons}, want {want}")
 

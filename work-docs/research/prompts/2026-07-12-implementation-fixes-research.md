@@ -6,8 +6,7 @@ prompt asked "what is the standard". This one asks "how do I CORRECTLY implement
 class of defect the audit found", so the research yields the right pattern + primary source + a
 copy-adaptable code example + how to test it. Target stack: zero-RUNTIME-dependency Python package
 (uv + ruff + mypy --strict + pytest; tree-sitter is the only external dep; dev deps are fine),
-single-operator local harness with multiple concurrent Claude sessions. Output dated `.md` under
-`~/docs/`. Primary sources with dates; flag anything unverified. For EACH section: (a) the correct
+single-operator local harness with multiple concurrent Claude sessions. Output lands in work-docs/research/ as dated `.md`. Primary sources with dates; flag anything unverified. For EACH section: (a) the correct
 SOTA pattern, (b) primary source(s), (c) a concrete example adapted to this stack, (d) the test that
 proves it (unit / property / concurrency / mutation as fits).
 

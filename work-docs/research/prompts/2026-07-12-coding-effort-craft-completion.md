@@ -6,7 +6,7 @@ NOT: (A) craft/effort (correct-but-lazy vs correct-and-crafted) and (B) completi
 wired vs commit-made-and-declared-done). The motivating failures: an agent made commits in widgora and
 claimed "shipped" while the UI/UX was unwired and non-functional; and in the harness itself, 5 modules
 were committed with tests green while 4 had zero callers (fake-completion). Target: build coding
-PERSONAS that code with a senior's effort and cannot fake-complete. Output dated `.md` under `~/docs/`,
+PERSONAS that code with a senior's effort and cannot fake-complete. Output lands in work-docs/research/ as dated `.md`,
 primary-sourced with dates. For each Q: the concept, primary source(s), a measurable/enforceable
 mechanism, and how to wire it into an agent loop (rubric + gate + iterate).
 

@@ -233,13 +233,22 @@ because the ledger is append-only. See
 The `repoclear` domain runs `python tools/repoclear/scan.py check`, which
 fails when any repo-clear count grows past `state/repoclear-baseline.json`:
 duplicate-doc groups and redundant copies (detection owned by
-`tools/audit/pile.py`, read from its manifest), identical and forked skills,
-empty dirs, tracked build artifacts, and research prompts naming an output
-destination whose directory does not exist. The baseline is a ratchet, not a
-cleanup demand: it records the measured counts on main and fails only on
-growth, so the existing duplicate and fork backlog can be collapsed by
-follow-up work without holding this domain red meanwhile. A missing baseline
-fails closed. See
+`tools/audit/pile.py`, read from its manifest, which is validated per row:
+schema `pile.v1`, known kind, copies of at least 2), identical and forked
+skills, empty dirs, tracked build artifacts, and research prompts naming an
+output destination whose directory does not exist. The destination check
+validates directory existence only, not that reports land there. The
+baseline is a ratchet, not a cleanup demand: it records the measured counts
+on main and fails only on growth, so the existing duplicate and fork backlog
+can be collapsed by follow-up work (#446) without holding this domain red
+meanwhile. A missing or malformed baseline fails closed. A baseline increase
+is a reviewed decision, never a drive-by line in a feature PR:
+`check --update-baseline` refuses under CI, and the baseline file carries
+`measured_on`, `base_commit`, `recheck_after`, and `follow_up` provenance,
+validated on load. The PASS line names the outstanding backlog every time,
+so green never reads as clean. Duplicates and artifacts are tracked-only
+(`git ls-files`); empty dirs are filesystem-wide. Timeout 60s, from the
+measured runtime (about 2s total). See
 [specs/2026-11-07-repoclear-gate-domain.md](specs/2026-11-07-repoclear-gate-domain.md).
 
 

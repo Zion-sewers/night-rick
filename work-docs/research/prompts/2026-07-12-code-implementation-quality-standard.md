@@ -4,7 +4,7 @@ Run this as a deep-research pass. Goal: produce a dated, primary-sourced SOTA st
 codebase against per-file, per-function, and per-line, and a ready-to-apply rubric + tool commands.
 Context: the target is a zero-runtime-dependency Python package (uv + ruff + mypy --strict + pytest),
 tree-sitter is the only external dep, single-operator local harness, agent-legible code (agents read
-it). Output as one or more dated `.md` docs under `~/docs/`. Prefer primary sources (PEPs, tool docs,
+it). Output lands in work-docs/research/ as one or more dated `.md` docs. Prefer primary sources (PEPs, tool docs,
 Google/NumPy style guides, arXiv/eng-blogs) with dates; flag anything unverified.
 
 ## Q1 - Docstring standard (the level, per scope)

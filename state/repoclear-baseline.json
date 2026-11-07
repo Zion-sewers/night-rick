@@ -1,12 +1,16 @@
 {
-  "schema": "repoclear-baseline.v1",
+  "base_commit": "2e5423fde1d288fefde9cdcf36e4a8596bd2de1b",
   "counts": {
-    "duplicate_doc_groups": 2,
-    "duplicate_doc_copies": 2,
-    "identical_skills": 19,
-    "forked_skills": 38,
-    "empty_dirs": 0,
     "artifacts": 0,
+    "duplicate_doc_copies": 2,
+    "duplicate_doc_groups": 2,
+    "empty_dirs": 0,
+    "forked_skills": 38,
+    "identical_skills": 19,
     "stale_destinations": 0
-  }
+  },
+  "follow_up": "night-rick#35: collapse the duplicate/fork backlog (#446); relocate the seven research reports (#447)",
+  "measured_on": "2026-11-07",
+  "recheck_after": "2027-02-05",
+  "schema": "repoclear-baseline.v1"
 }

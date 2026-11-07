@@ -35,55 +35,129 @@ or delete anything):
 - **empty_dirs**: filesystem walk, because git never tracks an empty
   directory. Topmost empty directory per empty subtree; `.git`, virtualenvs,
   `node_modules`, `target/`, `dist/`, `build/`, and `.claude/worktrees`
-  (sibling sessions' trees) are excluded.
+  (sibling sessions' trees) are excluded. A skipped child counts as
+  content, not absence: a directory whose only child is `__pycache__/` (or
+  `node_modules/`, `build/`, ...) holding real files is not empty.
 - **artifacts**: tracked files matching build-artifact patterns
   (`__pycache__/`, `*.pyc`, `node_modules/`, `.venv/`, `target/`, ...).
+  Matching is case-insensitive, and `git ls-files` runs `-z` so non-ASCII
+  filenames survive quoting. The segment test is deliberately broad by
+  design: any directory named `build/` (or `dist/`, `target/`, ...) is an
+  artifact container.
 - **stale_destinations**: `work-docs/research/prompts/*.md` lines of the
   form `Output lands in X` / `Land as X`; the destination DIRECTORY must
-  exist (a prompt may name a file that does not exist yet). Sentence
-  punctuation is stripped before resolving: `Path` collapses a trailing
-  `/.` one level up, which made a missing dir look present until the
-  selftest caught it.
+  exist (a prompt may name a file that does not exist yet). File-vs-directory
+  is read from the name, never from a trailing slash: a last component with
+  a file extension names a file, so its parent is checked; anything else
+  names the directory itself. Sentence punctuation is stripped before
+  resolving: `Path` collapses a trailing `/.` one level up, which made a
+  missing dir look present until the selftest caught it. Every destination
+  on a line is examined, and the lead-ins match case-insensitively. The
+  check validates directory existence ONLY: it does not prove reports land
+  there (the seven reports are still in work-docs/ root; relocating them is
+  #447). A destination under `~` is unresolvable inside the repo and counts
+  as stale (it is never expanded against the runner's home), and a prompt
+  with no machine-readable destination counts as stale too: a prompt the
+  check cannot parse is a prompt the check cannot verify.
+
+Detector scopes, stated so they can be argued with: duplicates and tracked
+artifacts are computed from `git ls-files` (tracked files only), while
+empty dirs are computed from a filesystem walk (tracked, untracked, and
+ignored alike, minus `SKIP_DIRS`).
 
 ### The ratchet, not the cleanup
 
 `check` fails when any count grows past `state/repoclear-baseline.json`
 (skip_tracker.py precedent). Measured on main 2026-11-07: 2 duplicate-doc
 groups (2 redundant copies), 19 identical skills, 38 forked skills, 0 empty
-dirs, 0 tracked artifacts, 0 stale destinations. A missing baseline fails
-closed (exit 2), never passes. Collapsing the existing duplicate/fork
-backlog is follow-up work (#92 / PR #444 and a dedup unit); this domain
+dirs, 0 tracked artifacts, 0 stale destinations. A missing or malformed
+baseline fails closed (exit 2), never passes. The baseline file carries
+provenance (`measured_on`, `base_commit`, `recheck_after`, `follow_up`),
+validated on load, so a bump is distinguishable from the original
+measurement. A baseline increase is a reviewed decision, never a drive-by
+line in a feature PR: `check --update-baseline` refuses under CI, and a
+baseline change lands as its own reviewed change from a developer machine.
+The PASS line names the outstanding backlog every time ("ratchet held (no
+growth); known outstanding: ..."), so green never reads as clean. Collapsing
+the existing duplicate/fork backlog is follow-up work (#446); this domain
 stops the pile growing.
+
+The pile.py seam is fail-closed: every manifest row must carry schema
+`pile.v1` and a known kind, and a duplicate-doc row must carry `copies` of
+at least 2, or the run raises instead of counting zero; a malformed manifest
+line and a pile.py timeout raise the same way. A zero-row manifest
+is legitimate (a clean repo emits no rows), so kinds are validated when
+present, not required; the selftest plants one group of each kind and
+asserts the counts, so a pile.py that silently stopped seeing groups goes
+red there. Timeouts are set from the measured runtime (about 2s total on
+main): the contract allows 60s, pile.py gets 45s, git gets 30s.
+
+`tools/repoclear/` is a directory, not a flat file under `tools/audit/`,
+because the tool is a subsystem (scanner plus ratchet state plus selftest
+plus mutation spec), not a single-purpose checker like `pile.py`. Its
+exclusion lists (`SKIP_DIRS`, `ARTIFACT_SEGMENTS`) are local copies, not
+shared with pile.py: the scanner stays stdlib-only and import-free so the
+gate domain has no import coupling to audit tooling. Sharing one exclusion
+list is adoption work, not this unit.
+
+Mutation coverage, stated honestly: `mutate.py --spec repoclear` runs with
+`ARGV = ["selftest"]`, so it covers what the selftest exercises (each
+detector going blind, the comparison inverting and off by one, the copies
+arithmetic, the identical/forked drops, the artifact suffix drop, the
+sentence-punctuation strip). It does not cover `check --update-baseline` or
+`scan --json`, which the selftest does not reach; those paths are covered by
+`tests/test_repoclear.py` instead.
 
 ### Wiring
 
 - `quality-contract.json`: required domain `repoclear`,
-  `python tools/repoclear/scan.py check`, timeout 300. No gate.py change:
-  extra contract domains run by the "DOMAINS is the floor, not the ceiling"
-  rule, same as `dashboard` / `coverage_map`.
-- `tools/audit/mutations/repoclear.py`: 5 mutants, each caught by
+  `python tools/repoclear/scan.py check`, timeout 60 (from the measured
+  runtime, about 2s total). No gate.py change: extra contract domains run by
+  the "DOMAINS is the floor, not the ceiling" rule, same as `dashboard` /
+  `coverage_map`.
+- `tools/audit/mutations/repoclear.py`: 11 mutants, each caught by
   `mutate.py --spec all` (empty-dir blind, artifact blind, baseline
-  comparison inverted, stale-destination resolver accepting missing paths,
-  duplicate groups dropped).
-- `tests/test_repoclear.py`: detectors on planted synthetic git repos, the
-  ratchet (pass at baseline, fail on growth, exit 2 on missing baseline),
-  and two pins: the contract declares the domain, the committed baseline
-  matches the live tree.
+  comparison inverted, ratchet comparison off by one, stale-destination
+  resolver accepting missing paths, sentence punctuation not stripped,
+  artifact suffix dropped, duplicate groups dropped, identical skills
+  dropped, forked skills dropped, duplicate copies arithmetic off by one).
+- `tests/test_repoclear.py`: detectors on planted synthetic git repos
+  (including identical/forked skill fixtures), the ratchet (pass at baseline,
+  fail on growth in duplicates and in empty dirs, exit 2 on missing or
+  malformed baseline, --update-baseline refusing under CI, PASS line naming
+  the outstanding backlog), manifest validation failing closed (bad schema,
+  unknown kind, bad copies, malformed line, pile timeout), and two pins:
+  the contract declares the domain, the committed baseline matches the live
+  tree.
 - `ship-gate.yml` falsifiability: named `repoclear selftest` step.
 - `docs/dir-purpose.txt`: row for `tools/repoclear/` (codemap domain).
 - Prompt fixes: the seven 2026-07-27 prompts + README now name
-  `work-docs/research/` (the directory that exists). The seven existing
+  `work-docs/research/` (the directory that exists), 15 stale references
+  fixed to 0; the three 2026-07-12 prompts had no machine-readable
+  destination at all (their output statements named `~/docs/` in other
+  words) and now name `work-docs/research/` too. The seven existing
   reports stay in work-docs/ root under their prose titles; relocating them
-  is curation, named as follow-up.
+  is #447.
 
 ## Deliberately out of scope
 
-- The epic's four-repo report: the other repos are not checked out in CI,
-  so the scanner reports over the repo it runs in (`--project`).
+- The epic's four-repo report (task 1 asks for one report over the four
+  repos): the scanner is night-rick only today. The other repos are not
+  checked out in CI and have no pile.py, no repoclear domain, and no
+  baseline; porting means copying the tool, the contract domain, and a
+  measured baseline, not just passing `--project`.
 - Task 2 (one root AGENTS.md per repo): covered by #92, in flight as
   PR #444.
 - Task 5 (new-recruit dedup): a different repo.
 - Task 6 (WSL2 move): epic-level.
 - Closing #35 itself: Shoval 2026-08-23: the epic stays open on purpose
   and closing it is the operator's call once the boxes it covers are done.
-  The PR references #35 (`Refs #35`), it does not close it.
+  The PR references #35 (`Relates to #35`), it does not close it.
+
+Task mapping, so the scope claim is checkable without opening the epic:
+task 1 is the scanner, task 3 is the gate domain with its selftest and
+mutation spec, task 4 is the research-path fix. Follow-ups are tracked
+issues, not PR-body prose: #446 (collapse the duplicate/fork backlog),
+#447 (relocate the seven research reports), #448 (recheck the 41 expired
+prior-art records), #449 (Ship gate failing at actions/setup-python@v5 on
+vm-runner-01).

@@ -7,11 +7,15 @@ the counts the tool measures on this tree right now.
 """
 
 import importlib.util
+import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock as mock
+from contextlib import redirect_stdout
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -61,6 +65,22 @@ class TestEmptyDirs(unittest.TestCase):
             _commit(proj)
             self.assertEqual(scan.find_empty_dirs(proj), [])
 
+    def test_skipped_dir_with_content_is_not_empty(self):
+        # B1: a directory whose only child is a skipped directory holding
+        # real files (__pycache__/, node_modules/, build/) is not empty.
+        # The old code pruned the skipped child and reported the parent.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            (proj / "onlycache" / "__pycache__").mkdir(parents=True)
+            (proj / "onlycache" / "__pycache__" / "x.pyc").write_bytes(b"\x00")
+            (proj / "onlynode" / "node_modules" / "pkg").mkdir(parents=True)
+            (proj / "onlynode" / "node_modules" / "pkg" / "f").write_text("x\n")
+            (proj / "onlybuild" / "build").mkdir(parents=True)
+            (proj / "onlybuild" / "build" / "out.txt").write_text("x\n")
+            _commit(proj)
+            self.assertEqual(scan.find_empty_dirs(proj), [])
+
 
 class TestArtifacts(unittest.TestCase):
     def test_tracked_pycache_is_an_artifact(self):
@@ -81,6 +101,27 @@ class TestArtifacts(unittest.TestCase):
             _commit(proj)
             self.assertEqual(scan.find_artifacts(proj), [])
 
+    def test_non_ascii_artifact_found(self):
+        # M4: git quotes non-ASCII paths under core.quotepath, so plain
+        # ls-files delivered the quoted form and the matcher never saw it.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            (proj / "__pycache__").mkdir()
+            (proj / "__pycache__" / "café.pyc").write_bytes(b"\x00")
+            _commit(proj)
+            self.assertEqual(scan.find_artifacts(proj), ["__pycache__/café.pyc"])
+
+    def test_uppercase_suffix_is_an_artifact(self):
+        # M9: X.PYC is a build artifact the same as x.pyc.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            (proj / "lib").mkdir()
+            (proj / "lib" / "X.PYC").write_bytes(b"\x00")
+            _commit(proj)
+            self.assertEqual(scan.find_artifacts(proj), ["lib/X.PYC"])
+
 
 class TestStaleDestinations(unittest.TestCase):
     def test_missing_destination_dir_is_stale(self):
@@ -89,13 +130,42 @@ class TestStaleDestinations(unittest.TestCase):
             _plant_repo(proj)
             prompts = proj / "work-docs" / "research" / "prompts"
             prompts.mkdir(parents=True)
-            (prompts / "p1.md").write_text("Output lands in ~/docs/no-such-dir/.\n")
+            (prompts / "p1.md").write_text("Output lands in work-docs/no-such-dir/.\n")
             (prompts / "p2.md").write_text("Output lands in work-docs/research/.\n")
             _commit(proj)
             stale = scan.find_stale_destinations(proj)
             self.assertEqual(len(stale), 1)
             self.assertEqual(stale[0]["file"], "work-docs/research/prompts/p1.md")
             self.assertEqual(stale[0]["line"], 1)
+            self.assertEqual(stale[0]["reason"], "missing_dir")
+
+    def test_home_path_destination_is_stale(self):
+        # A destination under ~ names a location outside the repo, so it can
+        # never be a valid in-repo destination, even if the dir happens to
+        # exist on this machine.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            prompts = proj / "work-docs" / "research" / "prompts"
+            prompts.mkdir(parents=True)
+            (prompts / "p1.md").write_text("Output lands in ~/docs/no-such-dir/.\n")
+            _commit(proj)
+            stale = scan.find_stale_destinations(proj)
+            self.assertEqual(len(stale), 1)
+            self.assertEqual(stale[0]["reason"], "home_path")
+
+    def test_prompt_without_destination_is_stale(self):
+        # A prompt the check cannot parse is a prompt the check cannot verify.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            prompts = proj / "work-docs" / "research" / "prompts"
+            prompts.mkdir(parents=True)
+            (prompts / "p1.md").write_text("A prompt with no destination line.\n")
+            _commit(proj)
+            stale = scan.find_stale_destinations(proj)
+            self.assertEqual(len(stale), 1)
+            self.assertEqual(stale[0]["reason"], "no_destination")
 
     def test_land_as_line_checks_parent_dir(self):
         # "Land as <file>" validates the directory the file would land in,
@@ -109,6 +179,67 @@ class TestStaleDestinations(unittest.TestCase):
                 "Land as work-docs/research/2026-07-future.md.\n")
             _commit(proj)
             self.assertEqual(scan.find_stale_destinations(proj), [])
+
+    def test_missing_dir_without_trailing_slash_is_stale(self):
+        # B2: the natural prose form has no trailing slash, and the parent
+        # exists, so the old slash rule checked the parent and missed it.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            prompts = proj / "work-docs" / "research" / "prompts"
+            prompts.mkdir(parents=True)
+            (proj / "work-docs").mkdir(exist_ok=True)
+            (prompts / "p1.md").write_text(
+                "Output lands in work-docs/no-such-dir.\n")
+            _commit(proj)
+            stale = scan.find_stale_destinations(proj)
+            self.assertEqual(len(stale), 1)
+            self.assertEqual(stale[0]["reason"], "missing_dir")
+            self.assertIn("no-such-dir", stale[0]["missing_dir"])
+
+    def test_missing_dir_through_dotdot_is_stale(self):
+        # M11: a missing directory named through ".." must be checked as
+        # itself, not via its parent (which resolves to an existing dir).
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            prompts = proj / "work-docs" / "research" / "prompts"
+            prompts.mkdir(parents=True)
+            (prompts / "p1.md").write_text(
+                "Output lands in work-docs/research/../no-such.\n")
+            _commit(proj)
+            stale = scan.find_stale_destinations(proj)
+            self.assertEqual(len(stale), 1)
+            self.assertEqual(stale[0]["reason"], "missing_dir")
+
+    def test_two_destinations_on_one_line_both_checked(self):
+        # M8: search() per line dropped the second destination on a line.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            prompts = proj / "work-docs" / "research" / "prompts"
+            prompts.mkdir(parents=True)
+            (prompts / "p1.md").write_text(
+                "Output lands in work-docs/research/. "
+                "Land as work-docs/no-such/file.md.\n")
+            _commit(proj)
+            stale = scan.find_stale_destinations(proj)
+            self.assertEqual(len(stale), 1)
+            self.assertEqual(stale[0]["reason"], "missing_dir")
+
+    def test_lowercase_lead_in_is_checked(self):
+        # M8: the lead-in is a convention, not a capitalisation.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            prompts = proj / "work-docs" / "research" / "prompts"
+            prompts.mkdir(parents=True)
+            (prompts / "p1.md").write_text(
+                "output lands in work-docs/no-such/.\n")
+            _commit(proj)
+            stale = scan.find_stale_destinations(proj)
+            self.assertEqual(len(stale), 1)
+            self.assertEqual(stale[0]["reason"], "missing_dir")
 
 
 class TestDuplicateReuse(unittest.TestCase):
@@ -125,6 +256,87 @@ class TestDuplicateReuse(unittest.TestCase):
             counts = scan.duplicate_counts(proj)
             self.assertEqual(counts["duplicate_doc_groups"], 1)
             self.assertEqual(counts["duplicate_doc_copies"], 1)
+
+    def test_identical_and_forked_skills_counted_via_pile(self):
+        # Same fixture shape pile.py's own selftest uses: a skill name in two
+        # payload trees, identical in one pair, forked in the other.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            for tree in ("dot-claude/skills", "dot-agents/skills"):
+                (proj / tree / "twin").mkdir(parents=True)
+                (proj / tree / "twin" / "SKILL.md").write_text("identical\n")
+                (proj / tree / "split").mkdir(parents=True)
+            (proj / "dot-claude/skills" / "split" / "SKILL.md").write_text("version one\n")
+            (proj / "dot-agents/skills" / "split" / "SKILL.md").write_text("version two, longer\n")
+            _commit(proj)
+            counts = scan.duplicate_counts(proj)
+            self.assertEqual(counts["identical_skills"], 1)
+            self.assertEqual(counts["forked_skills"], 1)
+
+    def test_manifest_validation_fails_closed(self):
+        # A pile manifest row without the pile.v1 schema, with an unknown
+        # kind, or with a duplicate-doc copies count below 2 must raise, not
+        # count as zero: an oracle that goes silent must not read as clean.
+        import unittest.mock as mock
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            (proj / "docs").mkdir()
+            (proj / "docs" / "a.md").write_text("same body\n")
+            _commit(proj)
+            good = scan.duplicate_counts(proj)
+            self.assertEqual(good["duplicate_doc_groups"], 0)
+            bad_rows = [
+                {"schema": "pile.v2", "kind": "duplicate-doc", "copies": 2},
+                {"schema": "pile.v1", "kind": "mystery-kind"},
+                {"schema": "pile.v1", "kind": "duplicate-doc", "copies": 1},
+            ]
+            for bad in bad_rows:
+                # Feed the bad manifest through the real reader by replacing
+                # pile.py with a stub that writes the bad row.
+                stub = Path(td) / "stub-pile.py"
+                stub.write_text(
+                    "import json, sys\n"
+                    f"open(sys.argv[sys.argv.index('--out') + 1], 'w').write("
+                    f"{json.dumps(bad)!r} + '\\n')\n")
+                with mock.patch.object(scan, "PILE", stub):
+                    with self.assertRaises(RuntimeError):
+                        scan.duplicate_counts(proj)
+
+    def test_malformed_manifest_line_fails_closed(self):
+        # M10: one malformed JSONL line used to crash the whole scan with a
+        # traceback; a gate tool must fail closed with a named error.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            (proj / "docs").mkdir()
+            (proj / "docs" / "a.md").write_text("same body\n")
+            _commit(proj)
+            stub = Path(td) / "stub-pile.py"
+            stub.write_text(
+                "import sys\n"
+                "open(sys.argv[sys.argv.index('--out') + 1], 'w').write("
+                "'{\"schema\": \"pile.v1\", \"kind\": \"duplicate-doc\", "
+                "\"copies\": 2}\\nnot json{\\n')\n")
+            with mock.patch.object(scan, "PILE", stub):
+                with self.assertRaises(RuntimeError):
+                    scan.duplicate_counts(proj)
+
+    def test_pile_timeout_fails_closed(self):
+        # M10: a hung pile.py must surface as a named error, not a silent
+        # gate timeout with no domain evidence.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            (proj / "docs").mkdir()
+            (proj / "docs" / "a.md").write_text("same body\n")
+            _commit(proj)
+            with mock.patch.object(
+                    scan.subprocess, "run",
+                    side_effect=subprocess.TimeoutExpired("pile.py", 45)):
+                with self.assertRaises(RuntimeError):
+                    scan.duplicate_counts(proj)
 
 
 class TestRatchet(unittest.TestCase):
@@ -144,10 +356,93 @@ class TestRatchet(unittest.TestCase):
             self.assertEqual(self._check(proj, baseline), 2)
             self.assertEqual(self._check(proj, baseline, update=True), 0)
             self.assertEqual(self._check(proj, baseline), 0)
-            grown = json.loads(baseline.read_text(encoding="utf-8"))
-            grown["counts"]["duplicate_doc_groups"] -= 1
-            baseline.write_text(json.dumps(grown, indent=2) + "\n", encoding="utf-8")
+            # Growth is a real duplicate added after baselining, not a
+            # baseline edited below zero: a negative baseline count is now
+            # malformed and fails closed with exit 2 instead.
+            (proj / "old").mkdir()
+            (proj / "old" / "a.md").write_text("same body\n")
+            _commit(proj)
             self.assertEqual(self._check(proj, baseline), 1)
+
+    def test_empty_dir_growth_fails(self):
+        # M12: the ratchet fires on empty-dir growth too, not only on
+        # duplicate growth (the new detectors need a growth proof each).
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            (proj / "planted").mkdir()
+            (proj / "planted" / "empty").mkdir()
+            (proj / "keep.txt").write_text("x\n")
+            _commit(proj)
+            baseline = proj / "state" / "repoclear-baseline.json"
+            self.assertEqual(self._check(proj, baseline, update=True), 0)
+            self.assertEqual(self._check(proj, baseline), 0)
+            # No commit: git never tracks an empty directory, so the second
+            # empty dir exists on the filesystem only, which is exactly what
+            # the empty-dir detector walks.
+            (proj / "planted2").mkdir()
+            (proj / "planted2" / "empty").mkdir()
+            self.assertEqual(self._check(proj, baseline), 1)
+
+    def test_update_baseline_refuses_under_ci(self):
+        # A baseline increase is a reviewed decision: CI must never raise
+        # the ceiling it enforces.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            (proj / "docs").mkdir()
+            (proj / "docs" / "a.md").write_text("same body\n")
+            _commit(proj)
+            baseline = proj / "state" / "repoclear-baseline.json"
+            saved = os.environ.pop("CI", None)
+            os.environ["CI"] = "true"
+            try:
+                self.assertEqual(self._check(proj, baseline, update=True), 2)
+            finally:
+                if saved is None:
+                    os.environ.pop("CI", None)
+                else:
+                    os.environ["CI"] = saved
+            self.assertFalse(baseline.is_file())
+
+    def test_malformed_baseline_is_exit_2(self):
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            (proj / "docs").mkdir()
+            (proj / "docs" / "a.md").write_text("same body\n")
+            _commit(proj)
+            baseline = proj / "state" / "repoclear-baseline.json"
+            baseline.parent.mkdir(parents=True)
+            good = {"schema": "repoclear-baseline.v1",
+                    "counts": dict.fromkeys(scan.COUNT_KEYS, 0),
+                    "measured_on": "2026-11-07", "base_commit": "x" * 40,
+                    "recheck_after": "2027-02-05", "follow_up": "night-rick#35"}
+            for broken in (
+                {**good, "schema": "repoclear-baseline.v2"},
+                {**good, "counts": {**good["counts"], "artifacts": -1}},
+                {k: v for k, v in good.items() if k != "measured_on"},
+            ):
+                baseline.write_text(json.dumps(broken, indent=2) + "\n", encoding="utf-8")
+                self.assertEqual(self._check(proj, baseline), 2)
+
+    def test_pass_line_names_the_outstanding_backlog(self):
+        # PASS must never read as clean while the ratchet blesses a backlog.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            (proj / "docs").mkdir()
+            (proj / "old").mkdir()
+            (proj / "docs" / "a.md").write_text("same body\n")
+            (proj / "old" / "a.md").write_text("same body\n")
+            _commit(proj)
+            baseline = proj / "state" / "repoclear-baseline.json"
+            self.assertEqual(self._check(proj, baseline, update=True), 0)
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                self.assertEqual(self._check(proj, baseline), 0)
+            self.assertIn("known outstanding: 1 duplicate-doc group (1 redundant copy)",
+                          buf.getvalue())
 
 
 class TestWiring(unittest.TestCase):

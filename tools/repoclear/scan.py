@@ -26,7 +26,7 @@ This tool is that checker, for this repository. It measures four things:
                      quoting.
   stale_destinations research prompts naming an output destination whose
                      directory does not exist. The 2026-07-27 prompts named
-                     ~/docs/research/, which does not exist; the seven reports
+                     ~/docs/research/, which does not exist; the six reports
                      landed in work-docs/ root instead. The check validates the
                      destination DIRECTORY, not the file to be created: a
                      last component with a file extension names a file, so its
@@ -34,16 +34,20 @@ This tool is that checker, for this repository. It measures four things:
                      itself. Every destination on a line is examined and the
                      lead-ins match case-insensitively. It validates directory
                      existence ONLY: it does not prove reports land there (the
-                     seven reports are still in work-docs/ root; relocating
+                     six reports are still in work-docs/ root; relocating
                      them is #447). A destination under ~ is unresolvable
-                     inside the repo and counts as stale, and a prompt with no
+                     inside the repo and counts as stale, and so does any
+                     destination that resolves outside the repo (an absolute
+                     path, or a .. path that escapes it): destinations must
+                     name a directory inside the repo. A prompt with no
                      machine-readable destination ("Output lands in <dir>" or
                      "Land as <path>") counts as stale too: a prompt the check
                      cannot parse is a prompt the check cannot verify.
 
 Subcommands:
 
-  scan      human-readable report; exit 0 always (report-only).
+  scan      human-readable report; exit 0 when the report completes (a
+            detector failure raises with a named error instead of a report).
   check     the gate: exit 1 when any count exceeds the committed baseline
             (state/repoclear-baseline.json), exit 2 when the baseline is
             missing or malformed (a missing baseline is not a pass: a gate
@@ -54,8 +58,13 @@ Subcommands:
             duplicate/fork backlog is follow-up work (#446), not this unit.
             A baseline increase is a reviewed decision, never a drive-by line
             in a feature PR: check --update-baseline refuses under CI, and
-            the baseline file carries measured_on, base_commit,
-            recheck_after, and follow_up provenance, validated on load.
+            refuses on a dirty tracked tree (commit first, so the baseline
+            measures a commit, not a working tree), and the baseline file
+            carries measured_on, base_commit,
+            recheck_after, and follow_up provenance, validated on load
+            (dates must parse as dates, base_commit must be a 40-hex sha).
+            CI also runs tools/repoclear/baseline_guard.py, which fails a PR
+            that modifies the committed baseline alongside other files.
   selftest  prove each detector fires on a planted synthetic git repo, and
             that the ratchet fires on growth and passes on no growth.
 
@@ -69,7 +78,7 @@ dirs are computed from a filesystem walk (tracked, untracked, and ignored
 alike, minus SKIP_DIRS). A clean CI checkout and a dirty developer tree
 therefore measure the same tracked counts but can differ on empty dirs.
 Timeouts are set from the measured runtime (about 2s total on main): the
-contract allows 60s, pile.py gets 45s, git gets 30s, so a hang surfaces as a
+contract allows 60s, pile.py gets 30s, git gets 15s, so a hang surfaces as a
 domain failure with evidence, not a silent gate timeout.
 The pile.py manifest the gate counts is re-derived on every run (pile.py is
 deterministic); to reproduce a red gate, re-run pile.py scan, whose output
@@ -89,6 +98,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import os
 import re
@@ -166,7 +176,7 @@ def _git_files(project: Path) -> list[str]:
     # the literal string '"__pycache__/caf\303\251.pyc"' and never matched.
     proc = subprocess.run(
         ["git", "-C", str(project), "ls-files", "-z"],
-        capture_output=True, text=True, timeout=30,
+        capture_output=True, text=True, timeout=15,
     )
     if proc.returncode != 0:
         raise RuntimeError(f"git ls-files failed in {project}: {proc.stderr.strip()}")
@@ -195,10 +205,10 @@ def duplicate_counts(project: Path) -> dict[str, int]:
             proc = subprocess.run(
                 [sys.executable, str(PILE), "scan", "--project", str(project),
                  "--out", str(manifest)],
-                capture_output=True, text=True, timeout=45,
+                capture_output=True, text=True, timeout=30,
             )
         except subprocess.TimeoutExpired as exc:
-            raise RuntimeError(f"pile.py scan timed out after 45s: {exc}")
+            raise RuntimeError(f"pile.py scan timed out after 30s: {exc}")
         if proc.returncode != 0:
             raise RuntimeError(f"pile.py scan failed: {proc.stderr.strip()}")
         try:
@@ -239,6 +249,19 @@ def duplicate_counts(project: Path) -> dict[str, int]:
     }
 
 
+def _subtree_has_file(path: Path) -> bool:
+    """True when any file sits anywhere under path.
+
+    Short-circuits on the first file, so a skipped directory holding real
+    files is cheap to recognise as content and an empty one is cheap to
+    recognise as absence, without the walk ever descending into it.
+    """
+    for entry in path.rglob("*"):
+        if entry.is_file():
+            return True
+    return False
+
+
 def find_empty_dirs(project: Path) -> list[str]:
     """Topmost directories holding no files, filesystem walk (not git).
 
@@ -251,10 +274,16 @@ def find_empty_dirs(project: Path) -> list[str]:
     """
     records: dict[Path, tuple[list[Path], bool]] = {}
     for root, dirs, files in os.walk(project, topdown=True):
-        # A skipped child is content, not absence: a directory whose only
-        # child is __pycache__/ (or node_modules/, build/, ...) holds real
-        # files and is not empty. Same treatment as .claude/worktrees below.
+        # A skipped child is content only when its subtree holds at least
+        # one file: a directory whose only child is an EMPTY skipped
+        # directory is empty (its topmost empty descendant is reported).
+        # A symlinked child directory is content too: the walk never
+        # descends into it (followlinks=False), so without this a directory
+        # whose only child is a symlink to a directory with files would
+        # read as empty.
         skipped = [d for d in dirs if d in SKIP_DIRS]
+        skipped_with_files = [d for d in skipped if _subtree_has_file(Path(root) / d)]
+        symlinked = [d for d in dirs if (Path(root) / d).is_symlink()]
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
         rel = Path(root).relative_to(project)
         if rel.parts[:2] == WORKTREES_PREFIX.parts:
@@ -263,7 +292,8 @@ def find_empty_dirs(project: Path) -> list[str]:
             records[rel] = ([], True)
             dirs[:] = []
             continue
-        records[rel] = ([rel / d for d in dirs], bool(files) or bool(skipped))
+        records[rel] = ([rel / d for d in dirs],
+                        bool(files) or bool(skipped_with_files) or bool(symlinked))
     empty: dict[Path, bool] = {}
     for rel in sorted(records, key=lambda p: len(p.parts), reverse=True):
         subdirs, has_files = records[rel]
@@ -300,7 +330,10 @@ def _destination_dir(project: Path, raw: str) -> Path | None:
     path names a location outside the repo, so it can never be a valid
     in-repo destination, and on a machine where ~/docs happens to exist it
     would otherwise pass. Callers must treat ~ as stale; this function never
-    sees it (find_stale_destinations flags it first).
+    sees it (find_stale_destinations flags it first). An absolute path, or a
+    relative path with .. that escapes the project, is resolved by the caller
+    and flagged outside_repo there; this function only turns the name into
+    the directory to check.
     """
     if os.path.isabs(raw):
         target = Path(raw)
@@ -316,9 +349,12 @@ def _destination_dir(project: Path, raw: str) -> Path | None:
 def find_stale_destinations(project: Path) -> list[dict]:
     """Prompt references whose destination directory does not exist.
 
-    Three ways to be stale: the destination directory is missing
+    Four ways to be stale: the destination directory is missing
     (reason missing_dir), the destination is a home path (reason home_path:
-    destinations must name a directory inside the repo), or the prompt
+    destinations must name a directory inside the repo), the destination
+    resolves outside the repo (reason outside_repo: an absolute path, or a
+    .. path that escapes the project, names a place the repo cannot verify,
+    even when it happens to exist on this machine), or the prompt
     carries no machine-readable destination at all (reason no_destination:
     a prompt the check cannot parse is a prompt the check cannot verify).
     Every destination on a line is examined (finditer, not search), and the
@@ -350,7 +386,7 @@ def find_stale_destinations(project: Path) -> list[dict]:
 
 def _check_one(project: Path, path: Path, lineno: int, raw: str,
                stale: list[dict]) -> None:
-    """One named destination: home path, missing dir, or fine."""
+    """One named destination: home path, outside the repo, missing dir, or fine."""
     # The destination often ends a sentence ("...research/."), and
     # Path() silently collapses a trailing "/." one level up, which
     # made a missing dir look present. Strip sentence punctuation first.
@@ -367,6 +403,21 @@ def _check_one(project: Path, path: Path, lineno: int, raw: str,
         return
     checked = _destination_dir(project, destination)
     if checked is None:
+        return
+    # Containment, not just existence: a destination that resolves outside
+    # the project (an absolute path, or a .. path that escapes it) can never
+    # be a valid in-repo destination, even when it happens to exist on this
+    # machine. Existence alone would bless /tmp/research/ on a machine where
+    # it exists and fail it in CI where it does not: machine-dependent.
+    resolved = checked.resolve(strict=False)
+    if not resolved.is_relative_to(project.resolve()):
+        stale.append({
+            "file": str(path.relative_to(project)),
+            "line": lineno,
+            "destination": destination,
+            "missing_dir": f"destination resolves outside the repo: {checked}",
+            "reason": "outside_repo",
+        })
         return
     if not checked.is_dir():
         stale.append({
@@ -404,12 +455,11 @@ def default_baseline_path(project: Path) -> Path:
 
 PROVENANCE_KEYS = ("measured_on", "base_commit", "recheck_after", "follow_up")
 FOLLOW_UP = ("night-rick#35: collapse the duplicate/fork backlog (#446); "
-             "relocate the seven research reports (#447)")
+             "relocate the six research reports (#447)")
 
 
 def _baseline_payload(counts: dict[str, int], project: Path) -> dict:
     """The baseline file: counts plus provenance, validated on load."""
-    import datetime
     today = datetime.date.today()
     head = subprocess.run(
         ["git", "-C", str(project), "rev-parse", "HEAD"],
@@ -430,8 +480,8 @@ def load_baseline(path: Path) -> dict[str, int]:
     """Load and validate the baseline. Fail closed on anything malformed.
 
     A baseline with the wrong schema, missing counts, a negative or
-    non-integer count, or missing provenance loads as an error, never as
-    zeros: a hand-edited baseline that silently redefines the ceiling is
+    non-integer count, or missing or malformed provenance loads as an error,
+    never as zeros: a hand-edited baseline that silently redefines the ceiling is
     the same defect as a silently raised one.
     """
     if not path.is_file():
@@ -455,6 +505,23 @@ def load_baseline(path: Path) -> dict[str, int]:
         v = data.get(k)
         if not isinstance(v, str) or not v:
             raise ValueError(f"baseline is missing provenance {k}: {path}")
+    # Provenance is validated for shape, not just presence: a hand-edited
+    # baseline with a plausible-looking but fake provenance ("not-a-date",
+    # a base_commit that is not a sha) must fail to load, not silently
+    # redefine the ceiling. follow_up stays presence-only: it is free text
+    # naming the follow-up issues.
+    for k in ("measured_on", "recheck_after"):
+        try:
+            datetime.date.fromisoformat(data[k])
+        except ValueError:
+            raise ValueError(
+                f"baseline provenance {k} is not a date: {data[k]!r}: {path}")
+    base_commit = data["base_commit"]
+    if (len(base_commit) != 40
+            or not all(c in "0123456789abcdef" for c in base_commit.lower())):
+        raise ValueError(
+            f"baseline provenance base_commit is not a 40-hex sha: "
+            f"{base_commit!r}: {path}")
     return out
 
 
@@ -524,12 +591,26 @@ def cmd_check(a: argparse.Namespace) -> int:
     baseline_path = Path(a.baseline) if a.baseline else default_baseline_path(project)
     if a.update_baseline:
         # A baseline increase is a reviewed decision, never a drive-by line
-        # in a feature PR: CI must never raise the ceiling it enforces.
-        if os.environ.get("CI"):
+        # in a feature PR: CI must never raise the ceiling it enforces, and
+        # neither may a dirty tracked tree: the baseline measures a commit,
+        # so commit first. Untracked files do not block the update (the
+        # empty-dir detector walks the filesystem, and a scratch dir is not
+        # a commit); tracked modifications and staged changes do.
+        if "CI" in os.environ:
             print("repoclear check: FAIL: --update-baseline refuses under CI; "
                   "a baseline change lands as its own reviewed change from a "
                   "developer machine", file=sys.stderr)
             return 2
+        for diff_args in (["diff", "--quiet"], ["diff", "--cached", "--quiet"]):
+            proc = subprocess.run(
+                ["git", "-C", str(project), *diff_args],
+                capture_output=True, timeout=15,
+            )
+            if proc.returncode == 1:
+                print("repoclear check: FAIL: --update-baseline refuses on a "
+                      "dirty tracked tree; commit first so the baseline "
+                      "measures a commit, not a working tree", file=sys.stderr)
+                return 2
         result = collect(project)
         payload = _baseline_payload(result["counts"], project)
         baseline_path.parent.mkdir(parents=True, exist_ok=True)
@@ -600,6 +681,13 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
         # this a file (parent work-docs/research/ exists) rather than a
         # missing directory named "report.md.".
         (prompts / "p5.md").write_text("Land as work-docs/research/report.md.\n")
+        # An absolute destination outside the repo: /tmp exists on this
+        # machine, so existence alone would bless it; containment must flag
+        # it (outside_repo).
+        (prompts / "p6.md").write_text("Output lands in /tmp/.\n")
+        # A .. path that escapes the project: the parent of the synthetic
+        # repo exists, so existence alone would bless it too.
+        (prompts / "p7.md").write_text("Output lands in ../.\n")
         # One identical skill pair and one forked pair, the same fixture
         # shape pile.py's own selftest uses (skill name in two payload trees).
         for tree in ("dot-claude/skills", "dot-agents/skills"):
@@ -615,6 +703,16 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
         # was reported (the skipped child counted as absent).
         (proj / "onlycache" / "__pycache__").mkdir(parents=True)
         (proj / "onlycache" / "__pycache__" / "x.pyc").write_bytes(b"\x00\x01")
+        # M1 fixture: a directory whose only child is an EMPTY skipped
+        # directory. It IS empty and must be reported (topmost empty dir).
+        (proj / "emptycache" / "__pycache__").mkdir(parents=True)
+        # m1 fixture: a directory whose only child is a symlink to a
+        # directory holding a real file. It is not empty and must never be
+        # reported; the walk never descends into the link.
+        (proj / "real").mkdir()
+        (proj / "real" / "f.txt").write_text("x\n")
+        (proj / "holder").mkdir()
+        os.symlink(proj / "real", proj / "holder" / "link")
 
         result = collect(proj)
         counts = result["counts"]
@@ -626,17 +724,21 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
             fails.append(f"identical_skills {counts['identical_skills']}, want 1")
         if counts["forked_skills"] != 1:
             fails.append(f"forked_skills {counts['forked_skills']}, want 1")
-        if counts["empty_dirs"] != 1 or result["empty_dirs"] != ["planted"]:
-            fails.append(f"empty_dirs {result['empty_dirs']}, want ['planted']")
+        if counts["empty_dirs"] != 2 or result["empty_dirs"] != ["emptycache", "planted"]:
+            fails.append(f"empty_dirs {result['empty_dirs']}, want ['emptycache', 'planted']")
+        if "holder" in result["empty_dirs"] or "onlycache" in result["empty_dirs"]:
+            fails.append(f"empty_dirs {result['empty_dirs']}: holder/onlycache must never be reported")
         if counts["artifacts"] != 2 or result["artifacts"] != ["__pycache__/x.pyc", "stray.pyc"]:
             fails.append(f"artifacts {result['artifacts']}, want ['__pycache__/x.pyc', 'stray.pyc']")
-        if counts["stale_destinations"] != 3:
-            fails.append(f"stale_destinations {counts['stale_destinations']}, want 3")
+        if counts["stale_destinations"] != 5:
+            fails.append(f"stale_destinations {counts['stale_destinations']}, want 5")
         else:
             reasons = [(s["file"], s.get("reason")) for s in result["stale_destinations"]]
             want = [(str(PROMPTS_DIR / "p1.md"), "missing_dir"),
                     (str(PROMPTS_DIR / "p3.md"), "no_destination"),
-                    (str(PROMPTS_DIR / "p4.md"), "home_path")]
+                    (str(PROMPTS_DIR / "p4.md"), "home_path"),
+                    (str(PROMPTS_DIR / "p6.md"), "outside_repo"),
+                    (str(PROMPTS_DIR / "p7.md"), "outside_repo")]
             if reasons != want:
                 fails.append(f"stale reasons {reasons}, want {want}")
 

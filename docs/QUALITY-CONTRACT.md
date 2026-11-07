@@ -243,12 +243,16 @@ on main and fails only on growth, so the existing duplicate and fork backlog
 can be collapsed by follow-up work (#446) without holding this domain red
 meanwhile. A missing or malformed baseline fails closed. A baseline increase
 is a reviewed decision, never a drive-by line in a feature PR:
-`check --update-baseline` refuses under CI, and the baseline file carries
+`check --update-baseline` refuses under CI and on a dirty tracked tree, CI
+runs `tools/repoclear/baseline_guard.py`, which fails a PR that modifies the
+committed baseline alongside other files, and the baseline file carries
 `measured_on`, `base_commit`, `recheck_after`, and `follow_up` provenance,
-validated on load. The PASS line names the outstanding backlog every time,
-so green never reads as clean. Duplicates and artifacts are tracked-only
-(`git ls-files`); empty dirs are filesystem-wide. Timeout 60s, from the
-measured runtime (about 2s total). See
+validated on load for shape (dates must parse as dates, `base_commit` must
+be a 40-hex sha). The guard closes the drive-by path, not the reviewed path:
+a hand-edit that lands alone still relies on review. The PASS line names the
+outstanding backlog every time, so green never reads as clean. Duplicates
+and artifacts are tracked-only (`git ls-files`); empty dirs are
+filesystem-wide. Timeout 60s, from the measured runtime (about 2s total). See
 [specs/2026-11-07-repoclear-gate-domain.md](specs/2026-11-07-repoclear-gate-domain.md).
 
 

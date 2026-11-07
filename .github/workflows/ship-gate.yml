@@ -92,6 +92,14 @@ jobs:
           # checkout would make that ref unavailable.
           fetch-depth: 0
 
+      # Baseline guard (night-rick#35): a baseline raise must land as its
+      # own reviewed change, never as a drive-by line in a feature PR. Runs
+      # before setup-python on purpose, so it still runs while that step is
+      # broken (#449): it needs only the system python3 and git.
+      - name: repoclear baseline guard (no drive-by baseline raise)
+        if: ${{ github.event_name == 'pull_request' }}
+        run: python3 tools/repoclear/baseline_guard.py --base ${{ github.event.pull_request.base.sha }} --head ${{ github.event.pull_request.head.sha }}
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

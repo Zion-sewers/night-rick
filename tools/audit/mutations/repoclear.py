@@ -91,4 +91,22 @@ MUTATIONS = [
         '        "duplicate_doc_copies": sum(r.get("copies", 0) - 1 for r in docs),',
         '        "duplicate_doc_copies": sum(r.get("copies", 0) for r in docs),',
     ),
+    (
+        "outside-repo destination containment dropped",
+        "A prompt names an absolute path or a .. path outside the repo and "
+        "the check passes, because the containment test never runs: the "
+        "exact 2026-07-27 defect (reports landing somewhere the repo cannot "
+        "verify) recurring in a new shape, machine-dependent.",
+        "    if not resolved.is_relative_to(project.resolve()):",
+        "    if False:",
+    ),
+    (
+        "empty skipped child counts as content",
+        "A directory whose only child is an empty __pycache__/ reads as "
+        "non-empty, because every skipped child counts as content whether "
+        "or not its subtree holds a file: the empty-dir half of the ratchet "
+        "never fires on that shape.",
+        "        skipped_with_files = [d for d in skipped if _subtree_has_file(Path(root) / d)]",
+        "        skipped_with_files = list(skipped)",
+    ),
 ]

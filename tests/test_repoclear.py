@@ -20,6 +20,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCAN_PATH = ROOT / "tools" / "repoclear" / "scan.py"
+GUARD_PATH = ROOT / "tools" / "repoclear" / "baseline_guard.py"
 
 
 def _load(path: Path):
@@ -31,6 +32,17 @@ def _load(path: Path):
 
 
 scan = _load(SCAN_PATH)
+
+
+def _load_guard(path: Path):
+    spec = importlib.util.spec_from_file_location("baseline_guard_under_test", path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+guard = _load_guard(GUARD_PATH)
 
 
 def _plant_repo(proj: Path) -> None:
@@ -78,6 +90,32 @@ class TestEmptyDirs(unittest.TestCase):
             (proj / "onlynode" / "node_modules" / "pkg" / "f").write_text("x\n")
             (proj / "onlybuild" / "build").mkdir(parents=True)
             (proj / "onlybuild" / "build" / "out.txt").write_text("x\n")
+            _commit(proj)
+            self.assertEqual(scan.find_empty_dirs(proj), [])
+
+    def test_empty_skipped_child_is_empty(self):
+        # M1: a directory whose only child is an EMPTY skipped directory
+        # is empty: the skipped child counts as content only when its
+        # subtree holds a file.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            (proj / "a" / "__pycache__").mkdir(parents=True)
+            (proj / "keep.txt").write_text("x\n")
+            _commit(proj)
+            self.assertEqual(scan.find_empty_dirs(proj), ["a"])
+
+    def test_symlink_to_dir_with_files_is_not_empty(self):
+        # m1: the walk never descends into a symlinked directory
+        # (followlinks=False), so without this a directory whose only child
+        # is a symlink to a directory with files would read as empty.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            (proj / "real").mkdir()
+            (proj / "real" / "f.txt").write_text("x\n")
+            (proj / "holder").mkdir()
+            os.symlink(proj / "real", proj / "holder" / "link")
             _commit(proj)
             self.assertEqual(scan.find_empty_dirs(proj), [])
 
@@ -241,6 +279,39 @@ class TestStaleDestinations(unittest.TestCase):
             self.assertEqual(len(stale), 1)
             self.assertEqual(stale[0]["reason"], "missing_dir")
 
+    def test_absolute_destination_outside_repo_is_stale(self):
+        # B1: an absolute destination outside the repo is stale even when
+        # it exists on this machine (/tmp does): existence alone would
+        # bless it here and fail it in CI. A missing absolute path is
+        # outside_repo too, not missing_dir: containment is checked first.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            prompts = proj / "work-docs" / "research" / "prompts"
+            prompts.mkdir(parents=True)
+            (prompts / "p1.md").write_text("Output lands in /tmp/.\n")
+            (prompts / "p2.md").write_text(
+                "Output lands in /nonexistent-dir-xyz/.\n")
+            _commit(proj)
+            stale = scan.find_stale_destinations(proj)
+            self.assertEqual(len(stale), 2)
+            self.assertEqual({s["reason"] for s in stale}, {"outside_repo"})
+
+    def test_dotdot_escape_outside_repo_is_stale(self):
+        # B1: a .. path that escapes the project is stale even when the
+        # parent directory exists: the destination must name a directory
+        # inside the repo.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            prompts = proj / "work-docs" / "research" / "prompts"
+            prompts.mkdir(parents=True)
+            (prompts / "p1.md").write_text("Output lands in ../.\n")
+            _commit(proj)
+            stale = scan.find_stale_destinations(proj)
+            self.assertEqual(len(stale), 1)
+            self.assertEqual(stale[0]["reason"], "outside_repo")
+
 
 class TestDuplicateReuse(unittest.TestCase):
     def test_identical_docs_counted_via_pile(self):
@@ -334,7 +405,7 @@ class TestDuplicateReuse(unittest.TestCase):
             _commit(proj)
             with mock.patch.object(
                     scan.subprocess, "run",
-                    side_effect=subprocess.TimeoutExpired("pile.py", 45)):
+                    side_effect=subprocess.TimeoutExpired("pile.py", 30)):
                 with self.assertRaises(RuntimeError):
                     scan.duplicate_counts(proj)
 
@@ -405,6 +476,49 @@ class TestRatchet(unittest.TestCase):
                     os.environ["CI"] = saved
             self.assertFalse(baseline.is_file())
 
+    def test_update_baseline_refuses_when_ci_set_but_empty(self):
+        # m5: CI="" (set but empty) used to pass the truthiness check and
+        # the update proceeded. Presence in the environment is the signal,
+        # not the value: GitHub Actions sets CI=true, and an empty value is
+        # still a CI-shaped environment, never a developer machine.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            (proj / "docs").mkdir()
+            (proj / "docs" / "a.md").write_text("same body\n")
+            _commit(proj)
+            baseline = proj / "state" / "repoclear-baseline.json"
+            saved = os.environ.pop("CI", None)
+            os.environ["CI"] = ""
+            try:
+                self.assertEqual(self._check(proj, baseline, update=True), 2)
+            finally:
+                if saved is None:
+                    os.environ.pop("CI", None)
+                else:
+                    os.environ["CI"] = saved
+            self.assertFalse(baseline.is_file())
+
+    def test_update_baseline_refuses_on_dirty_tracked_tree(self):
+        # The baseline measures a commit: with tracked modifications the
+        # base_commit it records would name a commit that does not include
+        # the measured tree.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            (proj / "docs").mkdir()
+            (proj / "docs" / "a.md").write_text("same body\n")
+            _commit(proj)
+            baseline = proj / "state" / "repoclear-baseline.json"
+            saved = os.environ.pop("CI", None)
+            try:
+                (proj / "docs" / "a.md").write_text("changed\n")
+                self.assertEqual(self._check(proj, baseline, update=True), 2)
+                self.assertFalse(baseline.is_file())
+            finally:
+                if saved is not None:
+                    os.environ["CI"] = saved
+
     def test_malformed_baseline_is_exit_2(self):
         with tempfile.TemporaryDirectory() as td:
             proj = Path(td)
@@ -416,12 +530,17 @@ class TestRatchet(unittest.TestCase):
             baseline.parent.mkdir(parents=True)
             good = {"schema": "repoclear-baseline.v1",
                     "counts": dict.fromkeys(scan.COUNT_KEYS, 0),
-                    "measured_on": "2026-11-07", "base_commit": "x" * 40,
+                    "measured_on": "2026-11-07", "base_commit": "a" * 40,
                     "recheck_after": "2027-02-05", "follow_up": "night-rick#35"}
             for broken in (
                 {**good, "schema": "repoclear-baseline.v2"},
                 {**good, "counts": {**good["counts"], "artifacts": -1}},
                 {k: v for k, v in good.items() if k != "measured_on"},
+                # m3: provenance is validated for shape, not just presence.
+                {**good, "measured_on": "not-a-date"},
+                {**good, "recheck_after": "yesterday"},
+                {**good, "base_commit": "x" * 40},
+                {**good, "base_commit": "abc"},
             ):
                 baseline.write_text(json.dumps(broken, indent=2) + "\n", encoding="utf-8")
                 self.assertEqual(self._check(proj, baseline), 2)
@@ -445,6 +564,64 @@ class TestRatchet(unittest.TestCase):
                           buf.getvalue())
 
 
+class TestBaselineGuard(unittest.TestCase):
+    def _head(self, proj: Path) -> str:
+        return subprocess.run(
+            ["git", "-C", str(proj), "rev-parse", "HEAD"],
+            capture_output=True, text=True, check=True).stdout.strip()
+
+    def _setup(self, proj: Path) -> str:
+        _plant_repo(proj)
+        (proj / "state").mkdir()
+        (proj / "state" / "repoclear-baseline.json").write_text("{}\n")
+        (proj / "a.py").write_text("x = 1\n")
+        _commit(proj)
+        return self._head(proj)
+
+    def test_baseline_modified_with_other_files_fails(self):
+        # M1: a baseline raise riding along in a feature PR is the drive-by
+        # the ratchet exists to stop.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            base = self._setup(proj)
+            (proj / "state" / "repoclear-baseline.json").write_text("{}\n ")
+            (proj / "a.py").write_text("x = 2\n")
+            _commit(proj)
+            self.assertEqual(guard.guard(proj, base, self._head(proj)), 1)
+
+    def test_baseline_modified_alone_passes(self):
+        # The reviewed decision: a baseline change landing as its own change.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            base = self._setup(proj)
+            (proj / "state" / "repoclear-baseline.json").write_text("{}\n ")
+            _commit(proj)
+            self.assertEqual(guard.guard(proj, base, self._head(proj)), 0)
+
+    def test_other_files_only_passes(self):
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            base = self._setup(proj)
+            (proj / "a.py").write_text("x = 2\n")
+            _commit(proj)
+            self.assertEqual(guard.guard(proj, base, self._head(proj)), 0)
+
+    def test_baseline_added_with_other_files_passes(self):
+        # The domain's first landing adds the baseline file alongside the
+        # tool: an addition is not a raise of a committed ceiling.
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td)
+            _plant_repo(proj)
+            (proj / "a.py").write_text("x = 1\n")
+            _commit(proj)
+            base = self._head(proj)
+            (proj / "state").mkdir()
+            (proj / "state" / "repoclear-baseline.json").write_text("{}\n")
+            (proj / "a.py").write_text("x = 2\n")
+            _commit(proj)
+            self.assertEqual(guard.guard(proj, base, self._head(proj)), 0)
+
+
 class TestWiring(unittest.TestCase):
     def test_contract_declares_repoclear_domain(self):
         contract = json.loads((ROOT / "quality-contract.json").read_text(encoding="utf-8"))
@@ -452,6 +629,16 @@ class TestWiring(unittest.TestCase):
         self.assertIsNotNone(domain, "quality-contract.json has no repoclear domain")
         self.assertTrue(domain.get("required"))
         self.assertIn("tools/repoclear/scan.py check", domain.get("cmd", ""))
+
+    def test_skip_dirs_cover_pile_skip_dirs(self):
+        # The scanner's SKIP_DIRS is a local copy, not shared with pile.py.
+        # The drift that split invites is pinned here: the scanner's set
+        # must cover pile.py's, so a directory pile.py skips is never one
+        # the empty-dir walk descends into.
+        pile = _load(ROOT / "tools" / "audit" / "pile.py")
+        self.assertTrue(pile.SKIP_DIRS <= scan.SKIP_DIRS,
+                        f"pile SKIP_DIRS {pile.SKIP_DIRS} not covered by "
+                        f"repoclear SKIP_DIRS {scan.SKIP_DIRS}")
 
     def test_committed_baseline_matches_live_tree(self):
         baseline = scan.load_baseline(ROOT / "state" / "repoclear-baseline.json")

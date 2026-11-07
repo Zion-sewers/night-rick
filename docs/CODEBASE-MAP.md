@@ -9,7 +9,7 @@ No timestamp and no commit sha here on purpose: either would make the map drift
 on every commit and train a reader to ignore the check. Line counts are out for
 the same reason, one level down.
 
-467 directories, 2516 tracked files, 0 without a stated purpose.
+467 directories, 2517 tracked files, 0 without a stated purpose.
 
 ## .claude
 
@@ -502,7 +502,7 @@ the same reason, one level down.
 | `tools/reclaim` | 2 | Executes a verified reclamation plan (archive/delete) for the 2026-07-30 filesystem reorganization. Dry-run by default; re-runs each row's invariants immediately before acting a... | registry |
 | `tools/refute` | 1 | CLI refutation engine that runs each claim's verifier command from state/claims-verify.jsonl and reports HELD/REFUTED/BROKEN, so no claim is asserted without an executable falsi... | registry |
 | `tools/refute/checks` | 8 | Verifier scripts refute.py invokes per claim: hook wiring/existence/execution, persona front-matter validity, config drift, hiring-ledger rows, and a meta-check that siblings fa... | registry |
-| `tools/repoclear` | 1 | Repo Clear checker (night-rick#35): read-only scan of duplicate-doc groups (via tools/audit/pile.py's manifest), identical/forked skills, empty dirs, tracked build artifacts, an... | registry |
+| `tools/repoclear` | 2 | Repo Clear checker (night-rick#35): read-only scan of duplicate-doc groups (via tools/audit/pile.py's manifest), identical/forked skills, empty dirs, tracked build artifacts, an... | registry |
 | `tools/review` | 6 | Runs a deterministic (plus optional opt-in OpenRouter) persona review over a git diff's added lines and writes the verdict artifact tools/gate/gate.py reads before merge | registry |
 | `tools/selfimprove` | 1 | scan.py reads real signals (open TODOs, git drift, hook health, tool coverage, doc staleness) to generate ranked proposals for the system's own next work; proposals.jsonl is tha... | registry |
 | `tools/skilleval` | 1 | run.py grades each skill's own routing-eval fixtures for whether its description text separates trigger from non-trigger prompts, flagging skills with no fixtures as UNCOVERED f... | registry |

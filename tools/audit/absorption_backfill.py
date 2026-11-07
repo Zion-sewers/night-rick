@@ -88,6 +88,9 @@ VERDICT_CLASS = {
     "tools-reclaim": "keep-ours",
     "tools-refute-checks": "keep-ours",
     "tools-refute": "wrap",
+    # Repo Clear ratchet (night-rick#35): keep the ratchet and the three small
+    # detectors; duplicate detection stays owned by pile.py, used as-is.
+    "tools-repoclear": "split",
     "tools-review": "split",
     "tools-skilleval": "split",
     "tools-snapshot": "keep-ours",

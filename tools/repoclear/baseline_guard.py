@@ -15,8 +15,11 @@ mechanism closes the drive-by path, not the reviewed path.
 The diff is read with --name-status, not --diff-filter=M: a filter on
 modified files alone lets a baseline raise ride along with an ADDED,
 DELETED, or RENAMED companion, which is the same drive-by in a different
-shape. The only status the guard excuses is A (added): a newly added
-baseline is a first landing, not a raise of a committed ceiling.
+shape. The only statuses the guard excuses are A (added: a newly added
+baseline is a first landing, not a raise of a committed ceiling) and D
+(deleted: the check itself fails closed, exit 2, on the missing baseline).
+A baseline renamed away passes the guard too, and the check fails closed
+on it the same way.
 
 Usage:
   python tools/repoclear/baseline_guard.py --base <sha> --head <sha> [--project .]

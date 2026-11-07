@@ -737,9 +737,10 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
         (proj / "holder").mkdir()
         os.symlink(proj / "real", proj / "holder" / "link")
         # F2 fixture: a destination through a symlink loop. The loop is two
-        # symlinks pointing at each other (a -> b, b -> a): a single
-        # self-pointing link resolves cleanly, this one raises RuntimeError
-        # out of resolve(). It lives under __pycache__/ (a skipped
+        # symlinks pointing at each other (a -> b, b -> a): a link to its
+        # own parent directory resolves cleanly, so the plant uses mutual
+        # links (a link pointing at itself also raises, the same
+        # RuntimeError either way). It lives under __pycache__/ (a skipped
         # directory) so the empty-dir walk never descends into it; only the
         # destination resolver sees it, and resolve() must report it stale
         # (unresolvable), not crash the whole scan.

@@ -76,7 +76,11 @@ directory can never be committed, so the empty-dir half of the gate polices
 working-tree state, not the commit. The same limit holds at baseline-write
 time: `--update-baseline` measures the working tree's empty dirs, so an
 untracked empty dir present at update time is baked into the baseline; the
-dirty-tracked-tree refusal covers tracked dirt only.
+dirty-tracked-tree refusal covers tracked dirt only. The backstops that
+make that tolerable are the equality pin test
+(`test_committed_baseline_matches_live_tree`, which fails when the live
+tree stops measuring exactly the baseline) and the fact that CI checkouts
+are clean, so their empty-dir count is vacuously the commit's.
 
 ### The ratchet, not the cleanup
 
@@ -98,9 +102,15 @@ newly added, or changed alone, passes: that is the reviewed decision). The
 guard reads the diff with `--name-status`, so any companion change trips
 it, whether the companion was added, deleted, renamed, or modified; a
 `--diff-filter=M` read would have let the raise ride along with a
-non-modified companion. The guard closes the drive-by path, not the reviewed path: a hand-edit that
+non-modified companion. A deleted baseline, or one renamed away, passes
+the guard: the check itself fails closed (exit 2) on the missing baseline,
+so there is no mergeable hole there. The guard closes the drive-by path, not the reviewed path: a hand-edit that
 lands alone still relies on review, and the spec says so rather than
-claiming otherwise. The PASS line names the outstanding backlog every time
+claiming otherwise. It also closes the PR path only: the guard step runs
+on pull_request events, and main is not branch-protected (verified
+2026-11-07: the protection endpoint returns 404), so a direct push to
+main bypasses it. That is pre-existing repo posture, not this unit's to
+fix here, and it is named rather than hidden. The PASS line names the outstanding backlog every time
 ("ratchet held (no growth); known outstanding: ..."), so green never reads
 as clean. Collapsing the existing duplicate/fork backlog is follow-up work
 (#446); this domain stops the pile growing.
@@ -143,7 +153,12 @@ Mutation coverage, stated honestly: `mutate.py --spec repoclear` runs with
 detector going blind, the comparison inverting and off by one, the copies
 arithmetic, the identical/forked drops, the artifact suffix drop, the
 sentence-punctuation strip, the outside-repo containment drop, the empty
-skipped child counting as content, the symlink-loop resolution drop). It does not cover `check
+skipped child counting as content, the symlink-loop resolution drop). Of
+the 14, 13 are caught by a named failing check; the symlink-loop mutant is
+caught by the selftest crashing (mutate.py flags it WEAK SIGNAL: caught
+without a named failing check), which is the defect's whole manifestation
+but a weaker signal than a named assertion, and it is disclosed as such
+rather than folded into a flat "14 caught". It does not cover `check
 --update-baseline` or `scan --json`, which the selftest does not reach;
 those paths are covered by `tests/test_repoclear.py` instead. It also does
 not cover the pile-seam validation itself (schema/kind/copies checks): a
@@ -160,8 +175,10 @@ unit-test-covered only (`test_manifest_validation_fails_closed`,
   runtime, about 2s total). No gate.py change: extra contract domains run by
   the "DOMAINS is the floor, not the ceiling" rule, same as `dashboard` /
   `coverage_map`.
-- `tools/audit/mutations/repoclear.py`: 14 mutants, each caught by
-  `mutate.py --spec all` (empty-dir blind, artifact blind, baseline
+- `tools/audit/mutations/repoclear.py`: 14 mutants, all caught by
+  `mutate.py --spec all` (13 by a named failing check, 1 — symlink-loop
+  resolution drop — by the selftest crashing; see the honest-coverage
+  paragraph above): empty-dir blind, artifact blind, baseline
   comparison inverted, ratchet comparison off by one, stale-destination
   resolver accepting missing paths, sentence punctuation not stripped,
   artifact suffix dropped, duplicate groups dropped, identical skills

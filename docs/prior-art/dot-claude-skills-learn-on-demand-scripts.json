@@ -1,10 +1,10 @@
 {
  "component": "dot-claude/skills/learn-on-demand/scripts",
  "reviewed": "2026-07-25",
- "recheck_after": "2026-10-23",
+ "recheck_after": "2027-01-21",
  "verdict": "keep-ours",
  "verdict_class": "keep-ours",
- "absorption_status": "unreviewed",
+ "absorption_status": "rejected-with-reason",
  "why": "knowledge.py's load-bearing job is a rights/attestation gate (CLAUDE.md: commercial books stay metadata-only unless the user explicitly attests private-use rights) plus hash-checked revoke -- no RAG framework (llama-index/langchain/haystack) or generic caching pattern ships that. Its retrieval engine is already sqlite FTS5, the lean stdlib option listed as an 'alternative,' not a reinvention needing replacement. Swapping to a framework would rebuild the governance logic on top of it while adding heavy, embedding-oriented dependency trees a one-maintainer, offline-CI repo doesn't need.",
  "alternatives": [
   {
@@ -48,5 +48,9 @@
  "our_loc": 598,
  "migration_loc": "If swapped to llama-index/langchain: ~598 lines removed, ~120-200 new glue lines, plus ~150 lines of rights/revoke logic rebuilt (no framework has it) -- roughly break-even. Keep-ours: 0 changed.",
  "what_ours_does": "knowledge.py (598 lines): CLI (validate/attest/build/query/revoke) around catalog.json (32 sources) enforcing a rights schema (rights_mode, canonical_url, verified_at). build loads metadata into sqlite FTS5 always; private text (txt/md/html/epub/docx/pdf, chunked) only after a hash-checked attestation. query runs FTS5+bm25 search, rebuilds on hash change; revoke deletes a source's private chunks.",
- "strongest_counterargument": "The ~160-line hand-rolled extract_html/epub/docx/chunks block duplicates, less robustly, what llama-index/langchain document loaders already provide (better malformed-file handling, more formats, smarter chunk boundaries); wrapping ebooklib/python-docx there would cut real lines without touching the rights/attestation logic that is this file's actual reason to exist."
+ "strongest_counterargument": "The ~160-line hand-rolled extract_html/epub/docx/chunks block duplicates, less robustly, what llama-index/langchain document loaders already provide (better malformed-file handling, more formats, smarter chunk boundaries); wrapping ebooklib/python-docx there would cut real lines without touching the rights/attestation logic that is this file's actual reason to exist.",
+ "rechecked": "2026-11-08",
+ "recheck_result": "Rechecked 2026-11-08: knowledge.py validate RC=0 (32 sources, 0 errors); query 'test' RC=0; grep for ripgrep returned nothing (the record's ripgrep claim needs checking against its why, not settled this cycle). llama-index 0.14.25, langchain 1.4.9, haystack-ai 3.4.1 are all alive and current on PyPI. Fix-forward evidence, all re-run this cycle and confirmed unchanged: `python dot-claude/skills/learn-on-demand/scripts/knowledge.py validate` exit 0 with {\"valid\": true, \"source_count\": 32, \"errors\": []}; `knowledge.py query 'test' --limit 3` exit 0 with result_count 3 (effective-software-testing, property-based-testing-proper, software-engineering-at-google); `grep -rn ripgrep dot-claude/skills/learn-on-demand` exit 1, no hit; PyPI versions via the PyPI JSON API (curl, the substitute the task allowed for `pip index versions`) are llama-index 0.14.25, langchain 1.4.9, haystack-ai 3.4.1, identical to the prior cycle.",
+ "absorbed": "knowledge.py validates clean (32 sources, 0 errors); llama-index, langchain and haystack-ai are all alive and current, so the keep half stands. Fix-forward 2026-11-08: re-ran all four clause steps, all confirmed: `python dot-claude/skills/learn-on-demand/scripts/knowledge.py validate` exit 0 (valid: true, source_count 32, errors []); query 'test' --limit 3 exit 0 (3 results: effective-software-testing, property-based-testing-proper, software-engineering-at-google); `grep -rn ripgrep dot-claude/skills/learn-on-demand` exit 1 (no hit, unchanged); PyPI JSON API versions llama-index 0.14.25, langchain 1.4.9, haystack-ai 3.4.1 (unchanged from the prior cycle; `pip index versions` was not used, the PyPI JSON API via curl was the substitute the task allowed)."
+
 }

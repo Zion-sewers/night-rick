@@ -1,10 +1,10 @@
 {
  "component": "dot-claude/skills/prove-implementation/scripts",
  "reviewed": "2026-07-26",
- "recheck_after": "2026-10-24",
+ "recheck_after": "2027-01-22",
  "verdict": "split",
  "verdict_class": "split",
- "absorption_status": "unreviewed",
+ "absorption_status": "rejected-with-reason",
  "why": "Default is ours loses, and mostly does: benchmark section is schema-only, hand-typed candidate_results, no timer run; loop_audit.py's IO_MARKERS misses .fetchall()/.json()/ORM .all(), measuring nothing radon/scalene would for real. But git-commit+diff-hash state binding, wired into a live pre_push_gate.py hook, is governance none of the 9 alternatives do - they measure, none gates a push on a written comparison. Split: keep gate/schema/provenance; replace loop heuristic with radon/scalene; require benchmark fields from real pytest-benchmark/pyperf JSON via run-check, not hand-typed.",
  "alternatives": [
   {
@@ -76,5 +76,9 @@
  "our_loc": 915,
  "migration_loc": "Delete loop_audit.py heuristic (~180 lines), add ~50-line radon/scalene wrapper; add ~40 lines ingesting pytest-benchmark/pyperf JSON; new pyproject.toml/uv.lock (~20 lines). Net approx -180/+110.",
  "what_ours_does": "implementation_proof.py: JSON schema + ~210-line validator enforcing report completeness, no execution. command_run_check subprocess.run()s a check, sha256-hashes output, capture_repo_state binds pass/fail to a real git commit+diff hash, consumed by a live pre_push_gate.py hook. loop_audit.py: static ast/regex heuristic flagging loops via a 25-word I/O name list; no execution, no metric.",
- "strongest_counterargument": "One maintainer, 915 lines, zero third-party deps, already tested (18 passing), already wired into a working push gate. loop_audit.py itself says \"review prompts, not proof of a defect\" - it never claimed oracle authority. Adding radon/pytest-benchmark/pyperf/scalene is new supply-chain surface for a solo tool whose real job is forcing a written comparison before push, not publishing a benchmark."
+ "strongest_counterargument": "One maintainer, 915 lines, zero third-party deps, already tested (18 passing), already wired into a working push gate. loop_audit.py itself says \"review prompts, not proof of a defect\" - it never claimed oracle authority. Adding radon/pytest-benchmark/pyperf/scalene is new supply-chain surface for a solo tool whose real job is forcing a written comparison before push, not publishing a benchmark.",
+ "rechecked": "2026-11-08",
+ "recheck_result": "Rechecked 2026-11-08: pytest tests/test_mastery_controls.py 18 passed; implementation_proof.py is referenced in pre_push_gate.py and SKILL.md, so the proof mechanism is wired and live. Round-2 evidence 2026-11-08: the loop_audit grep was run: loop_audit.py is live and wired (SKILL.md:60 invokes it; tests/test_mastery_controls.py:29,53 loads it); implementation_proof.py:63,180-196 carries the schema field; pytest tests/test_mastery_controls.py 18 passed.",
+ "absorbed": "Mastery controls pass (18 tests); implementation_proof.py is referenced from pre_push_gate.py and SKILL.md, so the mechanism is live. The radon/scalene replacement half is NOT rejected: loop_audit.py's IO_MARKERS scan misses .fetchall()/.json()/ORM .all() (per the why); follow-up (named concretely): 'Replace loop_audit.py IO_MARKERS scan with radon/scalene measurement' - owner file dot-claude/skills/prove-implementation/scripts/loop_audit.py; not executed here. Round-3 2026-11-08: owner path corrected (prove-implementation/scripts, not prove-implementation-scripts)."
+
 }

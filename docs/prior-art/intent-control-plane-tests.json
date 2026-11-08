@@ -1,10 +1,10 @@
 {
  "component": "intent-control-plane/tests",
  "reviewed": "2026-07-25",
- "recheck_after": "2026-10-23",
+ "recheck_after": "2027-01-21",
  "verdict": "split",
  "verdict_class": "split",
- "absorption_status": "unreviewed",
+ "absorption_status": "rejected-with-reason",
  "why": "Keep the example/integration majority: real subprocess CLI, real sqlite, injected clock, tmp_path isolation, no mocks is house-correct for a local CLI with no HTTP surface. Extend the ALREADY-adopted hypothesis (no new dependency) to the one under-tested security function, util.py's redactor, proven only by one hand-picked example with one of three regexes never exercised. Add syrupy for the dashboard render only checked for non-emptiness. pytest-randomly/xdist are cheap opportunistic adds, not urgent (34s green suite).",
  "alternatives": [
   {
@@ -62,5 +62,9 @@
  "our_loc": 4580,
  "migration_loc": "+50/-15: new test_redaction_properties.py (~50 lines) trimming one redundant assertion; +15/-5 syrupy snapshot in test_tower.py; xdist/randomly +2 lines in dev deps.",
  "what_ours_does": "44 pytest files, 426 tests (verified: `uv run pytest -q` -> 426 passed in 34.41s). Mostly in-process example tests, no mocks: tmp_path sqlite/JSONL, injected clock strings (test_cache.py). test_local_alpha.py (734 lines) runs the CLI as a real subprocess end-to-end. 4 files already use Hypothesis @given for pure-function invariants (test_properties.py, test_archive.py).",
- "strongest_counterargument": "426/426 green in 34s on a no-money/no-PII/no-prod tool is already strong. The docstrings show the maintainer deliberately chose real-over-mocked and injected-clock-over-frozen-clock -- the harder, better calls these libraries usually shortcut for people who didn't make them. Hand-enumerating the 3 known regex patterns takes 10 minutes without any new dependency."
+ "strongest_counterargument": "426/426 green in 34s on a no-money/no-PII/no-prod tool is already strong. The docstrings show the maintainer deliberately chose real-over-mocked and injected-clock-over-frozen-clock -- the harder, better calls these libraries usually shortcut for people who didn't make them. Hand-enumerating the 3 known regex patterns takes 10 minutes without any new dependency.",
+ "rechecked": "2026-11-08",
+ "recheck_result": "Rechecked 2026-11-08: python -m pytest in intent-control-plane gives 6 errors during collection, all ModuleNotFoundError: No module named 'hypothesis' (the dev dependency is not installed on this VM; 385 tests collected otherwise). SECRET_PATTERNS exists in util.py:11; hypothesis is present in 3 test files. The suite is unrunnable here for a missing dependency, not a code defect.",
+ "absorbed": "The suite cannot run here: 6 collection errors, all ModuleNotFoundError for hypothesis (dev dependency not installed on this VM); 385 tests collected otherwise."
+
 }

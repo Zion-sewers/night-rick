@@ -1,10 +1,10 @@
 {
  "component": "tools/lib",
  "reviewed": "2026-07-25",
- "recheck_after": "2026-10-23",
+ "recheck_after": "2027-01-21",
  "verdict": "keep-ours",
  "verdict_class": "keep-ours",
- "absorption_status": "unreviewed",
+ "absorption_status": "rejected-with-reason",
  "why": "Both fix a failure; no alternative removes it without a rewrite. envload (9-21): a case-sensitivity false-absence bug; a dotenv parser may be better-tested than this ~20-line parser but lacks case-insensitive matching and the redacted CLI, so most of 196 lines stay -- under the house \"hundreds of lines\" bar. A typed-settings package wants a schema, wrong shape. quota (2-19): needs an exact UTC-midnight reset plus a durable JSONL trail. The limiter has no file store; decorator/retry packages don't persist or track quotas; closest is rolling-window -- different semantics, plus a file-lock dep.",
  "alternatives": [
   {
@@ -55,5 +55,9 @@
  "our_loc": 317,
  "migration_loc": "envload: dotenv wrap cuts ~30-40 parsing lines (47-68) +1 dep, keeps ~155 candidate/case lines. quota: persistent-bucket lib cuts ~60-80 lines (49-84) +2 deps, drops JSONL trail/reset unless rebuilt.",
  "what_ours_does": "envload.py (196 ln): case-insensitive secret lookup across ordered candidate .env paths in a sibling repo, with misspelling fallbacks, and a presence/length/fingerprint-only CLI that never prints values. quota.py (121 ln): append-only JSONL usage ledger + DailyQuota (remaining/guard/pace/record) enforcing a UTC-day request ceiling, used by openrouter/client.py and dolt/client.py before every call.",
- "strongest_counterargument": "Working code is a weak guarantee: envload's parser (61-68) has no test and could mis-split a credential on an edge case an off-the-shelf parser has absorbed already. quota's 429-doesn't-count assumption (69-72) is itself unverified; one third-party, non-provider source found this session says failed attempts do count, which would mean quota overcounts remaining() regardless of library."
+ "strongest_counterargument": "Working code is a weak guarantee: envload's parser (61-68) has no test and could mis-split a credential on an edge case an off-the-shelf parser has absorbed already. quota's 429-doesn't-count assumption (69-72) is itself unverified; one third-party, non-provider source found this session says failed attempts do count, which would mean quota overcounts remaining() regardless of library.",
+ "rechecked": "2026-11-08",
+ "recheck_result": "Rechecked 2026-11-08: direct code read of tools/lib/quota.py confirms a CALENDAR-day reset at UTC midnight, not a rolling window: utc_day() (lines 33-37) formats datetime.fromtimestamp(ts, tz=timezone.utc) as %Y-%m-%d; rows_today() (lines 64-66) filters ledger rows by r['utc_day'] == utc_day(); line 82 states 'Resets at 00:00 UTC.' PyPI JSON API (curl -s https://pypi.org/pypi/<name>/json, exit 0 each) gives current releases: python-dotenv 1.2.4 (2026-10-01), pydantic-settings 2.16.2 (2026-10-28), limits 5.8.0 (2026-02-05), ratelimit 2.2.1 (2018-12-17, stale), tenacity 9.2.1 (2026-10-07), pyrate-limiter 4.5.1 (2026-10-20). All six alternatives are alive on PyPI except ratelimit, whose last release is 2018-12-17. No adoption is justified on this evidence alone; the persistent-bucket day-duration semantics are now established from code, not docs. The persistent-bucket day-duration code was read directly from the pyrate-limiter source (not its docs): Duration.DAY is a fixed 86,400,000 ms interval (pyrate_limiter/abstracts/rate.py), and the default algorithm SlidingWindowLog computes window_start as now minus interval, which is a rolling window; the wall-clock-aligned FixedWindow (now minus now mod interval) is opt-in. A 1/day pyrate limit therefore rolls rather than resetting at calendar midnight unless FixedWindow is selected. No adoption is justified by the release pages alone.",
+ "absorbed": "Persistent-bucket day-duration code read directly: calendar-day reset at UTC midnight (tools/lib/quota.py:33-37, 64-66, 82). Current PyPI releases verified 2026-11-08: python-dotenv 1.2.4, pydantic-settings 2.16.2, limits 5.8.0, ratelimit 2.2.1 (2018-12-17), tenacity 9.2.1, pyrate-limiter 4.5.1. Pyrate-limiter source read directly: Duration.DAY is a fixed 86,400,000 ms interval; the default SlidingWindowLog rolls (now minus interval); calendar alignment is opt-in FixedWindow."
+
 }

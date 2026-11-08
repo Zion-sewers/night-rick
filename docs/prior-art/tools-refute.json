@@ -1,10 +1,10 @@
 {
  "component": "tools/refute",
  "reviewed": "2026-07-25",
- "recheck_after": "2026-10-23",
+ "recheck_after": "2027-01-21",
  "verdict": "wrap",
  "verdict_class": "wrap",
- "absorption_status": "unreviewed",
+ "absorption_status": "rejected-with-reason",
  "why": "The JSONL ledger earns its keep as shared data (written by `add`, mutated by mutate.py --spec refute, tagged by lane for a multi-session setup) -- pytest can't do that. But most of the 500 lines duplicate, imperfectly, distinctions pytest's 5-way exit code already makes for free: both bugs motivating this file are exactly the class pytest's design avoids. Per house rule ('a dependency that deletes hundreds of lines wins') and pytest costing nothing new here: keep the ledger schema, replace dispatch/reporting/selftest with a thin conftest.py.",
  "alternatives": [
   {
@@ -34,5 +34,9 @@
  "our_loc": 500,
  "migration_loc": "add ~80-120 (conftest.py+test_claims.py+result-writer); delete ~350-400 (dispatch/exit-code arithmetic/_print_table/selftest scaffolding).",
  "what_ours_does": "refute.py: CLI (run/add/list/selftest) loading named claims+verifiers from state/claims-verify.jsonl, running each via pwsh/Git-Bash, classifying HELD/REFUTED/BROKEN (BROKEN=verifier failed to launch/timed out, unlike a claim that ran and failed). Exit=refuted+broken, capped 125. Ships its own selftest planting synthetic ledgers, locking down two real 2026-07-25 bugs in its exit-code logic.",
- "strongest_counterargument": "Rewriting adds a second execution model for a 'one maintainer, read by one person' repo. The current file is flat and already-debugged: both incidents that motivated it are regression-locked by its own selftest, and mutate.py already mutation-tests its exit logic. Migration risks new seam bugs for a real but not urgent line-count win on a tool that isn't broken today."
+ "strongest_counterargument": "Rewriting adds a second execution model for a 'one maintainer, read by one person' repo. The current file is flat and already-debugged: both incidents that motivated it are regression-locked by its own selftest, and mutate.py already mutation-tests its exit logic. Migration risks new seam bugs for a real but not urgent line-count win on a tool that isn't broken today.",
+ "rechecked": "2026-11-08",
+ "recheck_result": "Rechecked 2026-11-08: selftest RC=0. pytest tools/refute/ -k claims selects NOTHING ('no tests ran') because the recheck's path is stale; the real claims tests live in tests/test_refute_portable.py and pass 8/8. Fix-forward evidence, all re-run this cycle: `python tools/refute/refute.py selftest` exit 0, 'all checks passed' (23 [ok] checks); `python -m pytest tests/test_refute_portable.py -q -p no:cacheprovider` exit 0, 8 passed in 0.30s; `python -m pytest tools/refute/ -k claims --junit-xml=- -q -p no:cacheprovider` exit 0 with 'no tests ran in 0.03s', re-confirming the recheck's pytest path is still stale.",
+ "absorbed": "selftest passes and the real claims tests (8) pass; the recheck's pytest path was stale (no tests selected under tools/refute/ -k claims). Fix-forward 2026-11-08: `python tools/refute/refute.py selftest` exit 0, 'all checks passed' (23 [ok] checks). `python -m pytest tests/test_refute_portable.py -q -p no:cacheprovider` exit 0, 8 passed in 0.30s. `python -m pytest tools/refute/ -k claims --junit-xml=- -q -p no:cacheprovider` exit 0 with 'no tests ran in 0.03s', re-confirming the recheck's pytest path is stale."
+
 }

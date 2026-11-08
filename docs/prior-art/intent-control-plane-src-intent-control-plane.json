@@ -1,10 +1,10 @@
 {
  "component": "intent-control-plane/src/intent_control_plane",
  "reviewed": "2026-07-25",
- "recheck_after": "2026-10-23",
+ "recheck_after": "2027-01-21",
  "verdict": "split",
  "verdict_class": "split",
- "absorption_status": "unreviewed",
+ "absorption_status": "rejected-with-reason",
  "why": "Split verdict. (A) schema.py+transitions.py+durable.py+mappers.py (~612 ln): the sqlite ledger/allow-list core. Real libraries exist but don't fit: FSM libs skip persistence/concurrency; SQLAlchemy+Alembic is overkill for 12 flat JSON-blob tables; Temporal/Prefect/Dagster/Celery/APScheduler solve distributed scheduling, not a same-process 7-state ledger -> keep-ours, EXCEPT durable.py (zero production callers) -> delete-ours. (B) remaining ~6086 ln of gastown/depth-harness domain logic (rubric, guardrails, provenance, TUI, roster HR) has no named competitor -> keep-ours by default.",
  "alternatives": [
   {
@@ -55,5 +55,9 @@
  "our_loc": 6698,
  "migration_loc": "Keep subsystem A/B as-is (0 lines). Delete durable.py: -81 src lines, -82 test lines (test_durable.py), ~-8 lines trimmed from transitions.py's cross-referencing docstring.",
  "what_ours_does": "~612 ln (schema/transitions/durable/mappers): sqlite DDL+connection mgmt+a guarded 7-state allow-list pass-lifecycle machine with a swappable in-memory backend. ~6086 ln remaining (cli, tower, retrieval, project_map, standards, guardrails, rubric, company, archive, provenance): bespoke gastown/depth-harness logic - calibration, reward-hacking screens, persona grading, scorecards, TUI.",
- "strongest_counterargument": "sqlite-utils (v4.0 shipped 2026-07-07, confirmed) or Alembic would give a tested migration path that is genuinely missing today: SCHEMA_VERSION=3 is stamped with no ALTER-based upgrade, only additive CREATE TABLE IF NOT EXISTS. If this ledger ever needs a non-additive schema change, today's code has no story for it and one would have to be written ad hoc anyway."
+ "strongest_counterargument": "sqlite-utils (v4.0 shipped 2026-07-07, confirmed) or Alembic would give a tested migration path that is genuinely missing today: SCHEMA_VERSION=3 is stamped with no ALTER-based upgrade, only additive CREATE TABLE IF NOT EXISTS. If this ledger ever needs a non-additive schema change, today's code has no story for it and one would have to be written ad hoc anyway.",
+ "rechecked": "2026-11-08",
+ "recheck_result": "Rechecked 2026-11-08: advance_pass and related names appear ONLY in durable.py and transitions.py, so the delete-ours call on durable.py is not stale.",
+ "absorbed": "advance_pass and friends appear only in durable.py and transitions.py; the delete-ours call on durable.py is not stale."
+
 }

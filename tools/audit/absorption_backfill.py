@@ -52,16 +52,18 @@ VERDICT_CLASS = {
     "dot-claude-skills-explain-simply": "split",
     "dot-claude-skills-learn-on-demand-scripts": "keep-ours",
     "dot-claude-skills-prove-implementation-scripts": "split",
-    # "keep-provisionally, and it is the weakest of the three records written
-    # today". The hedge is about confidence in the record, not about the call.
-    "dot-claude-skills-syndication-engine": "keep-ours",
+    # Recheck 2026-11-08 flipped this to delete-ours: spans.py models exactly
+    # one article, and X/Medium/Reddit all closed or priced their write APIs.
+    "dot-claude-skills-syndication-engine": "delete-ours",
     "dot-claude-skills-voice-metrics": "split",
     "dot-claude-skills-whatsapp-query": "keep-ours",
     "intent-control-plane-src-intent-control-plane-harness": "keep-ours",
     "intent-control-plane-src-intent-control-plane": "split",
     "intent-control-plane-tests": "split",
     "tests": "split",
-    "tools-antigravity": "build",
+    # Recheck 2026-11-08 flipped this to delete-ours: upstream shipped the
+    # agy binary (June 2026), which was the record's own delete condition.
+    "tools-antigravity": "delete-ours",
     "tools-audit-mutations": "keep-ours",
     "tools-audit": "split",
     "tools-browser": "split",

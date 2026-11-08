@@ -15,6 +15,13 @@ Two failure modes get their own checks because both are the live risk here:
     short ones. find_blocks() marks distinct lines, so a 12-line repeat
     counts 12 duplicated lines in one block, and
     test_long_repeat_counts_distinct_lines pins that.
+  - A test that calls the wrong name, or never really runs, would exempt
+    an extraction it never characterizes. _qualifying_call_lines() admits
+    only calls inside an asserting test function, and _references_dest()
+    matches the destination's defined symbols, so a direct-import test of
+    a symbol whose name differs from the file stem exempts while a bare
+    call, a call under `if False:`, and a call in an uncalled helper do
+    not.
 """
 
 from __future__ import annotations
@@ -213,6 +220,70 @@ class TestReferencesDest(unittest.TestCase):
         self.assertTrue(D._references_dest(
             ["from tools.a.shared import shared", "assert shared() == 15"],
             "tools/a/shared.py"))
+
+    def test_direct_import_of_symbol_counts(self):
+        # The destination file is helpers.py, the extracted symbol is
+        # dedup: the gate matches the symbol, not the file stem.
+        self.assertTrue(D._references_dest(
+            ["from tools.a.helpers import dedup",
+             "assert dedup(row) == 15"],
+            "tools/a/helpers.py", {"dedup"}))
+
+    def test_module_qualified_symbol_call_counts(self):
+        self.assertTrue(D._references_dest(
+            ["assert helpers.dedup(row) == 15"],
+            "tools/a/helpers.py", {"dedup"}))
+
+    def test_stem_call_does_not_count_when_symbol_known(self):
+        # Calling the module itself is not calling the extracted symbol.
+        self.assertFalse(D._references_dest(
+            ["assert helpers() == 15"],
+            "tools/a/helpers.py", {"dedup"}))
+
+    def test_attribute_use_of_defined_constant_counts(self):
+        self.assertTrue(D._references_dest(
+            ["assert shared.VALUE == 15"],
+            "tools/a/shared.py", {"VALUE", "compute"}))
+
+
+class TestQualifyingCallLines(unittest.TestCase):
+    def test_asserting_call_qualifies(self):
+        lines = D._qualifying_call_lines(
+            "def test_dedup():\n    assert dedup() == 15\n")
+        self.assertEqual(lines, {2})
+
+    def test_bare_call_without_assert_does_not_qualify(self):
+        lines = D._qualifying_call_lines(
+            "def test_dedup():\n    dedup()\n")
+        self.assertEqual(lines, set())
+
+    def test_call_under_if_false_does_not_qualify(self):
+        lines = D._qualifying_call_lines(
+            "def test_dedup():\n"
+            "    if False:\n        assert dedup() == 15\n")
+        self.assertEqual(lines, set())
+
+    def test_call_in_uncalled_helper_does_not_qualify(self):
+        lines = D._qualifying_call_lines(
+            "def helper():\n    return dedup()\n\n\n"
+            "def test_dedup():\n    assert 1 == 1\n")
+        self.assertEqual(lines, set())
+
+    def test_unittest_style_assert_qualifies(self):
+        lines = D._qualifying_call_lines(
+            "import unittest\n\n\n"
+            "class TestDedup(unittest.TestCase):\n"
+            "    def test_dedup(self):\n"
+            "        self.assertEqual(dedup(), 15)\n")
+        self.assertEqual(lines, {6})
+
+    def test_module_level_call_does_not_qualify(self):
+        lines = D._qualifying_call_lines("assert dedup() == 15\n")
+        self.assertEqual(lines, set())
+
+    def test_unparseable_source_qualifies_nothing(self):
+        lines = D._qualifying_call_lines("def test_x(:\n")
+        self.assertEqual(lines, set())
 
 
 class TestExtraction(unittest.TestCase):
@@ -507,6 +578,88 @@ class TestEvaluateEndToEnd(unittest.TestCase):
         td = tempfile.mkdtemp()
         self.assertEqual(D.cmd_check(argparse.Namespace(
             project=td)), 1)
+
+    def _extract_repo(self, test_text):
+        extract_body = (
+            "    total = 0\n    total += 1\n    total += 2\n    total += 3\n"
+            "    total += 4\n    total += 5\n    return total\n"
+        )
+        base = {
+            "tools/a/one.py": "def f():\n" + extract_body,
+            "tools/a/two.py": "def g():\n" + extract_body,
+            "tools/a/helpers.py": "def h():\n    return 0\n",
+        }
+        pr = {
+            "tools/a/one.py": "def f():\n    return dedup()\n",
+            "tools/a/two.py": "def g():\n    return dedup()\n",
+            "tools/a/helpers.py": "def dedup():\n" + extract_body,
+            "tests/test_helpers.py": test_text,
+        }
+        return self._repo(base, pr)
+
+    def test_extraction_direct_import_of_symbol_passes(self):
+        project = self._extract_repo(
+            "from tools.a.helpers import dedup\n\n\n"
+            "def test_dedup():\n    assert dedup() == 15\n")
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=str(project))), 0)
+        self.assertEqual(D.evaluate(project)["extraction"], [])
+
+    def test_extraction_bare_call_without_assert_fails(self):
+        project = self._extract_repo(
+            "from tools.a.helpers import dedup\n\n\n"
+            "def test_dedup():\n    dedup()\n")
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=str(project))), 1)
+        self.assertTrue(len(D.evaluate(project)["extraction"]) > 0)
+
+    def test_extraction_call_under_if_false_fails(self):
+        project = self._extract_repo(
+            "from tools.a.helpers import dedup\n\n\n"
+            "def test_dedup():\n"
+            "    if False:\n        assert dedup() == 15\n")
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=str(project))), 1)
+        self.assertTrue(len(D.evaluate(project)["extraction"]) > 0)
+
+    def test_extraction_call_in_uncalled_helper_fails(self):
+        project = self._extract_repo(
+            "from tools.a.helpers import dedup\n\n\n"
+            "def helper():\n    return dedup()\n\n\n"
+            "def test_dedup():\n    assert 1 == 1\n")
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=str(project))), 1)
+        self.assertTrue(len(D.evaluate(project)["extraction"]) > 0)
+
+    def test_extraction_test_calling_unrelated_symbol_fails(self):
+        project = self._extract_repo(
+            "def test_other():\n    assert other() == 1\n")
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=str(project))), 1)
+        self.assertTrue(len(D.evaluate(project)["extraction"]) > 0)
+
+    def test_new_record_expiring_today_fails(self):
+        today = date.today().isoformat()
+        project = self._repo({"tools/a/one.py": "def f():\n    return 1\n"}, {
+            "state/dup-ratchet.json": json.dumps(
+                {"baseline": 6, "reason": "raise expiring today",
+                 "expires": today, "owner": "test"}),
+        })
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=str(project))), 1)
+
+    def test_malformed_baseline_on_main_surfaces_when_touched(self):
+        project = self._repo({
+            "tools/a/one.py": "def f():\n    return 1\n",
+            "state/dup-ratchet.json": "{not json",
+        }, {
+            "state/dup-ratchet.json": json.dumps(
+                {"baseline": 0, "reason": "repair",
+                 "expires": "", "owner": "test"}),
+        })
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=str(project))), 1)
+        self.assertTrue(len(D.evaluate(project)["baseline_errors"]) > 0)
 
 
 if __name__ == "__main__":

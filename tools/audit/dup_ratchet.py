@@ -45,9 +45,13 @@ appears at 2 or more locations is a duplicate block. Same-looking code that
 is not textually identical does NOT fire: same-looking code may encode
 different concepts, and abstracting it is a judgement call this tool
 refuses to make for the author. Similar-but-not-identical matches are out
-of scope by design: no shared-meaning justification is collected or
-checked, and the "abstraction needs a shared-meaning justification" line
-on each reported group is a reminder, not a gate. The threshold (6) was
+of scope by design. For byte-identical blocks the tool does not decide
+whether the copies share meaning either: before extracting, the author
+records why the copies share meaning (same concept, same future changes)
+in the PR description, where review enforces it, because a static tool
+cannot verify a PR description. The gate enforces the choice, not the
+judgement: extract with an asserting regression test, or keep the
+duplication and raise the baseline with a recorded reason. The threshold (6) was
 calibrated against real merged diffs (see
 docs/specs/2026-11-08-dup-ratchet.md): N=6 fires on the repo's copy-pasted
 corpus-profile blocks and stays silent on clean code diffs.
@@ -57,15 +61,22 @@ THE EXTRACTION GATE
 Cross-module extraction requires regression tests first. When the diff
 removes a repeated 6-line block AND the same block appears as added lines
 in a different file (the code moved to a shared home), the extraction is
-exempt only when an added test line CALLS the destination module (its stem
-followed by `(`, or `stem.attr(...)`). An import alone does NOT exempt: a
-test that imports and never calls still characterizes nothing, and a call
-is necessary, not sufficient, for characterization: the gate is a floor,
-not a proof that the test is good. The stem must appear as a whole
-identifier token: `shared_cache`, `ratio` against a stem of `io`, and a
-bare assignment such as `shared = 1` do not exempt. String literals and
-comments never count: `assert "shared" in "shared_name"` is a mention, not
-a test.
+exempt only when an added test line inside an asserting `test_*` function
+CALLS one of the destination's defined symbols (a top-level function,
+class, or constant of the destination file), directly or module-qualified
+(`dedup(...)`, `helpers.dedup(...)`). A call is necessary, not sufficient,
+for characterization: the gate is a floor, not a proof that the test is
+good. An import alone does NOT exempt: a test that imports and never calls
+still characterizes nothing. A bare call with no assertion does not
+exempt, a call that can never execute does not exempt (inside `if False:`,
+inside a helper no test calls), and a call outside a test function does
+not exempt. The symbol must appear as a whole identifier token:
+`shared_cache`, `ratio` against a stem of `io`, and a bare assignment
+such as `shared = 1` do not exempt. String literals and comments never
+count: `assert "shared" in "shared_name"` is a mention, not a test. When
+the destination defines no parseable symbols, the gate falls back to the
+stem rule (a call to the module stem). Non-Python test files keep the
+call-only floor: the test-function rule is implemented on the Python AST.
 
 "Repeated" has two shapes, and both are gated. The clean-room shape is a
 block removed from two or more places at once. The partial-migration
@@ -103,6 +114,7 @@ is reported as a cross-copy, also informationally.
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import re
 import subprocess
@@ -111,7 +123,7 @@ import tempfile
 from collections import Counter, defaultdict
 from datetime import date, timedelta
 from pathlib import Path
-from typing import TypedDict
+from typing import Iterator, TypedDict
 
 WINDOW = 6
 BASELINE_PATH = "state/dup-ratchet.json"
@@ -390,20 +402,262 @@ def _strip_code_text(line: str) -> str:
     return s
 
 
-def _references_dest(test_lines: list[str], dest: str) -> bool:
-    """Does any added test line call the destination module?
+def _const_truth(node: ast.AST) -> bool | None:
+    """Static truth of a branch condition, or None when unknowable.
 
-    The stem must appear as a whole identifier token in a call
-    (shared(), shared.compute()) or an attribute use (shared.VALUE). A
-    bare assignment (shared = 1), a variable that merely contains the
-    stem (shared_cache), a stem inside an ordinary word (ratio against
-    io), and a string mention do not count. An import alone does NOT
-    count: importing a module and never calling it characterizes
-    nothing, so `from ... import shared` without a call does not exempt.
+    Only literal constants (and `not` of them) are decided: `if False:`,
+    `if 0:`, `if not True:` are dead; anything with a name in it is
+    unknown and treated as live. A wrong guess here would silently
+    exempt a never-executed call, so unknown means live.
+    """
+    if isinstance(node, ast.Constant):
+        value = node.value
+        if value is True:
+            return True
+        if value is False or value is None:
+            return False
+        if isinstance(value, (int, float, complex)):
+            return value != 0
+        if isinstance(value, (str, bytes)):
+            return len(value) > 0
+        return False
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+        inner = _const_truth(node.operand)
+        return None if inner is None else not inner
+    return None
+
+
+def _iter_test_functions(
+    tree: ast.Module,
+) -> Iterator[ast.FunctionDef | ast.AsyncFunctionDef]:
+    """`test_*` functions pytest would collect: module-level or methods.
+
+    A test function nested inside another function is not yielded: it
+    never runs unless the outer function calls it, and the gate does
+    not trace that call.
+    """
+    def rec(
+        node: ast.AST, in_func: bool,
+    ) -> Iterator[ast.FunctionDef | ast.AsyncFunctionDef]:
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if not in_func and child.name.startswith("test_"):
+                    yield child
+                yield from rec(child, True)
+            elif isinstance(child, ast.ClassDef):
+                yield from rec(child, in_func)
+            else:
+                yield from rec(child, in_func)
+    yield from rec(tree, False)
+
+
+def _scan_test_body(stmts: list[ast.stmt]) -> tuple[set[int], bool]:
+    """Calls and assert-presence for one test-function body.
+
+    Returns (call linenos, asserted). A call counts only when it sits
+    directly in the test body: nested def/class/lambda bodies are not
+    descended into (their code runs only if called, which the gate does
+    not trace), and bodies under a constant-false branch are skipped
+    (their code never runs; the `else` branch of such a test is live
+    and still scanned). A test function asserts when it holds an
+    `assert` statement, an `assert*` method call (`self.assertEqual`),
+    or a `pytest.raises` guard.
+    """
+    calls: set[int] = set()
+    asserted = False
+
+    def scan(node: ast.AST) -> None:
+        nonlocal asserted
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef,
+                             ast.ClassDef, ast.Lambda)):
+            return
+        if isinstance(node, ast.Assert):
+            asserted = True
+        if isinstance(node, ast.Call):
+            calls.add(node.lineno)
+            func = node.func
+            if isinstance(func, ast.Attribute):
+                if func.attr.startswith("assert"):
+                    asserted = True
+                elif func.attr == "raises" and isinstance(
+                        func.value, ast.Name) \
+                        and func.value.id == "pytest":
+                    asserted = True
+            elif isinstance(func, ast.Name) \
+                    and func.id.startswith("assert"):
+                asserted = True
+        if isinstance(node, ast.If):
+            truth = _const_truth(node.test)
+            scan(node.test)
+            if truth is False:
+                for stmt in node.orelse:
+                    scan(stmt)
+            elif truth is True:
+                for stmt in node.body:
+                    scan(stmt)
+            else:
+                for stmt in node.body + node.orelse:
+                    scan(stmt)
+            return
+        if isinstance(node, ast.While):
+            truth = _const_truth(node.test)
+            scan(node.test)
+            if truth is False:
+                for stmt in node.orelse:
+                    scan(stmt)
+            else:
+                for stmt in node.body + node.orelse:
+                    scan(stmt)
+            return
+        for child in ast.iter_child_nodes(node):
+            scan(child)
+
+    for stmt in stmts:
+        scan(stmt)
+    return calls, asserted
+
+
+def _qualifying_call_lines(source: str) -> set[int]:
+    """Line numbers of calls that count as regression-test references.
+
+    A call counts only when it sits directly in a `test_*` function body
+    (not inside a nested def/class, not under a constant-false branch)
+    and that test function asserts something. A bare call with no
+    assertion, a call under `if False:`, and a call inside a helper no
+    test calls all characterize nothing, so none of them qualifies.
+    Unparseable source qualifies nothing: fail closed, the author fixes
+    the syntax error anyway.
+    """
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return set()
+    qualifying: set[int] = set()
+    for test_fn in _iter_test_functions(tree):
+        calls, asserted = _scan_test_body(test_fn.body)
+        if asserted:
+            qualifying.update(calls)
+    return qualifying
+
+
+def _dest_symbols_on_disk(project: Path, path: str) -> set[str] | None:
+    """Top-level defined names of the destination file, or None.
+
+    None means the destination is not Python or cannot be parsed: the
+    caller falls back to the stem rule. A Python file with no top-level
+    defs, classes, or constants also yields None, so a destination
+    that only holds data is still gated on its stem.
+    """
+    if Path(path).suffix.lower() != ".py":
+        return None
+    try:
+        tree = ast.parse((project / path).read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, SyntaxError):
+        return None
+    names: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef,
+                             ast.ClassDef)):
+            names.add(node.name)
+        elif isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id.isupper():
+                    names.add(target.id)
+        elif isinstance(node, ast.AnnAssign) \
+                and isinstance(node.target, ast.Name) \
+                and node.target.id.isupper():
+            names.add(node.target.id)
+    return names or None
+
+
+def _raw_added_test_lines_by_file(
+    diffs: list[str],
+) -> dict[str, list[tuple[str, int]]]:
+    """Raw added lines of test files per file: {path: [(text, new_lineno)]}.
+
+    Raw, not normalized: the reference check reads the original text so
+    its string-literal and comment stripping sees what the author wrote.
+    Line numbers are the new-file numbers, so they line up with the
+    test file on disk that the AST filter reads.
+    """
+    added: dict[str, list[tuple[str, int]]] = defaultdict(list)
+    for diff in diffs:
+        path: str | None = None
+        lineno = 0
+        for raw in diff.splitlines():
+            if raw.startswith("+++ b/"):
+                path = raw[6:]
+                lineno = 0
+            elif raw.startswith("+++ "):
+                path = None
+            elif raw.startswith("@@ ") and path is not None:
+                m = re.search(r"\+(\d+)", raw)
+                lineno = int(m.group(1)) if m else 0
+            elif path is not None and raw.startswith(" "):
+                lineno += 1
+            elif path is not None and raw.startswith("+") \
+                    and not raw.startswith("+++"):
+                if is_test_file(path):
+                    added[path].append((raw[1:], lineno))
+                lineno += 1
+    return added
+
+
+def _qualifying_test_lines(
+    project: Path,
+    raw_by_file: dict[str, list[tuple[str, int]]],
+) -> list[str]:
+    """Added test lines that can exempt an extraction, flat.
+
+    For Python test files, only lines the AST filter qualifies: a call
+    inside an asserting `test_*` function. An unreadable or unparseable
+    test file qualifies nothing (fail closed). Non-Python test files
+    keep the call-only floor: the test-function rule is implemented on
+    the Python AST, and the regex match in `_references_dest` is still
+    the check that the line calls the destination.
+    """
+    lines: list[str] = []
+    for path, entries in raw_by_file.items():
+        if Path(path).suffix.lower() != ".py":
+            lines.extend(raw for raw, _ in entries)
+            continue
+        try:
+            source = (project / path).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        ok = _qualifying_call_lines(source)
+        lines.extend(raw for raw, n in entries if n in ok)
+    return lines
+
+
+def _references_dest(
+    test_lines: list[str], dest: str, symbols: set[str] | None = None,
+) -> bool:
+    """Does any added test line call one of the destination's symbols?
+
+    With symbols given (the destination's defined names, from
+    `_dest_symbols_on_disk`), a direct call (`dedup(...)`) or a
+    module-qualified call (`helpers.dedup(...)`) counts, as does an
+    attribute use (`shared.VALUE`). With symbols None, the old stem
+    rule applies (a call to the module stem, or `stem.attr`): the
+    fallback for a destination with no parseable symbols. A bare
+    assignment (shared = 1), a variable that merely contains the name
+    (shared_cache), a stem inside an ordinary word (ratio against io),
+    and a string mention do not count. An import alone does NOT count:
+    importing a module and never calling it characterizes nothing, so
+    `from ... import shared` without a call does not exempt. Which
+    lines reach this function is the AST filter's job: only calls
+    inside an asserting test function are passed in.
     """
     stem = Path(dest).stem
-    call = re.compile(rf"\b{re.escape(stem)}\s*\(")
-    attr = re.compile(rf"\b{re.escape(stem)}\.[A-Za-z_]\w*")
+    if symbols is None:
+        call = re.compile(rf"\b{re.escape(stem)}\s*\(")
+        attr = re.compile(rf"\b{re.escape(stem)}\.[A-Za-z_]\w*")
+    else:
+        alt = "|".join(re.escape(s) for s in sorted(symbols))
+        call = re.compile(
+            rf"\b(?:{alt})\s*\(|\b{re.escape(stem)}\.(?:{alt})\s*\(")
+        attr = re.compile(rf"\b{re.escape(stem)}\.(?:{alt})\b")
     for raw in test_lines:
         line = _strip_code_text(raw)
         if call.search(line) or attr.search(line):
@@ -482,11 +736,15 @@ def find_extractions(
     removed: dict[str, list[tuple[str, int]]],
     test_lines: list[str],
     base_windows: dict[tuple[str, ...], int] | None = None,
+    dest_symbols: dict[str, set[str]] | None = None,
 ) -> list[ExtractionHit]:
     """Removed repeated block reappearing as added lines in another file.
 
-    A hit is exempt only when an added test line CALLS the destination
-    module. A test file that never calls the extracted module does not
+    A hit is exempt only when an added test line in an asserting test
+    function CALLS one of the destination's defined symbols (directly
+    or module-qualified). `dest_symbols` maps destination path to its
+    defined names; a destination absent from it falls back to the stem
+    rule. A test file that never calls the extracted symbol does not
     exempt, however it is named, and an import alone does not exempt.
 
     "Repeated" has two shapes. The clean-room shape: the block was
@@ -526,7 +784,8 @@ def find_extractions(
         for apath, aidx in added_windows.get(window, []):
             if rpaths == {apath}:
                 continue
-            if _references_dest(test_lines, apath):
+            syms = (dest_symbols or {}).get(apath)
+            if _references_dest(test_lines, apath, syms):
                 continue
             sources: list[Location] = [
                 {
@@ -610,9 +869,12 @@ def validate_baseline(rec: Baseline, today: date) -> list[str]:
     """Shape errors in one baseline record.
 
     This validates a record as written: a raise above 0 needs a reason, a
-    valid future expiry, and an owner. It never judges whether the record
-    on main has expired: that is the lapse rule in evaluate(), not an
-    error in the record being validated.
+    future expiry, and an owner. The expiry must be strictly future: a
+    raise expiring today fails validation (re-justify with a later date
+    or lower the baseline). A record that already lapsed (expiry in the
+    past) is not an error here: the lapse rule in evaluate() handles it,
+    and a PR that does not touch the file is not failed by the record it
+    did not write.
     """
     errors: list[str] = []
     if rec["baseline"] <= 0:
@@ -621,13 +883,13 @@ def validate_baseline(rec: Baseline, today: date) -> list[str]:
         errors.append("baseline raised without a recorded reason in "
                       f"{BASELINE_PATH}")
     try:
-        date.fromisoformat(rec["expires"])
+        expires = date.fromisoformat(rec["expires"])
     except ValueError:
         errors.append(f"baseline expires {rec['expires']!r} is not an ISO date")
         return errors
-    if _baseline_expired(rec, today):
-        errors.append(f"baseline expiry {rec['expires']} is in the past: "
-                      "set a future expiry or lower the baseline to 0")
+    if expires <= today:
+        errors.append(f"baseline expiry {rec['expires']} is not a future "
+                      "date: set a future expiry or lower the baseline to 0")
     if not rec["owner"].strip():
         errors.append("baseline raised without a recorded owner in "
                       f"{BASELINE_PATH}")
@@ -641,29 +903,6 @@ def _baseline_deleted(diff: str) -> bool:
         if raw == f"--- a/{BASELINE_PATH}" and lines[i + 1] == "+++ /dev/null":
             return True
     return False
-
-
-def _raw_added_test_lines(diffs: list[str]) -> list[str]:
-    """Raw added lines of test files, for the extraction reference check.
-
-    The reference check reads raw lines (not normalized ones) so its
-    own string-literal and comment stripping sees the original text:
-    normalize() drops import lines and full-line comments, which would
-    hide a call written on such a line from the check.
-    """
-    lines: list[str] = []
-    path: str | None = None
-    for diff in diffs:
-        for raw in diff.splitlines():
-            if raw.startswith("+++ b/"):
-                path = raw[6:]
-            elif raw.startswith("+++ "):
-                path = None
-            elif path is not None and raw.startswith("+") \
-                    and not raw.startswith("+++"):
-                if is_test_file(path):
-                    lines.append(raw[1:])
-    return lines
 
 
 def evaluate(project: Path) -> CheckResult:
@@ -693,7 +932,8 @@ def evaluate(project: Path) -> CheckResult:
     cross = [b for b in combined
              if any(is_test_file(loc["path"]) for loc in b["locations"])
              and any(not is_test_file(loc["path"]) for loc in b["locations"])]
-    test_lines = _raw_added_test_lines(diffs)
+    test_lines = _qualifying_test_lines(
+        project, _raw_added_test_lines_by_file(diffs))
     # Partial migration needs the base tree: a removed window re-added
     # elsewhere with only one distinct removal is an extraction only
     # when the block was already duplicated before the diff. Read the
@@ -712,7 +952,13 @@ def evaluate(project: Path) -> CheckResult:
     if removed_set & added_set:
         base_windows = _base_tree_window_counts(
             project, base, removed_set & added_set)
-    extraction = find_extractions(added, removed, test_lines, base_windows)
+    dest_symbols = {
+        path: syms
+        for path in added
+        if (syms := _dest_symbols_on_disk(project, path)) is not None
+    }
+    extraction = find_extractions(
+        added, removed, test_lines, base_windows, dest_symbols)
     today = date.today()
     errors: list[str] = []
     lapsed = ""
@@ -733,7 +979,11 @@ def evaluate(project: Path) -> CheckResult:
         # is not failed by the record it replaces.
         try:
             old = load_baseline_at_ref(project, base)
-        except BaselineError:
+        except BaselineError as exc:
+            # A malformed record on main is surfaced, not silently
+            # replaced with 0: the count is still judged against 0
+            # (fail closed), and the error names the repair.
+            errors.append(f"baseline at {base} is unreadable: {exc}")
             old = {"baseline": 0, "reason": "", "expires": "", "owner": ""}
         errors.extend(validate_baseline(new_baseline, today))
         effective = old["baseline"]
@@ -830,14 +1080,22 @@ def cmd_check(a: argparse.Namespace) -> int:
             print("  fix: deduplicate the listed blocks, or raise the "
                   f"baseline in {BASELINE_PATH} with a recorded reason, "
                   "expiry and owner (a raise takes effect for later diffs, "
-                  "not this one). Extracting a shared idiom will also "
-                  "require a test that calls it. See "
+                  "not this one; a raise permits that many duplicated "
+                  "lines in every PR until expiry). Before extracting a "
+                  "shared idiom, record why the copies share meaning "
+                  "(same concept, same future changes) in the PR "
+                  "description; without that justification, keep the "
+                  "duplication and raise the baseline instead. "
+                  "Extracting a shared idiom will also require a test "
+                  "that calls the extracted symbol and asserts on its "
+                  "behavior. See "
                   "docs/specs/2026-11-08-dup-ratchet.md")
         if result["extraction"]:
             print("  fix: add a regression test in the diff that calls the "
-                  "extracted module (import it and assert on its "
-                  "behavior). Tests already on main do not count: the "
-                  "test must be in the diff. See "
+                  "extracted symbol and asserts on its behavior (a bare "
+                  "call, a call in dead code, or a call outside a test "
+                  "function does not count). Tests already on main do not "
+                  "count: the test must be in the diff. See "
                   "docs/specs/2026-11-08-dup-ratchet.md")
         return 1
     if result["duplicated_lines"] < result["baseline"]:
@@ -1028,6 +1286,79 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
     check("extraction with a string-mention test still fails",
           code == 1 and len(res["extraction"]) > 0, json.dumps(res))
 
+    # 5b. extraction with a direct-import test of a symbol whose name
+    #     differs from the destination file stem passes: the gate
+    #     matches the extracted symbol, not the file stem.
+    dedup_base = {
+        "tools/a/one.py": "def f():\n" + extract_body,
+        "tools/a/two.py": "def g():\n" + extract_body,
+        "tools/a/helpers.py": "def h():\n    return 0\n",
+    }
+    dedup_pr = {
+        "tools/a/one.py": "def f():\n    return dedup()\n",
+        "tools/a/two.py": "def g():\n    return dedup()\n",
+        "tools/a/helpers.py": "def dedup():\n" + extract_body,
+    }
+    repo = make_repo(dedup_base)
+    commit(repo, {**dedup_pr,
+                  "tests/test_helpers.py":
+                      "from tools.a.helpers import dedup\n\n\n"
+                      "def test_dedup():\n    assert dedup() == 15\n"})
+    code, res = run_check(repo)
+    check("extraction with a direct-import test of the symbol passes",
+          code == 0 and res["extraction"] == [], json.dumps(res))
+    # 5c. a bare call with no assertion does not exempt
+    repo = make_repo(dedup_base)
+    commit(repo, {**dedup_pr,
+                  "tests/test_helpers.py":
+                      "from tools.a.helpers import dedup\n\n\n"
+                      "def test_dedup():\n    dedup()\n"})
+    code, res = run_check(repo)
+    check("extraction with a bare call and no assertion still fails",
+          code == 1 and len(res["extraction"]) > 0, json.dumps(res))
+    # 5d. a call under `if False:` never executes and does not exempt
+    repo = make_repo(dedup_base)
+    commit(repo, {**dedup_pr,
+                  "tests/test_helpers.py":
+                      "from tools.a.helpers import dedup\n\n\n"
+                      "def test_dedup():\n"
+                      "    if False:\n        assert dedup() == 15\n"})
+    code, res = run_check(repo)
+    check("extraction with a call under if False still fails",
+          code == 1 and len(res["extraction"]) > 0, json.dumps(res))
+    # 5e. a call inside a helper no test calls does not exempt
+    repo = make_repo(dedup_base)
+    commit(repo, {**dedup_pr,
+                  "tests/test_helpers.py":
+                      "from tools.a.helpers import dedup\n\n\n"
+                      "def helper():\n    return dedup()\n\n\n"
+                      "def test_dedup():\n    assert 1 == 1\n"})
+    code, res = run_check(repo)
+    check("extraction with a call in an uncalled helper still fails",
+          code == 1 and len(res["extraction"]) > 0, json.dumps(res))
+    # 5f. a unittest-style asserting call exempts
+    repo = make_repo(dedup_base)
+    commit(repo, {**dedup_pr,
+                  "tests/test_helpers.py":
+                      "import unittest\n"
+                      "from tools.a.helpers import dedup\n\n\n"
+                      "class TestDedup(unittest.TestCase):\n"
+                      "    def test_dedup(self):\n"
+                      "        self.assertEqual(dedup(), 15)\n"})
+    code, res = run_check(repo)
+    check("extraction with a unittest-style asserting test passes",
+          code == 0 and res["extraction"] == [], json.dumps(res))
+    # 5g. a test that calls an unrelated symbol does not exempt: the
+    #     call qualifies (asserting test function) but matches no
+    #     destination symbol.
+    repo = make_repo(dedup_base)
+    commit(repo, {**dedup_pr,
+                  "tests/test_helpers.py":
+                      "def test_other():\n    assert other() == 1\n"})
+    code, res = run_check(repo)
+    check("extraction with a test calling an unrelated symbol still fails",
+          code == 1 and len(res["extraction"]) > 0, json.dumps(res))
+
     # 6. empty diff passes
     repo = make_repo(base_files)
     code, res = run_check(repo)
@@ -1153,6 +1484,18 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
     check("new baseline record with a past expiry fails",
           code == 1 and len(res["baseline_errors"]) > 0, json.dumps(res))
 
+    # 13b. a new record expiring today fails: the expiry must be future.
+    repo = make_repo(base_files)
+    commit(repo, {
+        BASELINE_PATH: json.dumps(
+            {"baseline": 6, "reason": "raise expiring today",
+             "expires": date.today().isoformat(),
+             "owner": "claude-376-test"}),
+    })
+    code, res = run_check(repo)
+    check("new baseline record expiring today fails",
+          code == 1 and len(res["baseline_errors"]) > 0, json.dumps(res))
+
     # 14. deleting the baseline file fails closed
     repo = make_repo({**base_files, BASELINE_PATH: json.dumps(
         {"baseline": 0, "reason": "", "expires": "", "owner": ""})})
@@ -1162,6 +1505,19 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
                    cwd=repo, check=True)
     code, res = run_check(repo)
     check("deleting the baseline file fails closed",
+          code == 1 and len(res["baseline_errors"]) > 0, json.dumps(res))
+
+    # 14b. a malformed record on main is surfaced, not silently
+    #      replaced with 0, when the PR touches the file with a valid
+    #      record.
+    repo = make_repo({**base_files, BASELINE_PATH: "{not json"})
+    commit(repo, {
+        BASELINE_PATH: json.dumps(
+            {"baseline": 0, "reason": "repair",
+             "expires": "", "owner": "claude-376-test"}),
+    })
+    code, res = run_check(repo)
+    check("malformed baseline on main is surfaced when the file is touched",
           code == 1 and len(res["baseline_errors"]) > 0, json.dumps(res))
 
     # 15. partial migration: the block is removed from ONE of two files
@@ -1241,7 +1597,7 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
 
     print("\nVERDICT: {}".format(
         "duplication on changed lines is reported, the ratchet holds, and "
-        "extraction needs tests" if rc == 0 else "selftest has failures above"))
+        "extraction needs asserting tests" if rc == 0 else "selftest has failures above"))
     return rc
 
 

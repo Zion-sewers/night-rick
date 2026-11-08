@@ -42,8 +42,8 @@ MUTATIONS = [
         "extraction gate dropped",
         "find_extractions is replaced with an empty list, so a cross-module "
         "extraction with no regression tests in the diff passes.",
-        "    extraction = find_extractions(added, removed, test_lines, "
-        "base_windows)",
+        "    extraction = find_extractions(\n"
+        "        added, removed, test_lines, base_windows, dest_symbols)",
         "    extraction = []",
     ),
     (
@@ -91,22 +91,24 @@ MUTATIONS = [
         "direction, and it must still be caught: a gate that cries wolf on "
         "every tested extraction gets disabled, which is the same loss as "
         "the gate that never fires.",
-        "            if _references_dest(test_lines, apath):\n"
+        "            if _references_dest(test_lines, apath, syms):\n"
         "                continue",
         "            if False:  # reference check dropped\n"
         "                continue",
     ),
     (
-        "import alone exempts again",
-        "The call-only rule gains an import branch, so a test file "
-        "that merely imports the destination module exempts an "
-        "extraction it never calls. The flipped selftest case (an "
-        "import-only test still fails) must catch this.",
-        "        if call.search(line) or attr.search(line):\n"
-        "            return True",
-        "        if call.search(line) or attr.search(line) \\\n"
-        "                or line.strip().startswith((\"import \", \"from \")):\n"
-        "            return True",
+        "test-function filter dropped, any test line exempts",
+        "The AST filter is bypassed, so every added test line reaches "
+        "the reference check: a bare call, a call under `if False:`, or "
+        "a call in an uncalled helper exempts an extraction it never "
+        "characterizes. The flipped selftest cases (a bare call, a call "
+        "under if False, a call in an uncalled helper still fail) must "
+        "catch this. This replaces the old import-branch mutation: an "
+        "import line can no longer reach the matcher at all, so the "
+        "import-only rejection is enforced by this filter, not by the "
+        "regex.",
+        "        lines.extend(raw for raw, n in entries if n in ok)",
+        "        lines.extend(raw for raw, _ in entries)  # filter dropped",
     ),
     (
         "partial migration ignored, base tree unread",
@@ -139,5 +141,37 @@ MUTATIONS = [
         '        return {"baseline": 0, "reason": "", "expires": "", "owner": ""}',
         '    if not p.exists():\n'
         '        return {"baseline": 999, "reason": "x", "expires": "", "owner": ""}',
+    ),
+    (
+        "assert requirement dropped, a bare call exempts",
+        "The assert requirement is dropped, so a bare call with no "
+        "assertion qualifies as a regression test and an extraction with "
+        "a vacuous test passes. The flipped selftest case (a bare call "
+        "still fails) must catch this.",
+        "        if asserted:\n            qualifying.update(calls)",
+        "        if True:  # assert requirement dropped\n"
+        "            qualifying.update(calls)",
+    ),
+    (
+        "symbol matching dropped to stem-only",
+        "The destination-symbol map is emptied, so every destination "
+        "falls back to the stem rule and a direct-import test of a symbol "
+        "whose name differs from the file stem no longer exempts. The "
+        "flipped selftest case (a direct-import test of the symbol "
+        "passes) must catch this.",
+        "    dest_symbols = {\n        path: syms\n"
+        "        for path in added\n"
+        "        if (syms := _dest_symbols_on_disk(project, path)) is not None\n"
+        "    }",
+        "    dest_symbols = {}  # symbol matching dropped",
+    ),
+    (
+        "dead branches count as live",
+        "The constant-truth check never runs, so every branch reads as "
+        "live and a call under `if False:` qualifies as a regression "
+        "test. The flipped selftest case (a call under if False still "
+        "fails) must catch this.",
+        "    if isinstance(node, ast.Constant):\n        value = node.value",
+        "    if False:  # dead-branch check dropped\n        value = node.value",
     ),
 ]

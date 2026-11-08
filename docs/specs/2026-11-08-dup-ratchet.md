@@ -55,11 +55,17 @@ Same-looking code that is not textually identical does NOT fire, and that
 narrowing is explicit, not an accident of the detector. The issue's
 criterion 3 says same-looking code may encode different concepts and
 abstraction needs a shared-meaning justification; a similarity score would
-fire exactly on the matches the issue says need human judgement. This tool
-collects no shared-meaning justification and checks none: similar-but-not-
-identical matches are out of scope by design, and the "abstraction needs a
-shared-meaning justification" line on each reported group is a reminder,
-not a gate. The tool never suggests an extraction.
+fire exactly on the matches the issue says need human judgement.
+Similar-but-not-identical matches are out of scope by design. For
+byte-identical blocks the tool does not decide whether the copies share
+meaning either: before extracting, the author records why the copies
+share meaning (same concept, same future changes) in the PR description,
+where review enforces it, because a static tool cannot verify a PR
+description. The gate enforces the choice, not the judgement: extract
+with an asserting regression test, or keep the duplication and raise the
+baseline with a recorded reason. The "abstraction needs a shared-meaning
+justification" line on each reported group is the reminder of that
+requirement, not a gate. The tool never suggests an extraction.
 
 ## Calibration (measured 2026-11-08 on real merged diffs)
 
@@ -106,7 +112,8 @@ idiom because the identical `def main():` and `return run(args)` lines
 join it. That is the gate working as designed, not a false positive: the
 block really is duplicated new code. When it fires on boilerplate, the
 author's options in order are: extract the shared idiom into a helper
-(the extraction gate then requires a test that calls it); restructure so
+(the extraction gate then requires an asserting test that calls the
+extracted symbol); restructure so
 the repeated lines differ; or record a bounded baseline raise with reason,
 expiry, and owner. Prefer extraction: a raise is global until its expiry,
 so it permits the same count in every area. The first non-corpus PR to
@@ -118,7 +125,8 @@ written down here instead of discovered live.
 `state/dup-ratchet.json` holds one number, the baseline, plus a reason, an
 expiry date, and an owner. `check` fails when duplicated added lines exceed
 it. A raise above 0 needs all three: a non-empty reason, a future expiry
-date, and an owner. Owner is attribution, not verification: the tool
+date, and an owner. A raise expiring today fails validation: the expiry
+must be strictly future. Owner is attribution, not verification: the tool
 checks only that the field is non-empty, and review is the backstop for a
 lazy expiry or owner. The same holds for the expiry date itself, which is
 self-asserted; nothing in the tool can tell a genuine 90-day exception
@@ -172,20 +180,48 @@ it.
 Cross-module extraction requires regression tests first. When the diff
 removes a repeated 6-line block AND the same block appears as added lines
 in a different file (the code moved to a shared home), `check` fails unless
-an added test line calls the destination module (its stem followed by `(`
-or `stem.attr(...)`). An import alone does NOT exempt: a test that imports
-and never calls still characterizes nothing. The stem must appear as a
-whole identifier token: `shared_cache`, `ratio` against a stem of `io`,
-and a bare assignment such as `shared = 1` do not exempt. String literals
-and comments never count: `assert "shared" in "shared_name"` is a mention,
+an added test line inside an asserting `test_*` function calls one of the
+destination's defined symbols: a top-level function, class, or constant of
+the destination file, called directly (`dedup(...)`) or module-qualified
+(`helpers.dedup(...)`). An import alone does NOT exempt: a test that
+imports and never calls still characterizes nothing. A bare call with no
+assertion does not exempt, a call that can never execute does not exempt
+(inside `if False:`, inside a helper no test calls), and a call outside a
+test function does not exempt. The symbol must appear as a whole
+identifier token: `shared_cache`, `ratio` against a stem of `io`, and a
+bare assignment such as `shared = 1` do not exempt. String literals and
+comments never count: `assert "shared" in "shared_name"` is a mention,
 not a test. A call is necessary, not sufficient, for characterization:
-the gate is a floor, not a proof that the test is good. Known limit: the
-gate cannot resolve imports, so a stem collision (a test calling the
-stdlib `io.open(` for a destination stemmed `io`) can exempt; path-aware
-matching is not implemented. A test that already exists on main does not
-count: the calling test must be in the diff. Deleting duplicated code
-without adding a shared home is not an extraction and is not gated.
-Moving a block inside the same file is not gated either.
+the gate is a floor, not a proof that the test is good. A test that
+already exists on main does not count: the calling test must be in the
+diff. Deleting duplicated code without adding a shared home is not an
+extraction and is not gated. Moving a block inside the same file is not
+gated either.
+
+The gate matches the extracted symbol, not the file stem: a direct-import
+test (`from helpers import dedup`, then `assert dedup(...) == ...`)
+exempts, because the symbol is what the test characterizes. When the
+destination defines no parseable symbols, the gate falls back to the stem
+rule (a call to the module stem). Known limits: the gate cannot resolve
+imports, so a stem collision (a test calling the stdlib `io.open(` for a
+destination stemmed `io`) can exempt; path-aware matching is not
+implemented. Non-Python test files keep the call-only floor: the
+test-function rule is implemented on the Python AST. A test that calls
+the symbol only inside a helper it defines, and never calls that helper,
+does not exempt either: the gate does not trace helper calls. A call
+after floor division (`x = a // shared.VALUE`) can also miss the
+reference check, because the line sanitizer splits on `//`; that
+direction fails closed.
+
+The extraction gate covers the shapes the detector can see. A move that
+generalizes two or more lines spread through the block breaks every
+6-line window, so no byte-identical repeat survives and the gate does not
+fire: that extraction passes with no regression test. A one-line
+generalization is still caught. The boundary is the exact-match scope
+itself, stated in the verdict line: no byte-identical 6-line repeats in
+added lines. A generalized extraction is still reviewable: panel review
+sees the move, and the shared-meaning justification above applies to it
+the same as to any extraction.
 
 "Repeated" has two shapes. The clean-room shape is a block removed from
 two or more places at once. The partial-migration shape is a block

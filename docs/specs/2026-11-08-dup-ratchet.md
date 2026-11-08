@@ -48,8 +48,20 @@ coverage_map domain was added in 2026-08-19):
 An exact repeat, not a similarity score. After normalization (blank lines
 dropped, full-line comments dropped, import lines and bare docstring fences
 dropped, whitespace collapsed), a run of 6 consecutive added lines that
-appears at 2 or more locations is a duplicate block. The count is the number
-of distinct added lines inside duplicate blocks beyond the first occurrence.
+appears at 2 or more places is a duplicate block. A place is a maximal run
+of identical lines, not a window start: twelve identical lines in one file
+are one place, not seven overlapping windows, so a single file holding
+twelve identical lines counts 0 duplicated lines. Consecutive means
+consecutive in the file: the 6 lines must have consecutive line numbers,
+so lines added in two separate hunks, or split by a dropped blank or
+comment line, never form a block that never existed. The count is the
+number of distinct added lines inside duplicate blocks beyond the first
+occurrence, net of moves: a repeat whose added occurrences are fully
+covered by removed occurrences does not count, because moving legacy debt
+is not creating it, and a pure move of a function containing an internal
+repeat passes both gates. The threshold (6) was calibrated against real
+merged diffs (see the table below): N=6 fires on the repo's copy-pasted
+corpus-profile blocks and stays silent on clean code diffs.
 
 Same-looking code that is not textually identical does NOT fire, and that
 narrowing is explicit, not an accident of the detector. The issue's
@@ -60,8 +72,10 @@ Similar-but-not-identical matches are out of scope by design. For
 byte-identical blocks the tool does not decide whether the copies share
 meaning either: before extracting, the author records why the copies
 share meaning (same concept, same future changes) in the PR description,
-where review enforces it, because a static tool cannot verify a PR
-description. The gate enforces the choice, not the judgement: extract
+where a human reviewer sees it. No tool in this repo reads a PR
+description (panel.py takes only a project, a base, and an output path,
+and gate.py has no PR-body input), so the printed reminder is the whole
+mechanism: the gate enforces the choice, not the judgement. Extract
 with an asserting regression test, or keep the duplication and raise the
 baseline with a recorded reason. The "abstraction needs a shared-meaning
 justification" line on each reported group is the reminder of that
@@ -74,11 +88,11 @@ code-heavy merged commits with import lines and docstring fences excluded:
 
 | diff | added lines | N=6 blocks / dup lines | N=8 | N=10 |
 | --- | --- | --- | --- | --- |
-| 019f03c (8 corpus profile siblings) | 2113 | 60 / 561 | 25 / 288 | 17 / 222 |
-| c3e0329 (enrichment_lag_profile) | 377 | 2 / 22 | 1 / 16 | 0 / 0 |
-| d36308d (edge_source_temporal_lag) | 305 | 2 / 13 | 0 / 0 | 0 / 0 |
+| 019f03c (8 corpus profile siblings) | 2113 | 39 / 336 | 11 / 124 | 6 / 76 |
+| c3e0329 (enrichment_lag_profile) | 377 | 1 / 6 | 0 / 0 | 0 / 0 |
+| d36308d (edge_source_temporal_lag) | 305 | 0 / 0 | 0 / 0 | 0 / 0 |
 | 854357d (source_enrichment_completeness) | 322 | 1 / 7 | 0 / 0 | 0 / 0 |
-| 6f83d76 (simhash_edge_profile) | 296 | 3 / 19 | 0 / 0 | 0 / 0 |
+| 6f83d76 (simhash_edge_profile) | 296 | 2 / 13 | 0 / 0 | 0 / 0 |
 | 17d2c94 (version-source-profile) | 310 | 3 / 22 | 1 / 8 | 0 / 0 |
 | b01ee4a (cross_table_outlier_detector) | 344 | 0 / 0 | 0 / 0 | 0 / 0 |
 | 7045cee (E-0001..E-0003) | 365 | 0 / 0 | 0 / 0 | 0 / 0 |
@@ -98,12 +112,17 @@ columns exclude test files (for example 7045cee: 365 added lines, 238 of
 them non-test).
 
 N=6 fires on the repo's copy-pasted corpus-profile blocks and stays silent
-on clean code diffs: 6 of 12 measured diffs fire, 6 stay silent, and every
+on clean code diffs: 5 of 12 measured diffs fire, 7 stay silent, and every
 firing diff is a corpus-profile sibling. The six clean diffs are five
 corpus-profile tools plus one anatomy E-rows diff (7045cee, with one test
 file); none of the twelve diffs touches `tools/audit`, so no audit-family
-diff is in the set, and the sample is 11 of 12 corpus-profile diffs. N=8
-would miss d36308d, 854357d, and 6f83d76 entirely, and N=10 would miss all
+diff is in the set, and the sample is 11 of 12 corpus-profile diffs. The
+seventh silent diff is d36308d, a corpus-profile sibling whose only repeat
+is a SQL fragment whose six normalized lines are split by a closing
+docstring fence: the strict contiguity rule trades that block for the
+elimination of phantom windows, and the numbers above are the price of
+that trade (the pre-contiguity detector counted it at 2 / 13). N=8
+would miss c3e0329, 854357d, and 6f83d76 entirely, and N=10 would miss all
 but the largest diff, so N=6 is kept.
 
 N=6 also fires on ordinary boilerplate: two CLI entry points sharing a
@@ -218,15 +237,20 @@ generalizes two or more lines spread through the block breaks every
 6-line window, so no byte-identical repeat survives and the gate does not
 fire: that extraction passes with no regression test. A one-line
 generalization is still caught. The boundary is the exact-match scope
-itself, stated in the verdict line: no byte-identical 6-line repeats in
-added lines. A generalized extraction is still reviewable: panel review
+itself: no byte-identical 6-line repeats beyond the baseline, and no
+byte-identical extraction without an asserting test. A generalized
+extraction is still reviewable: panel review
 sees the move, and the shared-meaning justification above applies to it
 the same as to any extraction.
 
 "Repeated" has two shapes. The clean-room shape is a block removed from
 two or more places at once, where a place is a maximal run of identical
 lines, not a window start: twelve identical lines moved as a unit are one
-place, not two sources. The partial-migration shape is a block
+place, not two sources. The clean-room shape fires only when the
+destination holds strictly fewer occurrences of the block than were
+removed: a destination that still holds as many copies as were removed
+consolidated nothing, so the move is not an extraction. The
+partial-migration shape is a block
 removed from one place while the block was already duplicated before the
 diff: the gate counts the block's occurrences in the base tree (via
 `git archive`) and fires when the block occurred twice or more there.
@@ -238,13 +262,20 @@ extraction. The destination may itself be one of the files the block was
 removed from (consolidation into an existing holder file); it is skipped
 only when it is the SOLE file the block was removed from.
 
+Test files are excluded from the extraction gate entirely: moving a
+fixture block between test files is fixture deduplication, the same
+reason test files are excluded from the ratchet FAIL, and the gate stays
+silent. Only code files supply test lines, so a document named like a
+test (`test_notes.md`) cannot exempt an extraction with a line of prose.
+
 Known limit: a move rewritten past git's rename-detection threshold can
 trip both gates (the moved lines appear as removed and added), because
 the detector is diff-based and has no rename awareness. The common pure
-move, and a move with a one-line touch, do not trip it, unless the moved
-block is itself self-repeating: identical lines moved as a unit still
-count as duplicated added lines, so the ratchet fires even though the
-extraction gate stays silent.
+move, and a move with a one-line touch, do not trip it, including a
+moved block that contains an internal repeat: the ratchet counts
+net-new duplication, so a repeat fully covered by removed occurrences
+does not count, and the extraction gate stays silent when the
+destination consolidated nothing.
 
 ## Exclusions, and why each is stated
 
@@ -284,17 +315,33 @@ extraction gate, and whether the runner has a pinned-binary install path.
 
 ## Verification
 
-- `python tools/audit/dup_ratchet.py selftest` (28 planted checks)
-- `python -m pytest tests/test_dup_ratchet.py -q` (48 tests)
-- `python tools/audit/mutate.py --spec dup_ratchet` (13 mutations)
+- `python tools/audit/dup_ratchet.py selftest` (51 planted checks)
+- `python -m pytest tests/test_dup_ratchet.py -q` (83 tests)
+- `python tools/audit/mutate.py --spec dup_ratchet` (28 mutations)
 - ruff check on tools/audit/dup_ratchet.py and tests/test_dup_ratchet.py;
   mypy --strict on tools/audit/dup_ratchet.py
 - The new domain runs in CI through `gate.py run`; no ship-gate.yml change.
 
-A PASS means no byte-identical 6-line repeats in added lines. It does not
-mean no duplication of any shape: a copied block with one renamed
+A PASS means no NEW byte-identical duplication beyond the baseline, and
+no byte-identical extraction without an asserting test. It does not mean
+no duplication of any shape: a copied block with one renamed
 identifier sails through by design (see the criterion-3 narrowing above),
-and the verdict line says so.
+a repeat within the baseline passes by design, and the verdict line says
+the ratchet outcome, not the absence of repeats.
+
+Known measurement limits, all dirty-tree or local-only (CI runs on a
+clean checkout, where the second diff is empty): untracked new files are
+invisible to `check` (`git diff HEAD` does not show them), so a local
+pre-commit run misses a brand-new duplicated file; the two diffs
+(`base...HEAD` and `HEAD` working tree) merge by (text, line number), so
+a line added in the committed diff and then edited in the working tree
+is counted twice in the "added code lines" figure (the verdict rests on
+`duplicated_lines`, not that figure, and no phantom duplicate was
+observed); the base-tree read (`git archive`, ~66 MB / ~3 s on this
+repo, held whole in memory) runs only when a removed window is also an
+added window; a base-tree code file that cannot be decoded as UTF-8
+fails the check closed with "cannot measure" instead of silently
+skipping the file.
 
 ## Follow-ups (not merge blockers)
 

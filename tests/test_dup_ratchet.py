@@ -15,6 +15,10 @@ Two failure modes get their own checks because both are the live risk here:
     short ones. find_blocks() marks distinct lines, so a 12-line repeat
     counts 12 duplicated lines in one block, and
     test_long_repeat_counts_distinct_lines pins that.
+  - A pure move counts nothing: find_blocks() takes the removed places,
+    so a repeat fully covered by removed occurrences is net-new
+    duplication of zero, and a window spanning a hunk boundary or a
+    dropped line is not a block at all.
   - A test that calls the wrong name, or never really runs, would exempt
     an extraction it never characterizes. _qualifying_call_lines() admits
     only calls inside an asserting test function, and _references_dest()
@@ -142,6 +146,69 @@ class TestFindBlocks(unittest.TestCase):
         _, dup = D.find_blocks(streams)
         self.assertEqual(dup, 6)
 
+    def test_twelve_identical_lines_in_one_file_is_not_a_duplicate(self):
+        twelve = ["    pass"] * 12
+        streams = {
+            "a.py": [(t, i + 1) for i, t in enumerate(["def f():"] + twelve)],
+        }
+        _, dup = D.find_blocks(streams)
+        self.assertEqual(dup, 0)
+
+    def test_twelve_identical_lines_across_two_files_counts_twelve(self):
+        twelve = ["    pass"] * 12
+        streams = {
+            "a.py": [(t, i + 1) for i, t in enumerate(["def f():"] + twelve)],
+            "b.py": [(t, i + 1) for i, t in enumerate(["def g():"] + twelve)],
+        }
+        blocks, dup = D.find_blocks(streams)
+        self.assertEqual(dup, 12)
+        self.assertEqual(len(blocks), 1)
+        self.assertEqual(blocks[0]["lines"], 12)
+
+    def test_seven_identical_lines_across_two_files_counts_seven(self):
+        seven = ["    pass"] * 7
+        streams = {
+            "a.py": [(t, i + 1) for i, t in enumerate(["def f():"] + seven)],
+            "b.py": [(t, i + 1) for i, t in enumerate(["def g():"] + seven)],
+        }
+        _, dup = D.find_blocks(streams)
+        self.assertEqual(dup, 7)
+
+    def test_noncontiguous_window_is_not_a_duplicate(self):
+        # The same 3 lines added in two places in each of two files are
+        # never consecutive in either file, so no 6-line window exists.
+        three = ["x = 1", "y = 2", "z = 3"]
+        streams = {
+            "a.py": [(t, n) for t, n in zip(
+                three + three, [2, 3, 4, 9, 10, 11])],
+            "b.py": [(t, n) for t, n in zip(
+                three + three, [2, 3, 4, 9, 10, 11])],
+        }
+        _, dup = D.find_blocks(streams)
+        self.assertEqual(dup, 0)
+
+    def test_net_rule_pure_move_counts_zero(self):
+        # Two added places fully covered by two removed places: a pure
+        # move is net-new duplication of zero.
+        streams = {
+            "a.py": [(t, i + 1) for i, t in enumerate(["def f():"] + BLOCK)],
+            "b.py": [(t, i + 1) for i, t in enumerate(["def g():"] + BLOCK)],
+        }
+        removed = {tuple(BLOCK): [("a.py", 1), ("b.py", 1)]}
+        _, dup = D.find_blocks(streams, removed)
+        self.assertEqual(dup, 0)
+
+    def test_net_rule_partial_move_counts_net(self):
+        # Three added places, two removed: one net-new copy counts 6.
+        streams = {
+            "a.py": [(t, i + 1) for i, t in enumerate(["def f():"] + BLOCK)],
+            "b.py": [(t, i + 1) for i, t in enumerate(["def g():"] + BLOCK)],
+            "c.py": [(t, i + 1) for i, t in enumerate(["def h():"] + BLOCK)],
+        }
+        removed = {tuple(BLOCK): [("a.py", 1), ("b.py", 1)]}
+        _, dup = D.find_blocks(streams, removed)
+        self.assertEqual(dup, 6)
+
 
 class TestParseAdded(unittest.TestCase):
     def test_hunk_line_numbers_are_real(self):
@@ -174,6 +241,56 @@ class TestParseAdded(unittest.TestCase):
         removed = D.parse_removed(diff)
         self.assertEqual(len(removed["old.py"]), 7)
         self.assertEqual(removed["old.py"][0], ("def f():", 1))
+
+    def test_column_zero_plus_plus_lines_are_content(self):
+        # A content line starting with `++` at column 0 produces a
+        # diff line starting with `+++`, which is not a header.
+        diff = ("diff --git a/a.js b/a.js\n"
+                "--- a/a.js\n"
+                "+++ b/a.js\n"
+                "@@ -1,1 +1,7 @@\n"
+                " function f() {\n"
+                "+++count;\n"
+                "+    step_a(x);\n"
+                "+    step_b(x);\n"
+                "+    step_c(x);\n"
+                "+    step_d(x);\n"
+                "+    step_e(x);\n"
+                " }\n")
+        added = D.parse_added(diff)
+        self.assertEqual(len(added["a.js"]), 6)
+        self.assertEqual(added["a.js"][0], ("++count;", 2))
+
+    def test_column_zero_minus_minus_lines_are_content(self):
+        diff = ("diff --git a/a.js b/a.js\n"
+                "--- a/a.js\n"
+                "+++ b/a.js\n"
+                "@@ -1,7 +1,1 @@\n"
+                " function f() {\n"
+                "---count;\n"
+                "-    step_a(x);\n"
+                "-    step_b(x);\n"
+                "-    step_c(x);\n"
+                "-    step_d(x);\n"
+                "-    step_e(x);\n"
+                " }\n")
+        removed = D.parse_removed(diff)
+        self.assertEqual(len(removed["a.js"]), 6)
+        self.assertEqual(removed["a.js"][0], ("--count;", 2))
+        self.assertEqual(removed["a.js"][1], ("step_a(x);", 3))
+
+    def test_changed_files_includes_deleted_files(self):
+        diff = ("diff --git a/old.py b/old.py\n"
+                "--- a/old.py\n"
+                "+++ /dev/null\n"
+                "@@ -1,1 +0,0 @@\n"
+                "-x = 1\n"
+                "diff --git a/new.py b/new.py\n"
+                "--- /dev/null\n"
+                "+++ b/new.py\n"
+                "@@ -0,0 +1,1 @@\n"
+                "+y = 2\n")
+        self.assertEqual(D.changed_files(diff), ["new.py", "old.py"])
 
 
 class TestReferencesDest(unittest.TestCase):
@@ -437,6 +554,42 @@ class TestExtraction(unittest.TestCase):
                 [D.normalize(line, "tools/a/one.py") for line in BLOCK])]},
             [])
         self.assertEqual(hits, [])
+
+    def test_consolidation_without_reduction_is_not_an_extraction(self):
+        # Removed from two files, re-added twice in the destination:
+        # the destination holds as many copies as were removed, so
+        # nothing was consolidated and the move is not an extraction.
+        stanza = ["    v0 = 0", "    v1 = 1", "    v2 = 2",
+                  "    v3 = 3", "    v4 = 4", "    v5 = 5"]
+        added = D.parse_added(_diff_for({"tools/a/shared.py":
+            ["def shared():"] + stanza + ["    out = []"] + stanza}))
+        norm = [D.normalize(line, "tools/a/one.py") for line in stanza]
+        removed = {
+            path: [(t, i + 1) for i, t in enumerate(norm)]
+            for path in ("tools/a/one.py", "tools/a/two.py")
+        }
+        hits = D.find_extractions(added, removed, [])
+        self.assertEqual(hits, [])
+
+    def test_dest_range_does_not_span_gap(self):
+        # Removed from three files, re-added twice in the destination
+        # (two separate occurrences): two hits, each 6 lines, neither
+        # spanning the gap line between the occurrences.
+        stanza = ["    v0 = 0", "    v1 = 1", "    v2 = 2",
+                  "    v3 = 3", "    v4 = 4", "    v5 = 5"]
+        added = D.parse_added(_diff_for({"tools/a/shared.py":
+            ["def shared():"] + stanza + ["    out = []"] + stanza}))
+        norm = [D.normalize(line, "tools/a/one.py") for line in stanza]
+        removed = {
+            path: [(t, i + 1) for i, t in enumerate(norm)]
+            for path in ("tools/a/one.py", "tools/a/two.py",
+                         "tools/a/three.py")
+        }
+        hits = D.find_extractions(added, removed, [])
+        self.assertEqual(len(hits), 2)
+        for hit in hits:
+            self.assertEqual(
+                hit["dest"]["end_line"] - hit["dest"]["start_line"], 5)
 
 
 class TestPrintBlocks(unittest.TestCase):
@@ -702,6 +855,65 @@ class TestEvaluateEndToEnd(unittest.TestCase):
         self.assertEqual(D.cmd_check(argparse.Namespace(
             project=str(project))), 1)
         self.assertTrue(len(D.evaluate(project)["baseline_errors"]) > 0)
+
+    def test_pure_move_with_internal_repeat_passes(self):
+        # A function moved whole, its internal 6-line repeat included,
+        # passes both gates: the repeat predates the diff and nothing
+        # was consolidated into fewer occurrences.
+        stanza = (
+            "    if row is None:\n"
+            "        continue\n"
+            "    total += 1\n"
+            "    total += 2\n"
+            "    total += 3\n"
+            "    total += 4\n"
+        )
+        project = self._repo({
+            "tools/a/old.py": "def process():\n" + stanza + "    out = []\n" + stanza,
+            "tools/a/shared.py": "def s():\n    return 0\n",
+        }, {
+            "tools/a/old.py": "def process():\n    return shared()\n",
+            "tools/a/shared.py": "def shared():\n" + stanza + "    out = []\n" + stanza,
+        })
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=str(project))), 0)
+        res = D.evaluate(project)
+        self.assertEqual(res["duplicated_lines"], 0)
+        self.assertEqual(res["extraction"], [])
+
+    def test_test_file_extraction_does_not_fire(self):
+        # A fixture block moved between test files is fixture
+        # deduplication, not an extraction.
+        block_text = "\n".join(BLOCK) + "\n"
+        project = self._repo({
+            "tests/test_one.py": "def test_one():\n" + block_text,
+            "tests/test_two.py": "def test_two():\n" + block_text,
+            "tests/helpers.py": "def h():\n    return 0\n",
+        }, {
+            "tests/test_one.py": "def test_one():\n    return helper()\n",
+            "tests/test_two.py": "def test_two():\n    return helper()\n",
+            "tests/helpers.py": "def helper():\n" + block_text,
+        })
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=str(project))), 0)
+        self.assertEqual(D.evaluate(project)["extraction"], [])
+
+    def test_dirty_tree_padding_above_calling_test_still_exempts(self):
+        # Uncommitted comment lines above a calling test shift the
+        # on-disk call line, but the committed diff's lines are
+        # resolved against HEAD, so the exemption survives.
+        project = self._extract_repo(
+            "from tools.a.helpers import dedup\n\n\n"
+            "def test_dedup():\n    assert dedup() == 15\n")
+        test_path = project / "tests/test_helpers.py"
+        text = test_path.read_text(encoding="utf-8")
+        test_path.write_text(
+            text.replace("def test_dedup():",
+                         "# pad\n# pad\n# pad\ndef test_dedup():"),
+            encoding="utf-8")
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=str(project))), 0)
+        self.assertEqual(D.evaluate(project)["extraction"], [])
 
 
 if __name__ == "__main__":

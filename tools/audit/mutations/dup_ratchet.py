@@ -32,18 +32,18 @@ MUTATIONS = [
         "Only the window start is marked instead of all six lines, so a "
         "6-line repeat counts as 1 duplicated line and stays under any "
         "baseline that matters.",
-        "        for path, i in locs[1:]:\n"
-        "            for j in range(i, i + WINDOW):\n"
-        "                marked.add((path, j))",
-        "        for path, i in locs[1:]:\n"
-        "            marked.add((path, i))",
+        "            for p, idx in locs[free:]:\n"
+        "                for k in range(idx, idx + span):\n"
+        "                    marked.add((p, k))",
+        "            for p, idx in locs[free:]:\n"
+        "                marked.add((path, idx))  # one line per place",
     ),
     (
         "extraction gate dropped",
         "find_extractions is replaced with an empty list, so a cross-module "
         "extraction with no regression tests in the diff passes.",
         "    extraction = find_extractions(\n"
-        "        added, removed, test_lines, base_windows, dest_symbols)",
+        "        prod_added, prod_removed, test_lines, base_windows, dest_symbols)",
         "    extraction = []",
     ),
     (
@@ -199,5 +199,119 @@ MUTATIONS = [
         "fails) must catch this.",
         "    if isinstance(node, ast.Constant):\n        value = node.value",
         "    if False:  # dead-branch check dropped\n        value = node.value",
+    ),
+    (
+        "net rule dropped, a pure move fails the ratchet",
+        "The free-place count ignores removed places, so a repeat whose "
+        "added occurrences are fully covered by removed occurrences "
+        "counts as new duplication and a pure move fails the gate. The "
+        "flipped selftest case (a pure move of a function with an "
+        "internal repeat passes) must catch this.",
+        "        return max(1, len(removed_places.get(window, [])))",
+        "        return 1  # net rule dropped",
+    ),
+    (
+        "contiguity dropped, phantom windows fire",
+        "The window check accepts any 6 stream entries, so lines added "
+        "in two separate hunks concatenate into a block that never "
+        "existed in any file and the gate fails clean diffs. The "
+        "flipped selftest case (lines added in two separate hunks do "
+        "not form a block) must catch this.",
+        "    if lines[i + WINDOW - 1][1] - lines[i][1] != WINDOW - 1:\n"
+        "        return None",
+        "    if False:  # contiguity dropped\n"
+        "        return None",
+    ),
+    (
+        "consolidation rule dropped, a move that consolidates nothing fires",
+        "The destination-occurrence check is dropped, so a function "
+        "moved whole with its internal repeat still inside it fires "
+        "the extraction gate even though nothing was consolidated. The "
+        "flipped selftest case (a pure move of a function with an "
+        "internal repeat passes) must catch this.",
+        "                if dest_occ >= len(removed_positions[window]):\n"
+        "                    continue",
+        "                if False:  # consolidation dropped\n"
+        "                    continue",
+    ),
+    (
+        "test files reach the extraction gate again",
+        "The production-only filter is dropped, so moving a fixture "
+        "block between test files fires the extraction gate even though "
+        "the ratchet excludes test files for the same reason. The "
+        "flipped selftest case (moving a fixture block between test "
+        "files is not an extraction) must catch this.",
+        "    extraction = find_extractions(\n"
+        "        prod_added, prod_removed, test_lines, base_windows, dest_symbols)",
+        "    extraction = find_extractions(\n"
+        "        added, removed, test_lines, base_windows, dest_symbols)",
+    ),
+    (
+        "non-UTF8 base file silently skipped again",
+        "The decode failure is swallowed, so a partial-migration "
+        "verdict rests on a partially read base tree and a move that "
+        "should fail closed passes. The flipped selftest case (a "
+        "non-UTF8 base-tree file fails closed) must catch this.",
+        "            except UnicodeDecodeError:\n"
+        "                raise CheckError(\n"
+        "                    f\"cannot read the base tree at {base}: \"\n"
+        "                    f\"{member.name} is not UTF-8\")",
+        "            except UnicodeDecodeError:\n"
+        "                continue  # unread file skipped",
+    ),
+    (
+        "per-diff source resolution dropped, committed lines read from disk",
+        "The committed diff's test lines are resolved against the "
+        "working tree instead of HEAD, so uncommitted padding above a "
+        "calling test voids a valid exemption and the gate fails a "
+        "tested extraction. The flipped selftest case (dirty-tree "
+        "padding above a calling test still exempts) must catch this.",
+        "        lambda path: _head_source(project, path),",
+        "        lambda path: _disk_source(project, path),",
+    ),
+    (
+        "prose test lines exempt an extraction",
+        "The code-file filter is dropped from the raw test-line "
+        "collector, so a document named like a test exempts an "
+        "extraction with a line of prose. The flipped selftest case "
+        "(a test-named Markdown note does not exempt an extraction) "
+        "must catch this.",
+        '            if kind == "added" and is_test_file(path) and is_code(path):',
+        '            if kind == "added" and is_test_file(path):',
+    ),
+    (
+        "diff header guards loosened to bare prefixes",
+        "The header guard matches bare `+++` again, so a content line "
+        "starting with `++` at column 0 is dropped as a header and the "
+        "repeat it belonged to passes the gate. The flipped selftest "
+        "case (column-0 ++ lines are content and the repeat fails) must "
+        "catch this.",
+        '                and not raw.startswith("+++ "):',
+        '                and not raw.startswith("+++"):',
+    ),
+    (
+        "PASS line claims no repeats when repeats exist",
+        "The verdict line goes back to asserting there are no "
+        "byte-identical repeats whenever the gate passes, which is "
+        "false on every passing PR at a nonzero baseline. The flipped "
+        "selftest case (PASS line states the ratchet outcome at the "
+        "baseline) must catch this.",
+        "        print(f\"\\nVERDICT: PASS (duplicated added lines \"\n"
+        "              f\"{result['duplicated_lines']} within baseline \"\n"
+        "              f\"{result['baseline']})\")",
+        "        print(\"\\nVERDICT: PASS (no byte-identical 6-line repeats \"\n"
+        "              \"in added lines)\")",
+    ),
+    (
+        "run collapse dropped in the ratchet leg",
+        "The ratchet leg stops collapsing overlapping window starts "
+        "inside one maximal run, so twelve identical lines in one file "
+        "count as duplication with no second copy anywhere. The "
+        "flipped selftest case (twelve identical lines in one new "
+        "file are not a duplicate) must catch this.",
+        "            for s in _distinct_starts(idxs, [t for t, _ in lines]):\n"
+        "                places[window].append((path, s))",
+        "            for s in idxs:  # run collapse dropped\n"
+        "                places[window].append((path, s))",
     ),
 ]

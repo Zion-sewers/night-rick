@@ -41,15 +41,25 @@ WHAT COUNTS AS A DUPLICATE
 An exact repeat, not a similarity score. After normalization (blank lines
 dropped, full-line comments dropped, import lines and bare docstring fences
 dropped, whitespace collapsed), a run of 6 consecutive added lines that
-appears at 2 or more locations is a duplicate block. Same-looking code that
+appears at 2 or more places is a duplicate block. A place is a maximal run
+of identical lines, not a window start: twelve identical lines in one file
+are one place, not seven overlapping windows, so a single file holding
+twelve identical lines counts 0 duplicated lines. Consecutive means
+consecutive in the file: the 6 lines must have consecutive line numbers,
+so lines added in two separate hunks never form a block that never
+existed. The ratchet is net-new: a repeat whose added occurrences are
+fully covered by removed occurrences does not count (a pure move counts
+0), because the issue's first mechanism is that legacy debt never
+blocks, and moving debt is not creating it. Same-looking code that
 is not textually identical does NOT fire: same-looking code may encode
 different concepts, and abstracting it is a judgement call this tool
 refuses to make for the author. Similar-but-not-identical matches are out
 of scope by design. For byte-identical blocks the tool does not decide
 whether the copies share meaning either: before extracting, the author
 records why the copies share meaning (same concept, same future changes)
-in the PR description, where review enforces it, because a static tool
-cannot verify a PR description. The gate enforces the choice, not the
+in the PR description, where a human reviewer sees it. No tool in this
+repo reads a PR description, so the printed reminder is the whole
+mechanism. The gate enforces the choice, not the
 judgement: extract with an asserting regression test, or keep the
 duplication and raise the baseline with a recorded reason. The threshold (6) was
 calibrated against real merged diffs (see
@@ -93,8 +103,15 @@ ratchet FAIL. A unique block that merely moves (one base-tree occurrence)
 is not an extraction and is not gated. The destination may itself be one
 of the files the block was removed from (consolidation into an existing
 holder file); it is skipped only when it is the SOLE file the block was
-removed from, which is an in-place edit, not a move. Deleting duplicated
-code without adding a shared home is not an extraction and is not gated.
+removed from, which is an in-place edit, not a move. The clean-room
+shape fires only when the destination holds strictly fewer occurrences
+of the block than were removed: a destination that still holds as many
+copies as were removed consolidated nothing, so the move is not an
+extraction (a function moved whole, repeat inside it included, passes
+both gates). Test files are excluded from the extraction gate entirely:
+moving a fixture block between test files is fixture deduplication, not
+an extraction. Deleting duplicated code without adding a shared home is
+not an extraction and is not gated.
 
 MEASUREMENT
 
@@ -128,7 +145,7 @@ import tempfile
 from collections import Counter, defaultdict
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Iterator, TypedDict
+from typing import Callable, Iterator, TypedDict
 
 WINDOW = 6
 BASELINE_PATH = "state/dup-ratchet.json"
@@ -275,6 +292,12 @@ def _scan_diff(diff: str) -> Iterator[tuple[str, int, int, str, str]]:
     them), and a new file's `+++ b/` header sets the path before any
     content line, so dropping the reset changes nothing observable
     on a well-formed git diff.
+
+    Header guards match only the actual header forms (`+++ ` and
+    `--- ` with a trailing space): a content line starting with `++`
+    or `--` at column 0 (`++count;`, `--count;`) produces a diff line
+    starting with `+++` / `---`, and a bare-prefix guard would drop
+    it and shift every later line number in the hunk by one.
     """
     path: str | None = None
     old_lineno = 0
@@ -294,11 +317,11 @@ def _scan_diff(diff: str) -> Iterator[tuple[str, int, int, str, str]]:
             old_lineno += 1
             new_lineno += 1
         elif path is not None and raw.startswith("+") \
-                and not raw.startswith("+++"):
+                and not raw.startswith("+++ "):
             yield path, old_lineno, new_lineno, "added", raw[1:]
             new_lineno += 1
         elif path is not None and raw.startswith("-") \
-                and not raw.startswith("---"):
+                and not raw.startswith("--- "):
             yield path, old_lineno, new_lineno, "removed", raw[1:]
             old_lineno += 1
 
@@ -332,66 +355,162 @@ def changed_files(diff: str) -> list[str]:
     for raw in diff.splitlines():
         if raw.startswith("+++ b/"):
             files.add(raw[6:])
+        elif raw.startswith("--- a/"):
+            # A deleted file has no `+++ b/` header, so without this
+            # its path never appears in the changed list.
+            files.add(raw[6:])
     return sorted(files)
+
+
+def _window_at(
+    lines: list[tuple[str, int]], i: int,
+) -> tuple[str, ...] | None:
+    """The 6-line window starting at stream index i, or None.
+
+    None when the window would run past the end of the stream, and
+    None when the 6 lines are not consecutive in the file: a window
+    spanning a hunk boundary, or a dropped blank/comment line, is a
+    block that never existed as a block, so it must not count. The
+    line numbers are the file's own, so consecutive in the stream is
+    not enough; the check is lineno[i+5] - lineno[i] == 5.
+    """
+    if i < 0 or i + WINDOW > len(lines):
+        return None
+    if lines[i + WINDOW - 1][1] - lines[i][1] != WINDOW - 1:
+        return None
+    return tuple(t for t, _ in lines[i:i + WINDOW])
+
+
+def _contiguous_windows(
+    lines: list[tuple[str, int]],
+) -> Iterator[tuple[int, tuple[str, ...]]]:
+    """(index, window) for every contiguous 6-line window in a stream."""
+    for i in range(len(lines) - WINDOW + 1):
+        window = _window_at(lines, i)
+        if window is not None:
+            yield i, window
+
+
+def _window_places(
+    streams: dict[str, list[tuple[str, int]]],
+) -> dict[tuple[str, ...], list[tuple[str, int]]]:
+    """Distinct places of each contiguous window, per file collapsed.
+
+    A place is a maximal run of identical lines, not a window start:
+    twelve identical lines moved as a unit are one place, not two
+    non-overlapping windows. `_distinct_starts` does the collapsing
+    per file; the places of a window are the collapsed starts across
+    all files that hold it.
+    """
+    places: dict[tuple[str, ...], list[tuple[str, int]]] = defaultdict(list)
+    for path, lines in streams.items():
+        starts: dict[tuple[str, ...], list[int]] = defaultdict(list)
+        for i, window in _contiguous_windows(lines):
+            starts[window].append(i)
+        for window, idxs in starts.items():
+            for s in _distinct_starts(idxs, [t for t, _ in lines]):
+                places[window].append((path, s))
+    return places
 
 
 def find_blocks(
     streams: dict[str, list[tuple[str, int]]],
+    removed_places: dict[tuple[str, ...], list[tuple[str, int]]] | None = None,
 ) -> tuple[list[Block], int]:
-    """Group duplicate windows into maximal blocks; count distinct dup lines.
+    """Group duplicate windows into maximal blocks; count net-new dup lines.
 
-    The count is the set of distinct added lines inside any duplicate
-    window beyond the first occurrence, so a 12-line repeat counts 12
-    lines in one block, not 7 overlapping windows. Reporting groups
-    windows into maximal families: a family is a maximal run of consecutive
-    windows whose location set shifts with the window. Every location of
-    every family is reported, first occurrence included.
+    A place is a maximal run of identical lines (see `_window_places`),
+    and a window is a duplicate only when it appears at 2 or more
+    places. The count is the set of distinct added lines inside any
+    duplicate block beyond the first occurrence, so a 12-line repeat
+    counts 12 lines in one block, not 7 overlapping windows, and a
+    single file holding 12 identical lines counts 0: there is no
+    second copy anywhere.
+
+    The ratchet is net-new: `removed_places` maps each window to the
+    distinct places it was removed from, and a repeat whose added
+    occurrences are fully covered by removed occurrences does not
+    count. Counted places are the added places beyond
+    max(1, removed places) per window: one place is always free (the
+    first occurrence), and each removed place covers one more, so a
+    pure move counts 0 and a block added twice while removed once
+    counts one copy. With no removed map (report, calibration) the
+    free count is 1, the old rule. Reporting groups windows into
+    maximal families: a family is a maximal run of consecutive windows
+    whose location set shifts with the window, where the shift is
+    checked by tuple equality at the shifted position in every file
+    holding a place, so a uniform run extends to its full length in
+    every copy and the family's span is the shortest run across its
+    places. Every location of every family is reported, first
+    occurrence included.
     """
-    windows: dict[tuple[str, ...], list[tuple[str, int]]] = defaultdict(list)
-    for path, lines in streams.items():
-        for i in range(len(lines) - WINDOW + 1):
-            windows[tuple(t for t, _ in lines[i:i + WINDOW])].append((path, i))
-    marked: set[tuple[str, int]] = set()
-    for locs in windows.values():
-        if len(locs) < 2:
-            continue
-        for path, i in locs[1:]:
-            for j in range(i, i + WINDOW):
-                marked.add((path, j))
+    places = _window_places(streams)
+
+    def free_count(window: tuple[str, ...]) -> int:
+        if removed_places is None:
+            return 1
+        return max(1, len(removed_places.get(window, [])))
+
+    def is_duplicate(window: tuple[str, ...]) -> bool:
+        return len(places.get(window, [])) > free_count(window)
+
+    def tuple_at(path: str, idx: int) -> tuple[str, ...] | None:
+        lines = streams.get(path)
+        if lines is None:
+            return None
+        return _window_at(lines, idx)
+
+    def extends(
+        base_places: list[tuple[str, int]], ref_path: str,
+        from_idx: int, to_idx: int,
+    ) -> bool:
+        """Does the family starting at from_idx extend to to_idx?
+
+        Every base place's shifted position must hold the same window
+        tuple as the reference position to_idx. For a block of
+        distinct lines that is the shifted place itself; for a uniform
+        run it is any position inside the run, which is what lets the
+        family span the whole run instead of one window.
+        """
+        target = tuple_at(ref_path, to_idx)
+        if target is None:
+            return False
+        delta = to_idx - from_idx
+        for p, s in base_places:
+            if tuple_at(p, s + delta) != target:
+                return False
+        return True
+
     blocks: list[Block] = []
+    marked: set[tuple[str, int]] = set()
     seen: set[tuple[tuple[tuple[str, int], ...], int]] = set()
     for path, lines in streams.items():
         i = 0
         while i <= len(lines) - WINDOW:
-            key = tuple(t for t, _ in lines[i:i + WINDOW])
-            locs = windows.get(key, [])
-            if len(locs) < 2:
+            key = tuple_at(path, i)
+            if key is None or not is_duplicate(key):
                 i += 1
                 continue
+            locs = places[key]
             if i > 0:
-                prev = tuple(t for t, _ in lines[i - 1:i - 1 + WINDOW])
-                prev_locs = windows.get(prev, [])
-                shifted = sorted((p, idx + 1) for p, idx in prev_locs)
-                if len(prev_locs) >= 2 and sorted(locs) == shifted:
+                prev = tuple_at(path, i - 1)
+                if prev is not None and is_duplicate(prev) \
+                        and extends(places[prev], path, i - 1, i):
                     i += 1
                     continue
             j = i
-            run_locs = locs
-            while j + 1 <= len(lines) - WINDOW:
-                nxt = tuple(t for t, _ in lines[j + 1:j + 1 + WINDOW])
-                nxt_locs = windows.get(nxt, [])
-                shifted = sorted((p, idx + 1) for p, idx in run_locs)
-                if len(nxt_locs) >= 2 and sorted(nxt_locs) == shifted:
-                    j += 1
-                    run_locs = nxt_locs
-                else:
-                    break
+            while extends(locs, path, i, j + 1):
+                j += 1
             span = j - i + WINDOW
             family_key = (tuple(sorted(locs)), span)
             if family_key in seen:
                 i = j + 1
                 continue
             seen.add(family_key)
+            free = free_count(key)
+            for p, idx in locs[free:]:
+                for k in range(idx, idx + span):
+                    marked.add((p, k))
             locations: list[Location] = []
             for p, idx in locs:
                 plines = streams[p]
@@ -594,6 +713,28 @@ def _dest_symbols_on_disk(project: Path, path: str) -> set[str] | None:
     return names or None
 
 
+def _head_source(project: Path, path: str) -> str | None:
+    """The test file's content at HEAD, or None when it is not there.
+
+    The committed diff's line numbers refer to HEAD, so its test lines
+    are resolved against this source, never against the working tree.
+    """
+    out = git(project, f"show HEAD:{path}")
+    return out if out else None
+
+
+def _disk_source(project: Path, path: str) -> str | None:
+    """The test file's content on disk, or None when unreadable.
+
+    The working-tree diff's line numbers refer to the working tree,
+    so its test lines are resolved against this source.
+    """
+    try:
+        return (project / path).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
 def _raw_added_test_lines_by_file(
     diffs: list[str],
 ) -> dict[str, list[tuple[str, int]]]:
@@ -602,24 +743,32 @@ def _raw_added_test_lines_by_file(
     Raw, not normalized: the reference check reads the original text so
     its string-literal and comment stripping sees what the author wrote.
     Line numbers are the new-file numbers, so they line up with the
-    test file on disk that the AST filter reads.
+    test file the AST filter reads. Only code files supply test lines:
+    a document named like a test (`test_notes.md`) is prose, not a
+    regression test, and its lines must not exempt an extraction.
     """
     added: dict[str, list[tuple[str, int]]] = defaultdict(list)
     for diff in diffs:
         for path, _old, new_lineno, kind, text in _scan_diff(diff):
-            if kind == "added" and is_test_file(path):
+            if kind == "added" and is_test_file(path) and is_code(path):
                 added[path].append((text, new_lineno))
     return added
 
 
 def _qualifying_test_lines(
-    project: Path,
     raw_by_file: dict[str, list[tuple[str, int]]],
+    source_for: "Callable[[str], str | None]",
 ) -> list[str]:
     """Added test lines that can exempt an extraction, flat.
 
     For Python test files, only lines the AST filter qualifies: a call
-    inside an asserting `test_*` function. An unreadable or unparseable
+    inside an asserting `test_*` function. `source_for` resolves the
+    file's content for the diff these lines came from: the committed
+    diff's lines are checked against the file at HEAD, the
+    working-tree diff's lines against the file on disk. The two diffs
+    number lines on different bases (HEAD vs working tree), so one
+    source for both would void a valid exemption whenever uncommitted
+    edits above the test shift its lines. An unreadable or unparseable
     test file qualifies nothing (fail closed). Non-Python test files
     keep the call-only floor: the test-function rule is implemented on
     the Python AST, and the regex match in `_references_dest` is still
@@ -630,9 +779,8 @@ def _qualifying_test_lines(
         if Path(path).suffix.lower() != ".py":
             lines.extend(raw for raw, _ in entries)
             continue
-        try:
-            source = (project / path).read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
+        source = source_for(path)
+        if source is None:
             continue
         ok = _qualifying_call_lines(source)
         lines.extend(raw for raw, n in entries if n in ok)
@@ -715,7 +863,10 @@ def _base_tree_window_counts(
     by the test itself, the same reason test files are excluded from
     the ratchet FAIL, so it must not turn a production move into an
     extraction. Raises CheckError when the base tree cannot be read: a
-    partial-migration verdict must not rest on an unread tree.
+    partial-migration verdict must not rest on an unread tree. That
+    covers a git-level failure and a code file that cannot be decoded
+    as UTF-8: either is a tree that cannot be read, so the check fails
+    closed instead of silently skipping the file.
     """
     import io
     import tarfile
@@ -741,18 +892,20 @@ def _base_tree_window_counts(
             try:
                 text = extracted.read().decode("utf-8")
             except UnicodeDecodeError:
-                continue
+                raise CheckError(
+                    f"cannot read the base tree at {base}: "
+                    f"{member.name} is not UTF-8")
             lines = [
-                norm for line in text.splitlines()
+                (norm, lineno)
+                for lineno, line in enumerate(text.splitlines(), start=1)
                 if (norm := normalize(line, member.name)) is not None
             ]
             positions: dict[tuple[str, ...], list[int]] = defaultdict(list)
-            for i in range(len(lines) - WINDOW + 1):
-                window = tuple(lines[i:i + WINDOW])
+            for i, window in _contiguous_windows(lines):
                 if window in candidates:
                     positions[window].append(i)
             for window, starts in positions.items():
-                counts[window] += len(_distinct_starts(starts, lines))
+                counts[window] += len(_distinct_starts(starts, [t for t, _ in lines]))
     return dict(counts)
 
 
@@ -781,24 +934,29 @@ def find_extractions(
     occurrence) is not an extraction. The destination is skipped only
     when it is the SOLE file the block was removed from (an in-place
     edit); consolidation into an existing holder file still fires.
+    The clean-room shape fires only when the destination holds strictly
+    fewer occurrences of the block than were removed: a destination
+    that still holds as many copies as were removed consolidated
+    nothing, so the move is not an extraction. Windows are contiguous
+    6-line runs in the file: a window spanning a hunk boundary or a
+    dropped line never existed as a block, so it cannot be an
+    extraction. A hit's destination range covers one run of
+    consecutive windows only, never the gap between two separate
+    occurrences of the same block in the destination.
     """
-    removed_windows: dict[tuple[str, ...], set[str]] = defaultdict(set)
-    removed_positions: dict[tuple[str, ...], list[tuple[str, int]]] = defaultdict(list)
-    for path, lines in removed.items():
-        starts: dict[tuple[str, ...], list[int]] = defaultdict(list)
-        for i in range(len(lines) - WINDOW + 1):
-            window = tuple(t for t, _ in lines[i:i + WINDOW])
-            starts[window].append(i)
-        for window, idxs in starts.items():
-            removed_windows[window].add(path)
-            for s in _distinct_starts(idxs, [t for t, _ in lines]):
-                removed_positions[window].append((path, s))
+    removed_positions = _window_places(removed)
+    removed_windows: dict[tuple[str, ...], set[str]] = {
+        window: {p for p, _ in rplaces}
+        for window, rplaces in removed_positions.items()
+    }
     added_windows: dict[tuple[str, ...], list[tuple[str, int]]] = defaultdict(list)
     for path, lines in added.items():
-        for i in range(len(lines) - WINDOW + 1):
-            added_windows[tuple(t for t, _ in lines[i:i + WINDOW])].append((path, i))
+        for i, window in _contiguous_windows(lines):
+            added_windows[window].append((path, i))
     base_counts = base_windows or {}
-    merged: dict[tuple[tuple[str, ...], str], ExtractionHit] = {}
+    merged: list[ExtractionHit] = []
+    active: dict[tuple[tuple[str, ...], str], int] = {}
+    last_aidx: dict[tuple[tuple[str, ...], str], int] = {}
     for window, rpaths in removed_windows.items():
         # A removed block counts as repeated when it occurs 2+ distinct
         # times among removed lines, or occurred 2+ times in the base
@@ -809,6 +967,17 @@ def find_extractions(
         for apath, aidx in added_windows.get(window, []):
             if rpaths == {apath}:
                 continue
+            if len(removed_positions[window]) >= 2:
+                # Clean-room leg: the destination must hold strictly
+                # fewer occurrences than were removed, or nothing was
+                # consolidated and the move is not an extraction.
+                dest_starts = [
+                    i for p, i in added_windows[window] if p == apath
+                ]
+                dest_occ = len(_distinct_starts(
+                    dest_starts, [t for t, _ in added[apath]]))
+                if dest_occ >= len(removed_positions[window]):
+                    continue
             syms = (dest_symbols or {}).get(apath)
             if _references_dest(test_lines, apath, syms):
                 continue
@@ -827,17 +996,20 @@ def find_extractions(
                 "end_line": alines[aidx + WINDOW - 1][1],
             }
             key = (tuple(sorted(rpaths)), apath)
-            hit = merged.get(key)
-            if hit is None:
-                merged[key] = {
+            if key in active and aidx == last_aidx[key] + 1:
+                hit = merged[active[key]]
+                hit["dest"]["end_line"] = max(
+                    hit["dest"]["end_line"], dest["end_line"])
+                last_aidx[key] = aidx
+            else:
+                active[key] = len(merged)
+                last_aidx[key] = aidx
+                merged.append({
                     "sources": sources,
                     "dest": dest,
                     "sample": window[0][:100],
-                }
-            else:
-                hit["dest"]["end_line"] = max(
-                    hit["dest"]["end_line"], dest["end_line"])
-    return sorted(merged.values(),
+                })
+    return sorted(merged,
                   key=lambda h: (h["dest"]["path"], h["dest"]["start_line"]))
 
 
@@ -949,30 +1121,43 @@ def evaluate(project: Path) -> CheckResult:
             seen_r = {(t, n) for t, n in removed[path]}
             removed[path].extend([(t, n) for t, n in rlines if (t, n) not in seen_r])
         files.update(changed_files(diff))
-    blocks, dup = find_blocks(
-        {p: lines for p, lines in added.items() if not is_test_file(p)})
+    prod_added = {p: lines for p, lines in added.items()
+                  if not is_test_file(p)}
+    test_added = {p: lines for p, lines in added.items()
+                  if is_test_file(p)}
+    prod_removed = {p: lines for p, lines in removed.items()
+                    if not is_test_file(p)}
+    test_removed = {p: lines for p, lines in removed.items()
+                    if is_test_file(p)}
+    blocks, dup = find_blocks(prod_added, _window_places(prod_removed))
     test_blocks, test_dup = find_blocks(
-        {p: lines for p, lines in added.items() if is_test_file(p)})
-    combined, _ = find_blocks(added)
+        test_added, _window_places(test_removed))
+    combined, _ = find_blocks(added, _window_places(removed))
     cross = [b for b in combined
              if any(is_test_file(loc["path"]) for loc in b["locations"])
              and any(not is_test_file(loc["path"]) for loc in b["locations"])]
+    # The two diffs number lines on different bases (HEAD vs working
+    # tree), so each diff's test lines are resolved against its own
+    # source: HEAD for the committed diff, disk for the working one.
     test_lines = _qualifying_test_lines(
-        project, _raw_added_test_lines_by_file(diffs))
+        _raw_added_test_lines_by_file([diffs[0]]),
+        lambda path: _head_source(project, path),
+    ) + _qualifying_test_lines(
+        _raw_added_test_lines_by_file([diffs[1]]),
+        lambda path: _disk_source(project, path),
+    )
     # Partial migration needs the base tree: a removed window re-added
     # elsewhere with only one distinct removal is an extraction only
     # when the block was already duplicated before the diff. Read the
     # base tree only when such a candidate exists.
     base_windows: dict[tuple[str, ...], int] = {}
     removed_set = {
-        tuple(t for t, _ in lines[i:i + WINDOW])
-        for lines in removed.values()
-        for i in range(len(lines) - WINDOW + 1)
+        window for lines in removed.values()
+        for _, window in _contiguous_windows(lines)
     }
     added_set = {
-        tuple(t for t, _ in lines[i:i + WINDOW])
-        for lines in added.values()
-        for i in range(len(lines) - WINDOW + 1)
+        window for lines in added.values()
+        for _, window in _contiguous_windows(lines)
     }
     if removed_set & added_set:
         base_windows = _base_tree_window_counts(
@@ -982,8 +1167,11 @@ def evaluate(project: Path) -> CheckResult:
         for path in added
         if (syms := _dest_symbols_on_disk(project, path)) is not None
     }
+    # The extraction gate sees production code only: a move inside
+    # test files is fixture deduplication, not an extraction, the same
+    # reason test files are excluded from the ratchet FAIL.
     extraction = find_extractions(
-        added, removed, test_lines, base_windows, dest_symbols)
+        prod_added, prod_removed, test_lines, base_windows, dest_symbols)
     today = date.today()
     errors: list[str] = []
     lapsed = ""
@@ -1069,7 +1257,9 @@ def cmd_check(a: argparse.Namespace) -> int:
                   "justification):", result["blocks"])
     if result["blocks"]:
         print("  (duplicated lines count distinct added lines beyond the "
-              "first occurrence of each block)")
+              "first occurrence of each block, net of lines moved as a "
+              "unit: a repeat fully covered by removed occurrences does "
+              "not count)")
     _print_blocks("TEST-FILE DUPLICATION (informational, not ratcheted):",
                   result["test_blocks"])
     _print_blocks("CROSS-COPIES, production code and test file "
@@ -1127,7 +1317,17 @@ def cmd_check(a: argparse.Namespace) -> int:
         print(f"\n  note: duplicated lines are below baseline; the baseline "
               f"can be lowered to {result['duplicated_lines']} in a "
               "follow-up with reason 'lowered after dedup'")
-    print("\nVERDICT: PASS (no byte-identical 6-line repeats in added lines)")
+    if result["blocks"] or result["test_blocks"] or result["cross_blocks"] \
+            or result["duplicated_lines"] > 0:
+        # The verdict line states the ratchet outcome, not the absence
+        # of repeats: repeats within the baseline, and repeats the
+        # ratchet excludes (test files, cross-copies), are real repeats
+        # the old wording denied.
+        print(f"\nVERDICT: PASS (duplicated added lines "
+              f"{result['duplicated_lines']} within baseline "
+              f"{result['baseline']})")
+    else:
+        print("\nVERDICT: PASS (no byte-identical 6-line repeats in added lines)")
     return 0
 
 
@@ -1176,7 +1376,8 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text(text, encoding="utf-8")
 
-    def make_repo(files: dict[str, str]) -> Path:
+    def make_repo(files: dict[str, str],
+                  raw: dict[str, bytes] | None = None) -> Path:
         td = tempfile.mkdtemp()
         project = Path(td)
         subprocess.run(["git", "init", "-q", "-b", "main"], cwd=project, check=True)
@@ -1184,6 +1385,10 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
                        cwd=project, check=True)
         subprocess.run(["git", "config", "user.name", "t"], cwd=project, check=True)
         write_files(project, files)
+        for path, data in (raw or {}).items():
+            p = project / path
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_bytes(data)
         subprocess.run(["git", "add", "-A"], cwd=project, check=True)
         subprocess.run(["git", "commit", "-q", "-m", "base"], cwd=project, check=True)
         subprocess.run(["git", "checkout", "-q", "-b", "pr"], cwd=project, check=True)
@@ -1205,6 +1410,11 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
 
     block = "\n".join(f"    value_{i} = compute_{i}(row)" for i in range(6)) + "\n"
     base_files = {"tools/a/one.py": "def f():\n    return 1\n"}
+
+    def repo_with_baseline() -> Path:
+        return make_repo({**base_files, BASELINE_PATH: json.dumps(
+            {"baseline": 6, "reason": "sibling profile scripts, recorded",
+             "expires": future(), "owner": "claude-376-test"})})
 
     # 1. a 6-line block repeated across two new files fails the ratchet
     repo = make_repo(base_files)
@@ -1393,9 +1603,7 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
     # 7. baseline respected; raised baseline without a reason fails.
     #    The raise must already be on main: a raise inside the diff under
     #    review does not take effect until it merges (case 11).
-    repo = make_repo({**base_files, BASELINE_PATH: json.dumps(
-        {"baseline": 6, "reason": "sibling profile scripts, recorded",
-         "expires": future(), "owner": "claude-376-test"})})
+    repo = repo_with_baseline()
     commit(repo, {
         "tools/a/two.py": "def g():\n" + block,
         "tools/a/three.py": "def h():\n" + block,
@@ -1651,6 +1859,219 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
     code, res = run_check(repo)
     check("single removal of 12 identical lines is not an extraction",
           res["extraction"] == [], json.dumps(res))
+
+    # 19. twelve identical lines in ONE new file are one place, not a
+    #     duplicate: there is no second copy anywhere.
+    repo = make_repo(base_files)
+    commit(repo, {"tools/a/two.py": "def g():\n" + twelve})
+    code, res = run_check(repo)
+    check("twelve identical lines in one new file are not a duplicate",
+          code == 0 and res["duplicated_lines"] == 0, json.dumps(res))
+
+    # 19b. the same run in two files counts 12, not 23 overlapping
+    #      windows.
+    repo = make_repo(base_files)
+    commit(repo, {
+        "tools/a/two.py": "def g():\n" + twelve,
+        "tools/a/three.py": "def h():\n" + twelve,
+    })
+    code, res = run_check(repo)
+    check("twelve identical lines in two files count 12",
+          code == 1 and res["duplicated_lines"] == 12, json.dumps(res))
+
+    # 19c. seven identical lines in two files count 7.
+    repo = make_repo(base_files)
+    commit(repo, {
+        "tools/a/two.py": "def g():\n" + seven,
+        "tools/a/three.py": "def h():\n" + seven,
+    })
+    code, res = run_check(repo)
+    check("seven identical lines in two files count 7",
+          code == 1 and res["duplicated_lines"] == 7, json.dumps(res))
+
+    # 20. the same 3 lines added in two places in each of two files do
+    #     not form a 6-line block: the lines were never consecutive.
+    phantom_base = {
+        "tools/a/one.py": "def f1():\n    return 1\n\n\ndef f2():\n    return 2\n",
+        "tools/a/two.py": "def g1():\n    return 1\n\n\ndef g2():\n    return 2\n",
+    }
+    three = "    x = 1\n    y = 2\n    z = 3\n"
+    phantom_pr = {
+        "tools/a/one.py": "def f1():\n" + three + "    return 1\n\n\ndef f2():\n" + three + "    return 2\n",
+        "tools/a/two.py": "def g1():\n" + three + "    return 1\n\n\ndef g2():\n" + three + "    return 2\n",
+    }
+    repo = make_repo(phantom_base)
+    commit(repo, phantom_pr)
+    code, res = run_check(repo)
+    check("lines added in two separate hunks do not form a block",
+          code == 0 and res["duplicated_lines"] == 0, json.dumps(res))
+
+    # 20b. the same 6 lines removed in two halves around a kept line
+    #      and re-added contiguously are not an extraction: the block
+    #      never existed contiguously in any file.
+    split_base = {
+        "tools/a/one.py": "def f():\n    v0 = 0\n    v1 = 1\n    v2 = 2\n    keep = 1\n    v3 = 3\n    v4 = 4\n    v5 = 5\n",
+        "tools/a/two.py": "def g():\n    v0 = 0\n    v1 = 1\n    v2 = 2\n    keep = 2\n    v3 = 3\n    v4 = 4\n    v5 = 5\n",
+        "tools/a/shared.py": "def s():\n    return 0\n",
+    }
+    split_pr = {
+        "tools/a/one.py": "def f():\n    return shared()\n",
+        "tools/a/two.py": "def g():\n    return shared()\n",
+        "tools/a/shared.py": "def shared():\n    v0 = 0\n    v1 = 1\n    v2 = 2\n    v3 = 3\n    v4 = 4\n    v5 = 5\n",
+    }
+    repo = make_repo(split_base)
+    commit(repo, split_pr)
+    code, res = run_check(repo)
+    check("lines removed in two halves are not an extraction",
+          code == 0 and res["extraction"] == [], json.dumps(res))
+
+    # 21. a pure move of a function containing a 6-line stanza twice
+    #     passes both gates: the repeat predates the diff, nothing was
+    #     extracted, and the ratchet is net-new.
+    stanza = (
+        "    if row is None:\n"
+        "        continue\n"
+        "    total += 1\n"
+        "    total += 2\n"
+        "    total += 3\n"
+        "    total += 4\n"
+    )
+    move_base = {
+        "tools/a/old.py": "def process():\n" + stanza + "    out = []\n" + stanza,
+        "tools/a/shared.py": "def s():\n    return 0\n",
+    }
+    move_pr = {
+        "tools/a/old.py": "def process():\n    return shared()\n",
+        "tools/a/shared.py": "def shared():\n" + stanza + "    out = []\n" + stanza,
+    }
+    repo = make_repo(move_base)
+    commit(repo, move_pr)
+    code, res = run_check(repo)
+    check("pure move of a function with an internal repeat passes",
+          code == 0 and res["duplicated_lines"] == 0
+          and res["extraction"] == [], json.dumps(res))
+
+    # 22. moving a fixture block between test files is not an
+    #     extraction: test files are excluded from the gate, the same
+    #     reason they are excluded from the ratchet FAIL.
+    fixture_base = {
+        "tests/test_one.py": "def test_one():\n" + block,
+        "tests/test_two.py": "def test_two():\n" + block,
+        "tests/helpers.py": "def h():\n    return 0\n",
+    }
+    fixture_pr = {
+        "tests/test_one.py": "def test_one():\n    return helper()\n",
+        "tests/test_two.py": "def test_two():\n    return helper()\n",
+        "tests/helpers.py": "def helper():\n" + block,
+    }
+    repo = make_repo(fixture_base)
+    commit(repo, fixture_pr)
+    code, res = run_check(repo)
+    check("moving a fixture block between test files is not an extraction",
+          code == 0 and res["extraction"] == [], json.dumps(res))
+
+    # 23. a base-tree code file that cannot be decoded as UTF-8 fails
+    #     closed instead of silently skipping the file: the
+    #     partial-migration verdict must not rest on a partial read.
+    #     The latin-1 file is written as bytes into the BASE commit:
+    #     amending the base commit would orphan main and the diff
+    #     itself would fail with "no merge base" instead.
+    import io
+    from contextlib import redirect_stdout
+    repo = make_repo({
+        "tools/a/one.py": "def f():\n" + extract_body,
+        "tools/a/shared.py": "def s():\n    return 0\n",
+    }, raw={
+        "tools/a/two.py":
+            ("def g():  # caf\xe9\n" + extract_body).encode("latin-1"),
+    })
+    commit(repo, {
+        "tools/a/one.py": "def f():\n    return shared()\n",
+        "tools/a/shared.py": "def shared():\n" + extract_body,
+    })
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        code = cmd_check(argparse.Namespace(project=str(repo)))
+    check("non-UTF8 base-tree file fails closed",
+          code == 1 and "cannot measure" in buf.getvalue(),
+          buf.getvalue()[:400])
+
+    # 24. uncommitted padding above a calling test does not void the
+    #     exemption: the committed diff's lines are resolved against
+    #     HEAD, the working diff's against the file on disk.
+    repo = make_repo(extract_base)
+    commit(repo, {**extract_pr,
+                  "tests/test_shared.py":
+                      "from tools.a.shared import shared\n\n\n"
+                      "def test_shared():\n    assert shared() == 15\n"})
+    test_path = repo / "tests/test_shared.py"
+    text = test_path.read_text(encoding="utf-8")
+    test_path.write_text(
+        text.replace("def test_shared():",
+                     "# pad\n# pad\n# pad\ndef test_shared():"),
+        encoding="utf-8")
+    code, res = run_check(repo)
+    check("dirty-tree padding above a calling test still exempts",
+          code == 0 and res["extraction"] == [], json.dumps(res))
+
+    # 25. a document named like a test does not exempt an extraction:
+    #     only code files supply test lines.
+    repo = make_repo(extract_base)
+    commit(repo, {**extract_pr,
+                  "tests/test_notes.md":
+                      "# notes\n\n```python\nassert shared() == 15\n```\n"})
+    code, res = run_check(repo)
+    check("a test-named Markdown note does not exempt an extraction",
+          code == 1 and len(res["extraction"]) > 0, json.dumps(res))
+
+    # 26. a column-0 `++` line is content, not a diff header: two .js
+    #     files adding the same 6-line block starting with `++count;`
+    #     fail the ratchet. The files hold ONLY the block: a trailing
+    #     line would supply the sixth window line even if `++count;`
+    #     were dropped, and the pin would not pin anything.
+    plus_block = (
+        "++count;\n"
+        "    step_a(x);\n"
+        "    step_b(x);\n"
+        "    step_c(x);\n"
+        "    step_d(x);\n"
+        "    step_e(x);\n"
+    )
+    repo = make_repo(base_files)
+    commit(repo, {
+        "tools/a/one.js": plus_block,
+        "tools/a/two.js": plus_block,
+    })
+    code, res = run_check(repo)
+    check("column-0 ++ lines are content and the repeat fails",
+          code == 1 and res["duplicated_lines"] >= 6, json.dumps(res))
+
+    # 27. the PASS line states the ratchet outcome: repeats within the
+    #     baseline, and repeats the ratchet excludes, are real repeats
+    #     the old wording denied.
+    def check_output(project: Path) -> tuple[int, str]:
+        out_buf = io.StringIO()
+        with redirect_stdout(out_buf):
+            out_code = cmd_check(argparse.Namespace(project=str(project)))
+        return out_code, out_buf.getvalue()
+
+    # 27a. repeats at the baseline pass, and the line says so.
+    repo = repo_with_baseline()
+    commit(repo, {
+        "tools/a/two.py": "def g():\n" + block,
+        "tools/a/three.py": "def h():\n" + block,
+    })
+    code, out = check_output(repo)
+    check("PASS line states the ratchet outcome at the baseline",
+          code == 0 and "within baseline" in out
+          and "no byte-identical 6-line repeats" not in out, out[-400:])
+    # 27b. a clean PR with no repeats keeps the no-repeats line.
+    repo = make_repo(base_files)
+    commit(repo, {"tools/a/clean.py": "def c():\n    return 2\n"})
+    code, out = check_output(repo)
+    check("PASS line keeps the no-repeats wording with no repeats",
+          code == 0 and "no byte-identical 6-line repeats" in out,
+          out[-400:])
 
     print("\nVERDICT: {}".format(
         "duplication on changed lines is reported, the ratchet holds, and "

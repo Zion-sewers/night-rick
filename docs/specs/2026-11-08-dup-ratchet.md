@@ -224,10 +224,15 @@ sees the move, and the shared-meaning justification above applies to it
 the same as to any extraction.
 
 "Repeated" has two shapes. The clean-room shape is a block removed from
-two or more places at once. The partial-migration shape is a block
+two or more places at once, where a place is a maximal run of identical
+lines, not a window start: twelve identical lines moved as a unit are one
+place, not two sources. The partial-migration shape is a block
 removed from one place while the block was already duplicated before the
 diff: the gate counts the block's occurrences in the base tree (via
-`git archive`) and fires when the block occurred twice or more there. A
+`git archive`) and fires when the block occurred twice or more there.
+That count covers production code files only: a copy surviving only in a
+test file does not count, because the test itself characterizes it, the
+same reason test files are excluded from the ratchet FAIL. A
 unique block that merely moves (one base-tree occurrence) is not an
 extraction. The destination may itself be one of the files the block was
 removed from (consolidation into an existing holder file); it is skipped
@@ -236,7 +241,10 @@ only when it is the SOLE file the block was removed from.
 Known limit: a move rewritten past git's rename-detection threshold can
 trip both gates (the moved lines appear as removed and added), because
 the detector is diff-based and has no rename awareness. The common pure
-move, and a move with a one-line touch, do not trip it.
+move, and a move with a one-line touch, do not trip it, unless the moved
+block is itself self-repeating: identical lines moved as a unit still
+count as duplicated added lines, so the ratchet fires even though the
+extraction gate stays silent.
 
 ## Exclusions, and why each is stated
 

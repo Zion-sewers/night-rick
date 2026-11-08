@@ -124,6 +124,32 @@ MUTATIONS = [
         "            continue",
     ),
     (
+        "test files counted in the base tree again",
+        "The base-tree count includes test files, so a production move "
+        "whose only surviving copy is a test-file fixture fails the "
+        "extraction gate for lack of a test the surviving copy already "
+        "supplies. The flipped selftest case (a move with only a "
+        "test-file copy surviving passes) must catch this.",
+        "            if not member.isfile() or not is_code(member.name) \\\n"
+        "                    or is_test_file(member.name):\n"
+        "                continue",
+        "            if not member.isfile() or not is_code(member.name):\n"
+        "                continue  # test files counted",
+    ),
+    (
+        "one identical run counted as two sources",
+        "The run collapse is dropped, so twelve identical lines moved "
+        "as a unit count as two non-overlapping windows and a "
+        "single-site move is reported as a two-source extraction. The "
+        "flipped selftest case (a single removal of 12 identical "
+        "lines is not an extraction) must catch this.",
+        "        if taken and all(\n"
+        "                line == lines[taken[-1]]\n"
+        "                for line in lines[taken[-1]:s + WINDOW]):\n"
+        "            continue",
+        "        if False:  # run collapse dropped\n            continue",
+    ),
+    (
         "holder consolidation skipped again",
         "The destination skip goes back to exempting any destination "
         "that is also a removal source, so consolidating duplicated "

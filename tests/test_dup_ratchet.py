@@ -162,6 +162,19 @@ class TestParseAdded(unittest.TestCase):
                 + "\n".join("-" + line for line in ["def f():"] + BLOCK) + "\n")
         self.assertEqual(D.parse_added(diff), {})
 
+    def test_deleted_file_removed_lines_are_collected(self):
+        # A deleted file's `+++ /dev/null` header must not orphan its
+        # removed lines: parse_removed still sees them.
+        diff = (
+            "diff --git a/old.py b/old.py\n"
+            "--- a/old.py\n"
+            "+++ /dev/null\n"
+            "@@ -1,7 +0,0 @@\n" + "\n".join("-" + line for line in ["def f():"] + BLOCK) + "\n"
+        )
+        removed = D.parse_removed(diff)
+        self.assertEqual(len(removed["old.py"]), 7)
+        self.assertEqual(removed["old.py"][0], ("def f():", 1))
+
 
 class TestReferencesDest(unittest.TestCase):
     def test_call_counts(self):
@@ -381,6 +394,35 @@ class TestExtraction(unittest.TestCase):
         }
         hits = D.find_extractions(added, removed, [])
         self.assertEqual(hits, [])
+
+    def test_twelve_identical_lines_single_removal_is_not(self):
+        # Twelve identical lines are one occurrence (one maximal run,
+        # not two non-overlapping windows), so a single removal is not
+        # a repeated block.
+        twelve = ["    pass"] * 12
+        added = D.parse_added(_diff_for({"tools/a/shared.py": twelve}))
+        norm = [D.normalize(line, "tools/a/one.py") for line in twelve]
+        removed = {
+            "tools/a/one.py": [(t, i + 1) for i, t in enumerate(norm)],
+        }
+        hits = D.find_extractions(added, removed, [])
+        self.assertEqual(hits, [])
+
+    def test_twelve_identical_lines_report_one_source(self):
+        # When the same 12-line run does fire (the block was already
+        # duplicated in the base tree), the report names one source,
+        # not one file twice.
+        twelve = ["    pass"] * 12
+        added = D.parse_added(_diff_for({"tools/a/shared.py": twelve}))
+        norm = [D.normalize(line, "tools/a/one.py") for line in twelve]
+        removed = {
+            "tools/a/one.py": [(t, i + 1) for i, t in enumerate(norm)],
+        }
+        window = tuple(norm[:6])
+        hits = D.find_extractions(added, removed, [], {window: 2})
+        self.assertEqual(len(hits), 1)
+        self.assertEqual(len(hits[0]["sources"]), 1)
+        self.assertEqual(hits[0]["sources"][0]["path"], "tools/a/one.py")
 
     def test_extraction_with_unrelated_test_is_a_hit(self):
         added, removed = self._setup()

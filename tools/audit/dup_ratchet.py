@@ -79,12 +79,17 @@ stem rule (a call to the module stem). Non-Python test files keep the
 call-only floor: the test-function rule is implemented on the Python AST.
 
 "Repeated" has two shapes, and both are gated. The clean-room shape is a
-block removed from two or more places at once. The partial-migration
+block removed from two or more places at once, where a place is a maximal
+run of identical lines, not a window start: twelve identical lines moved
+as a unit are one place, not two sources. The partial-migration
 shape is a block removed from one place while the block was already
 duplicated before the diff: the surviving copy is invisible to a
 diff-only detector, so the gate counts the block's occurrences in the
 base tree (via `git archive`) and fires when the block occurred twice or
-more there. A unique block that merely moves (one base-tree occurrence)
+more there. That count covers production code files only: a copy
+surviving only in a test file does not count, because the test itself
+characterizes it, the same reason test files are excluded from the
+ratchet FAIL. A unique block that merely moves (one base-tree occurrence)
 is not an extraction and is not gated. The destination may itself be one
 of the files the block was removed from (consolidation into an existing
 holder file); it is skipped only when it is the SOLE file the block was
@@ -253,53 +258,72 @@ def default_base(project: Path) -> str:
     return "HEAD~1"
 
 
+def _scan_diff(diff: str) -> Iterator[tuple[str, int, int, str, str]]:
+    """One walk over a unified diff.
+
+    Yields (path, old_lineno, new_lineno, kind, text) for every
+    context, added, and removed line, with both line numbers tracked
+    from the hunk header. `kind` is "context", "added", or "removed";
+    `text` is the line without its leading marker. The three consumers
+    (parse_added, parse_removed, _raw_added_test_lines_by_file) used to
+    each walk the diff with their own copy of this loop, and the copies
+    drifted into a 13-line repeat the ratchet flags on its own diff;
+    there is one walk now.
+
+    No reset on `/dev/null` headers: a deleted file's removed lines
+    still belong to it (its `+++ /dev/null` header must not orphan
+    them), and a new file's `+++ b/` header sets the path before any
+    content line, so dropping the reset changes nothing observable
+    on a well-formed git diff.
+    """
+    path: str | None = None
+    old_lineno = 0
+    new_lineno = 0
+    for raw in diff.splitlines():
+        if raw.startswith(("+++ b/", "--- a/")):
+            path = raw[6:]
+            old_lineno = 0
+            new_lineno = 0
+        elif raw.startswith("@@ ") and path is not None:
+            m_old = re.search(r"-(\d+)", raw)
+            m_new = re.search(r"\+(\d+)", raw)
+            old_lineno = int(m_old.group(1)) if m_old else 0
+            new_lineno = int(m_new.group(1)) if m_new else 0
+        elif path is not None and raw.startswith(" "):
+            yield path, old_lineno, new_lineno, "context", raw[1:]
+            old_lineno += 1
+            new_lineno += 1
+        elif path is not None and raw.startswith("+") \
+                and not raw.startswith("+++"):
+            yield path, old_lineno, new_lineno, "added", raw[1:]
+            new_lineno += 1
+        elif path is not None and raw.startswith("-") \
+                and not raw.startswith("---"):
+            yield path, old_lineno, new_lineno, "removed", raw[1:]
+            old_lineno += 1
+
+
 def parse_added(diff: str) -> dict[str, list[tuple[str, int]]]:
     """Added normalized lines per file: {path: [(text, new_lineno)]}."""
     added: dict[str, list[tuple[str, int]]] = defaultdict(list)
-    path: str | None = None
-    lineno = 0
-    for raw in diff.splitlines():
-        if raw.startswith("+++ b/"):
-            path = raw[6:]
-            lineno = 0
-        elif raw.startswith("+++ "):
-            path = None
-        elif raw.startswith("@@ ") and path is not None:
-            m = re.search(r"\+(\d+)", raw)
-            lineno = int(m.group(1)) if m else 0
-        elif path is not None and raw.startswith(" "):
-            lineno += 1
-        elif path is not None and raw.startswith("+") and not raw.startswith("+++"):
-            if is_code(path):
-                norm = normalize(raw[1:], path)
-                if norm is not None:
-                    added[path].append((norm, lineno))
-            lineno += 1
+    for path, _old, new_lineno, kind, text in _scan_diff(diff):
+        if kind != "added" or not is_code(path):
+            continue
+        norm = normalize(text, path)
+        if norm is not None:
+            added[path].append((norm, new_lineno))
     return added
 
 
 def parse_removed(diff: str) -> dict[str, list[tuple[str, int]]]:
     """Removed normalized lines per file: {path: [(text, old_lineno)]}."""
     removed: dict[str, list[tuple[str, int]]] = defaultdict(list)
-    path: str | None = None
-    lineno = 0
-    for raw in diff.splitlines():
-        if raw.startswith("--- a/"):
-            path = raw[6:]
-            lineno = 0
-        elif raw.startswith("--- "):
-            path = None
-        elif raw.startswith("@@ ") and path is not None:
-            m = re.search(r"-(\d+)", raw)
-            lineno = int(m.group(1)) if m else 0
-        elif path is not None and raw.startswith(" "):
-            lineno += 1
-        elif path is not None and raw.startswith("-") and not raw.startswith("---"):
-            if is_code(path):
-                norm = normalize(raw[1:], path)
-                if norm is not None:
-                    removed[path].append((norm, lineno))
-            lineno += 1
+    for path, old_lineno, _new, kind, text in _scan_diff(diff):
+        if kind != "removed" or not is_code(path):
+            continue
+        norm = normalize(text, path)
+        if norm is not None:
+            removed[path].append((norm, old_lineno))
     return removed
 
 
@@ -582,24 +606,9 @@ def _raw_added_test_lines_by_file(
     """
     added: dict[str, list[tuple[str, int]]] = defaultdict(list)
     for diff in diffs:
-        path: str | None = None
-        lineno = 0
-        for raw in diff.splitlines():
-            if raw.startswith("+++ b/"):
-                path = raw[6:]
-                lineno = 0
-            elif raw.startswith("+++ "):
-                path = None
-            elif raw.startswith("@@ ") and path is not None:
-                m = re.search(r"\+(\d+)", raw)
-                lineno = int(m.group(1)) if m else 0
-            elif path is not None and raw.startswith(" "):
-                lineno += 1
-            elif path is not None and raw.startswith("+") \
-                    and not raw.startswith("+++"):
-                if is_test_file(path):
-                    added[path].append((raw[1:], lineno))
-                lineno += 1
+        for path, _old, new_lineno, kind, text in _scan_diff(diff):
+            if kind == "added" and is_test_file(path):
+                added[path].append((text, new_lineno))
     return added
 
 
@@ -665,19 +674,31 @@ def _references_dest(
     return False
 
 
-def _distinct_starts(starts: list[int]) -> list[int]:
+def _distinct_starts(starts: list[int], lines: list[str]) -> list[int]:
     """Start indices with overlapping windows collapsed (greedy, in order).
 
     Seven identical consecutive lines form two overlapping 6-line
     windows, but they are one occurrence, not two: a start that falls
-    inside an already-taken window is not a second occurrence.
+    inside an already-taken window is not a second occurrence. The
+    same holds for two non-overlapping starts inside one maximal run
+    of identical lines: twelve identical lines form two 6-line
+    windows, but the run is one place, not two sources, so a
+    single-site move must not be reported as a two-source extraction.
+    A start joins the previous taken start's run only when every line
+    between them is the same value; a repeated 6-line pattern of
+    distinct lines still counts each copy separately.
     """
     taken: list[int] = []
     last_end = -1
     for s in sorted(starts):
-        if s >= last_end:
-            taken.append(s)
-            last_end = s + WINDOW
+        if s < last_end:
+            continue
+        if taken and all(
+                line == lines[taken[-1]]
+                for line in lines[taken[-1]:s + WINDOW]):
+            continue
+        taken.append(s)
+        last_end = s + WINDOW
     return taken
 
 
@@ -689,9 +710,12 @@ def _base_tree_window_counts(
     Reads the base tree once via `git archive` and counts, per window,
     the distinct (file, start) occurrences with overlapping windows
     collapsed. Only candidate windows are counted, so the memory cost is
-    bounded by the candidate set, not the tree. Raises CheckError when
-    the base tree cannot be read: a partial-migration verdict must not
-    rest on an unread tree.
+    bounded by the candidate set, not the tree. Test files are not
+    counted: a copy that survives only in a test file is characterized
+    by the test itself, the same reason test files are excluded from
+    the ratchet FAIL, so it must not turn a production move into an
+    extraction. Raises CheckError when the base tree cannot be read: a
+    partial-migration verdict must not rest on an unread tree.
     """
     import io
     import tarfile
@@ -708,7 +732,8 @@ def _base_tree_window_counts(
     counts: Counter[tuple[str, ...]] = Counter()
     with tarfile.open(fileobj=io.BytesIO(r.stdout)) as tf:
         for member in tf.getmembers():
-            if not member.isfile() or not is_code(member.name):
+            if not member.isfile() or not is_code(member.name) \
+                    or is_test_file(member.name):
                 continue
             extracted = tf.extractfile(member)
             if extracted is None:
@@ -727,7 +752,7 @@ def _base_tree_window_counts(
                 if window in candidates:
                     positions[window].append(i)
             for window, starts in positions.items():
-                counts[window] += len(_distinct_starts(starts))
+                counts[window] += len(_distinct_starts(starts, lines))
     return dict(counts)
 
 
@@ -766,7 +791,7 @@ def find_extractions(
             starts[window].append(i)
         for window, idxs in starts.items():
             removed_windows[window].add(path)
-            for s in _distinct_starts(idxs):
+            for s in _distinct_starts(idxs, [t for t, _ in lines]):
                 removed_positions[window].append((path, s))
     added_windows: dict[tuple[str, ...], list[tuple[str, int]]] = defaultdict(list)
     for path, lines in added.items():
@@ -1548,6 +1573,20 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
     check("partial migration with a calling test passes",
           code == 0 and res["extraction"] == [], json.dumps(res))
 
+    # 15b. partial migration where the surviving copy lives only in a
+    #      test file: the base-tree count covers production code only,
+    #      so the move is not an extraction and passes with no test.
+    partial_test_base = {
+        "tools/a/one.py": "def f():\n" + extract_body,
+        "tests/test_fixture.py": extract_body,
+        "tools/a/shared.py": "def s():\n    return 0\n",
+    }
+    repo = make_repo(partial_test_base)
+    commit(repo, partial_pr)
+    code, res = run_check(repo)
+    check("partial migration with only a test-file copy surviving passes",
+          code == 0 and res["extraction"] == [], json.dumps(res))
+
     # 16. consolidation into an existing holder file: the block is
     #    removed from two files and re-added in one of them (the holder),
     #    with no test. The holder's copy is reindented under the new
@@ -1593,6 +1632,24 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
     commit(repo, seven_pr)
     code, res = run_check(repo)
     check("single removal of 7 identical lines is not an extraction",
+          res["extraction"] == [], json.dumps(res))
+
+    # 18b. twelve identical consecutive lines removed once and re-added
+    #     elsewhere are one occurrence, not two non-overlapping windows,
+    #     so the extraction gate does not fire on a single removal.
+    twelve = "".join("    pass\n" for _ in range(12))
+    twelve_base = {
+        "tools/a/one.py": "def f():\n" + twelve,
+        "tools/a/shared.py": "def s():\n    return 0\n",
+    }
+    twelve_pr = {
+        "tools/a/one.py": "def f():\n    return shared()\n",
+        "tools/a/shared.py": "def shared():\n" + twelve,
+    }
+    repo = make_repo(twelve_base)
+    commit(repo, twelve_pr)
+    code, res = run_check(repo)
+    check("single removal of 12 identical lines is not an extraction",
           res["extraction"] == [], json.dumps(res))
 
     print("\nVERDICT: {}".format(

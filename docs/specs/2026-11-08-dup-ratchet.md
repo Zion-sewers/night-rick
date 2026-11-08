@@ -264,12 +264,15 @@ main. A two-PR split defeats the two shapes above: the first PR adds the
 helper with no removal, the second rewires the call sites to it with no
 added copy of the block, so the added-lines leg sees no destination. The
 gate closes that split: a removed window that survives in the base tree
-in a file other than the removal sources is a destination when the diff's
-added lines in the removal sources call that file's symbols (the
-rewiring). The destination's line numbers are base-tree lines, because
-the file is unchanged by the diff. A pure deletion adds no call, so it
-does not fire, and a surviving copy in a file the diff never calls is not
-a home. The same exemption applies: an added test in an asserting test
+is a destination when the diff's added lines in the removal sources call
+that file's symbols (the rewiring). A base location in a removal source
+counts only under occurrence accounting: the file must hold more base
+occurrences of the window than were removed from it, and only the
+surviving occurrence is reported, never a removed copy. The
+destination's line numbers are base-tree lines, because the location is
+read from the base tree. A pure deletion adds no call, so it does not
+fire, and a surviving copy in a file the diff never calls is not a home.
+The same exemption applies: an added test in an asserting test
 function calling the destination's symbols exempts.
 The destination may itself be one of the files the block was
 removed from (consolidation into an existing holder file); it is skipped
@@ -328,9 +331,9 @@ extraction gate, and whether the runner has a pinned-binary install path.
 
 ## Verification
 
-- `python tools/audit/dup_ratchet.py selftest` (56 planted checks)
-- `python -m pytest tests/test_dup_ratchet.py -q` (89 tests)
-- `python tools/audit/mutate.py --spec dup_ratchet` (29 mutations)
+- `python tools/audit/dup_ratchet.py selftest` (58 planted checks)
+- `python -m pytest tests/test_dup_ratchet.py -q` (93 tests)
+- `python tools/audit/mutate.py --spec dup_ratchet` (30 mutations)
 - ruff check on tools/audit/dup_ratchet.py and tests/test_dup_ratchet.py;
   mypy --strict on tools/audit/dup_ratchet.py
 - The new domain runs in CI through `gate.py run`; no ship-gate.yml change.
@@ -352,7 +355,11 @@ is counted twice in the "added code lines" figure (the verdict rests on
 `duplicated_lines`, not that figure, and no phantom duplicate was
 observed); the base-tree read (`git archive`, ~66 MB / ~3 s on this
 repo, held whole in memory) runs whenever any window is removed (the
-base-home leg needs the surviving locations even when nothing is re-added); a base-tree code file that cannot be decoded as UTF-8
+base-home leg needs the surviving locations even when nothing is re-added);
+destination symbols for base-home files are read with one `git show` per
+distinct base-location file not already known from disk, so a
+widely-repeated window costs one subprocess call per file holding it,
+bounded by the candidate set; a base-tree code file that cannot be decoded as UTF-8
 fails the check closed with "cannot measure" instead of silently
 skipping the file.
 

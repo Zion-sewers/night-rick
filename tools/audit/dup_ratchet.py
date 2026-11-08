@@ -106,16 +106,19 @@ home that already exists on main. A two-PR split defeats the two shapes
 above: the first PR adds the helper with no removal, the second rewires
 the call sites to it with no added copy of the block, so the added-lines
 leg sees no destination. The gate closes that split: a removed window
-that survives in the base tree in a file other than the removal sources
-is a destination when the diff's added lines in the removal sources call
-that file's symbols (the rewiring). The destination's line numbers are
-base-tree lines, because the file is unchanged by the diff. A pure
+that survives in the base tree is a destination when the diff's added
+lines in the removal sources call that file's symbols (the rewiring).
+The destination's line numbers are base-tree lines, because the
+location is read from the base tree. A pure
 deletion adds no call, so it does not fire, and a surviving copy in a
 file the diff never calls is not a home. The same exemption applies:
 an added test in an asserting test function calling the destination's
 symbols exempts. The destination may itself be one
 of the files the block was removed from (consolidation into an existing
-holder file); it is skipped only when it is the SOLE file the block was
+holder file); a base location in such a file counts only under
+occurrence accounting, when the file holds more base occurrences of
+the window than were removed from it, and only the surviving
+occurrence is reported. It is skipped only when it is the SOLE file the block was
 removed from, which is an in-place edit, not a move. The clean-room
 shape fires only when the destination holds strictly fewer occurrences
 of the block than were removed: a destination that still holds as many
@@ -1010,13 +1013,18 @@ def find_extractions(
     with no added copy of the block, so the added-lines leg sees no
     destination. `base_locations` (base-tree occurrences of each
     removed window, from `_base_tree_window_counts`) closes that
-    split: a removed window that survives in the base tree in a file
-    other than the removal sources is a destination when the diff's
-    added lines in the removal sources CALL that file's symbols (the
-    rewiring). A pure deletion adds no call, so it does not fire, and
-    a surviving copy in a file the diff never calls is not a home.
-    The destination's line numbers are base-tree lines, because the
-    file is unchanged by the diff. The same exemption applies: an
+    split: a removed window that survives in the base tree is a
+    destination when the diff's added lines in the removal sources
+    CALL that file's symbols (the rewiring). A pure deletion adds no
+    call, so it does not fire, and a surviving copy in a file the diff
+    never calls is not a home. A base location in a removal source
+    counts only under occurrence accounting: the file must hold more
+    base occurrences of the window than were removed from it, and only
+    the surviving occurrence is reported, never a removed copy; the
+    destination is skipped outright only when its file is the SOLE
+    file the block was removed from. The destination's line numbers
+    are base-tree lines, because the location is read from the base
+    tree. The same exemption applies: an
     added test calling the destination's symbols exempts. A base-home
     hit is deduped against an added-leg hit for the same (removal
     set, destination) key.
@@ -1093,17 +1101,36 @@ def find_extractions(
                     "sample": window[0][:100],
                 })
         # Base-home leg: the block survives in the base tree in a file
-        # other than the removal sources. That file is a shared home
-        # only when the diff rewires to it: an added line in a removal
-        # source must call the file's symbols. A pure deletion adds no
-        # call, and a surviving copy the diff never calls is not a home.
+        # that may itself be one of the removal sources. That file is a
+        # shared home only when the diff rewires to it: an added line in
+        # a removal source must call the file's symbols. A pure deletion
+        # adds no call, and a surviving copy the diff never calls is not
+        # a home. Occurrence accounting (arch-7 finding 1): a base
+        # location in a removal source counts only when that file holds
+        # more base occurrences of the window than were removed from it,
+        # and only the surviving occurrence may be reported, so the
+        # removed copies are never reported as destinations. The sole
+        # removal source is an in-place edit, skipped outright like the
+        # added leg.
         rewire_lines = [
             t for p in rpaths for t, _ in added.get(p, [])
         ]
+        removed_starts: dict[str, set[int]] = defaultdict(set)
+        removed_counts: Counter[str] = Counter()
+        for rpath, i in removed_positions[window]:
+            removed_counts[rpath] += 1
+            removed_starts[rpath].add(removed[rpath][i][1])
+        base_counts_by_file: Counter[str] = Counter(
+            loc["path"] for loc in base_locs.get(window, []))
         for bloc in base_locs.get(window, []):
             bpath = bloc["path"]
             if bpath in rpaths:
-                continue
+                if rpaths == {bpath}:
+                    continue
+                if base_counts_by_file[bpath] <= removed_counts[bpath]:
+                    continue
+                if bloc["start_line"] in removed_starts[bpath]:
+                    continue
             key = (tuple(sorted(rpaths)), bpath)
             if key in active:
                 continue
@@ -1272,9 +1299,11 @@ def evaluate(project: Path) -> CheckResult:
     # Partial migration needs the base tree: a removed window re-added
     # elsewhere with only one distinct removal is an extraction only
     # when the block was already duplicated before the diff. The
-    # base-home leg needs it too: a removed window that survives in a
-    # file other than the removal sources is a shared home the diff may
-    # have rewired to, even when the block never appears as added lines.
+    # base-home leg needs it too: a removed window that survives in the
+    # base tree is a shared home the diff may have rewired to, even when
+    # the block never appears as added lines. A base location in a
+    # removal source counts only when the file holds more base
+    # occurrences than were removed from it (occurrence accounting).
     # Read the base tree whenever any window was removed, not only when
     # a removed window is also an added window.
     base_windows: dict[tuple[str, ...], int] = {}
@@ -1777,6 +1806,44 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
     commit(repo, {"tools/a/shared.py": "def shared():\n" + extract_body})
     code, res = run_check(repo)
     check("adding an untested helper with no removal passes",
+          code == 0 and res["extraction"] == [], json.dumps(res))
+    # 5l. the shared home lives in a file that is itself a removal
+    #     source (arch-7 finding 1): one.py holds the block twice
+    #     (helper plus f), two.py once. The PR rewires both call sites
+    #     to helper() with no test. Occurrence accounting must fire on
+    #     the surviving copy in one.py, not skip the file outright.
+    holder_base = {
+        "tools/a/one.py": ("def helper():\n" + extract_body
+                           + "\ndef f():\n" + extract_body),
+        "tools/a/two.py": "def g():\n" + extract_body,
+    }
+    repo = make_repo(holder_base)
+    commit(repo, {
+        "tools/a/one.py": ("def helper():\n" + extract_body
+                           + "\ndef f():\n    return helper()\n"),
+        "tools/a/two.py": ("from tools.a.one import helper\n\n\n"
+                           "def g():\n    return helper()\n"),
+    })
+    code, res = run_check(repo)
+    check("rewiring to a home housed in a removal source fails",
+          code == 1 and len(res["extraction"]) == 1
+          and res["extraction"][0]["dest"]["path"] == "tools/a/one.py"
+          and res["extraction"][0]["dest"]["start_line"] == 2
+          and res["extraction"][0]["dest"]["end_line"] == 8,
+          json.dumps(res))
+    # 5m. the same consolidation inside a single file passes: the
+    #     holder file is the SOLE file the block was removed from, an
+    #     in-place edit, not a move.
+    repo = make_repo({
+        "tools/a/one.py": ("def helper():\n" + extract_body
+                           + "\ndef f():\n" + extract_body),
+    })
+    commit(repo, {
+        "tools/a/one.py": ("def helper():\n" + extract_body
+                           + "\ndef f():\n    return helper()\n"),
+    })
+    code, res = run_check(repo)
+    check("consolidation inside a single file passes",
           code == 0 and res["extraction"] == [], json.dumps(res))
 
     # 6. empty diff passes

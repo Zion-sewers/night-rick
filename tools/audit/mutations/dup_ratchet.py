@@ -328,4 +328,17 @@ MUTATIONS = [
         "        for bloc in base_locs.get(window, []):",
         "        for bloc in []:  # base-home leg dropped",
     ),
+    (
+        "occurrence accounting dropped, a removed copy reads as a home",
+        "The base-home leg stops checking whether a base location in a "
+        "removal source is itself one of the removed copies, so a file "
+        "that holds the block twice reports the removed copy as a "
+        "second destination alongside the surviving one: the selftest "
+        "case (rewiring to a home housed in a removal source fails) "
+        "must catch this, because it asserts exactly one hit.",
+        '                if bloc["start_line"] in removed_starts[bpath]:\n'
+        '                    continue',
+        '                if False:  # occurrence accounting dropped\n'
+        '                    continue',
+    ),
 ]

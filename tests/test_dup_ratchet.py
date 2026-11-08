@@ -655,6 +655,84 @@ class TestExtraction(unittest.TestCase):
             {"tools/a/shared.py": {"shared"}}, base_locations)
         self.assertEqual(hits, [])
 
+    def test_rewiring_to_holder_that_is_a_removal_source_is_a_hit(self):
+        # Arch-7 finding 1: the shared home lives in a file that is
+        # itself a removal source. one.py holds the block twice (the
+        # helper at lines 2-7 and the removed copy at 11-16); two.py
+        # holds it once. Both call sites rewire to helper() with no
+        # test. Occurrence accounting must report the surviving copy
+        # in one.py as the destination, never the removed copy.
+        added = D.parse_added(_diff_for({
+            "tools/a/one.py": ["    return helper()"],
+            "tools/a/two.py": ["    return helper()"],
+        }))
+        norm = [D.normalize(line, "tools/a/one.py") for line in BLOCK]
+        removed = {
+            "tools/a/one.py": [(t, i + 11) for i, t in enumerate(norm)],
+            "tools/a/two.py": [(t, i + 2) for i, t in enumerate(norm)],
+        }
+        window = tuple(norm)
+        base_locations = {window: [
+            {"path": "tools/a/one.py", "start_line": 2, "end_line": 7},
+            {"path": "tools/a/one.py", "start_line": 11, "end_line": 16},
+            {"path": "tools/a/two.py", "start_line": 2, "end_line": 7},
+        ]}
+        hits = D.find_extractions(
+            added, removed, [], {window: 3},
+            {"tools/a/one.py": {"helper", "f"},
+             "tools/a/two.py": {"g"}},
+            base_locations)
+        self.assertEqual(len(hits), 1)
+        self.assertEqual(hits[0]["dest"]["path"], "tools/a/one.py")
+        self.assertEqual(hits[0]["dest"]["start_line"], 2)
+        self.assertEqual(hits[0]["dest"]["end_line"], 7)
+        self.assertEqual(len(hits[0]["sources"]), 2)
+
+    def test_removed_copy_in_holder_is_not_a_destination(self):
+        # The holder file holds exactly as many base occurrences as
+        # were removed from it, so no copy survives there: the removed
+        # copy must not be reported as a destination.
+        added = D.parse_added(_diff_for({
+            "tools/a/one.py": ["    return helper()"],
+            "tools/a/two.py": ["    return helper()"],
+        }))
+        norm = [D.normalize(line, "tools/a/one.py") for line in BLOCK]
+        removed = {
+            "tools/a/one.py": [(t, i + 11) for i, t in enumerate(norm)],
+            "tools/a/two.py": [(t, i + 2) for i, t in enumerate(norm)],
+        }
+        window = tuple(norm)
+        base_locations = {window: [
+            {"path": "tools/a/one.py", "start_line": 11, "end_line": 16},
+            {"path": "tools/a/two.py", "start_line": 2, "end_line": 7},
+        ]}
+        hits = D.find_extractions(
+            added, removed, [], {window: 2},
+            {"tools/a/one.py": {"helper", "f"},
+             "tools/a/two.py": {"g"}},
+            base_locations)
+        self.assertEqual(hits, [])
+
+    def test_sole_removal_source_holder_is_not_a_destination(self):
+        # The holder file is the SOLE file the block was removed from:
+        # an in-place edit, skipped outright like the added leg.
+        added = D.parse_added(_diff_for({
+            "tools/a/one.py": ["    return helper()"],
+        }))
+        norm = [D.normalize(line, "tools/a/one.py") for line in BLOCK]
+        removed = {
+            "tools/a/one.py": [(t, i + 11) for i, t in enumerate(norm)],
+        }
+        window = tuple(norm)
+        base_locations = {window: [
+            {"path": "tools/a/one.py", "start_line": 2, "end_line": 7},
+            {"path": "tools/a/one.py", "start_line": 11, "end_line": 16},
+        ]}
+        hits = D.find_extractions(
+            added, removed, [], {window: 2},
+            {"tools/a/one.py": {"helper", "f"}}, base_locations)
+        self.assertEqual(hits, [])
+
     def test_consolidation_without_reduction_is_not_an_extraction(self):
         # Removed from two files, re-added twice in the destination:
         # the destination holds as many copies as were removed, so
@@ -924,6 +1002,38 @@ class TestEvaluateEndToEnd(unittest.TestCase):
         self.assertEqual(len(res["extraction"]), 1)
         self.assertEqual(
             res["extraction"][0]["dest"]["path"], "tools/a/shared.py")
+
+    def test_rewiring_to_holder_that_is_a_removal_source_fails(self):
+        # Arch-7 finding 1 end to end: the shared home lives in one.py,
+        # which is itself a removal source (it holds the block twice,
+        # as helper() and as f()). Both call sites rewire to helper()
+        # with no test, so the gate must fire on the surviving copy.
+        extract_body = (
+            "    total = 0\n    total += 1\n    total += 2\n    total += 3\n"
+            "    total += 4\n    total += 5\n    return total\n"
+        )
+        base = {
+            "tools/a/one.py": ("def helper():\n" + extract_body
+                               + "\ndef f():\n" + extract_body),
+            "tools/a/two.py": "def g():\n" + extract_body,
+        }
+        pr = {
+            "tools/a/one.py": ("def helper():\n" + extract_body
+                               + "\ndef f():\n    return helper()\n"),
+            "tools/a/two.py": ("from tools.a.one import helper\n\n\n"
+                               "def g():\n    return helper()\n"),
+        }
+        project = self._repo(base, pr)
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=str(project))), 1)
+        res = D.evaluate(project)
+        self.assertEqual(len(res["extraction"]), 1)
+        self.assertEqual(
+            res["extraction"][0]["dest"]["path"], "tools/a/one.py")
+        self.assertEqual(
+            res["extraction"][0]["dest"]["start_line"], 2)
+        self.assertEqual(
+            res["extraction"][0]["dest"]["end_line"], 8)
 
     def test_extraction_bare_call_without_assert_fails(self):
         project = self._extract_repo(

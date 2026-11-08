@@ -156,6 +156,59 @@ class TestParseAdded(unittest.TestCase):
         self.assertEqual(D.parse_added(diff), {})
 
 
+class TestReferencesDest(unittest.TestCase):
+    def test_call_counts(self):
+        self.assertTrue(D._references_dest(
+            ["assert shared() == 15"], "tools/a/shared.py"))
+
+    def test_attribute_call_counts(self):
+        self.assertTrue(D._references_dest(
+            ["result = shared.compute(row)"], "tools/a/shared.py"))
+
+    def test_attribute_use_counts(self):
+        self.assertTrue(D._references_dest(
+            ["assert shared.VALUE == 15"], "tools/a/shared.py"))
+
+    def test_import_from_counts(self):
+        self.assertTrue(D._references_dest(
+            ["from tools.a.shared import shared"], "tools/a/shared.py"))
+
+    def test_import_dotted_counts(self):
+        self.assertTrue(D._references_dest(
+            ["import tools.a.shared"], "tools/a/shared.py"))
+
+    def test_bare_assignment_does_not_count(self):
+        self.assertFalse(D._references_dest(
+            ["shared = 1", "assert shared == 1"], "tools/a/shared.py"))
+
+    def test_string_mention_does_not_count(self):
+        self.assertFalse(D._references_dest(
+            ['assert "shared" in "shared_name"'], "tools/a/shared.py"))
+
+    def test_variable_containing_stem_does_not_count(self):
+        self.assertFalse(D._references_dest(
+            ["shared_cache = {}"], "tools/a/shared.py"))
+
+    def test_stem_inside_ordinary_word_does_not_count(self):
+        self.assertFalse(D._references_dest(
+            ["ratio = 2"], "tools/a/io.py"))
+
+    def test_comment_mention_does_not_count(self):
+        self.assertFalse(D._references_dest(
+            ["# call shared() to verify"], "tools/a/shared.py"))
+
+    def test_unrelated_import_does_not_count(self):
+        self.assertFalse(D._references_dest(
+            ["from fixtures import other"], "tools/a/shared.py"))
+
+    def test_import_name_collision_counts(self):
+        # Documented limit: the gate cannot resolve imports, so importing
+        # a name that collides with the module stem counts as an import
+        # of the module. The call pattern is the strong signal.
+        self.assertTrue(D._references_dest(
+            ["from fixtures import shared"], "tools/a/shared.py"))
+
+
 class TestExtraction(unittest.TestCase):
     def _setup(self):
         added = D.parse_added(_diff_for({"tools/a/shared.py": BLOCK}))
@@ -269,6 +322,78 @@ class TestEvaluateEndToEnd(unittest.TestCase):
         (project / "state").mkdir(exist_ok=True)
         (project / "state" / "dup-ratchet.json").write_text(
             "{not json", encoding="utf-8")
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=str(project))), 1)
+
+    def _expired_base(self):
+        past = (date.today() - timedelta(days=1)).isoformat()
+        return {
+            "tools/a/one.py": "def f():\n    return 1\n",
+            "state/dup-ratchet.json": json.dumps(
+                {"baseline": 6, "reason": "sibling scripts, recorded",
+                 "expires": past, "owner": "test"}),
+        }
+
+    def test_clean_pr_passes_with_expired_baseline(self):
+        project = self._repo(self._expired_base(), {
+            "tools/a/clean.py": "def c():\n    return 2\n",
+        })
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=str(project))), 0)
+        self.assertNotEqual(D.evaluate(project)["baseline_lapsed"], "")
+
+    def test_rejustify_expired_baseline_passes(self):
+        future = (date.today() + timedelta(days=90)).isoformat()
+        block = "\n".join(BLOCK) + "\n"
+        project = self._repo(self._expired_base(), {
+            "state/dup-ratchet.json": json.dumps(
+                {"baseline": 6, "reason": "re-justified",
+                 "expires": future, "owner": "test"}),
+            "tools/a/two.py": "def g():\n" + block,
+            "tools/a/three.py": "def h():\n" + block,
+        })
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=str(project))), 0)
+
+    def test_lower_expired_baseline_passes(self):
+        project = self._repo(self._expired_base(), {
+            "state/dup-ratchet.json": json.dumps(
+                {"baseline": 0, "reason": "lowered after expiry",
+                 "expires": "", "owner": ""}),
+        })
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=str(project))), 0)
+
+    def test_dup_with_lapsed_baseline_fails_against_zero(self):
+        block = "\n".join(BLOCK) + "\n"
+        project = self._repo(self._expired_base(), {
+            "tools/a/two.py": "def g():\n" + block,
+            "tools/a/three.py": "def h():\n" + block,
+        })
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=str(project))), 1)
+        self.assertEqual(D.evaluate(project)["baseline"], 0)
+
+    def test_new_record_with_past_expiry_fails(self):
+        past = (date.today() - timedelta(days=1)).isoformat()
+        project = self._repo({"tools/a/one.py": "def f():\n    return 1\n"}, {
+            "state/dup-ratchet.json": json.dumps(
+                {"baseline": 6, "reason": "raise with a past expiry",
+                 "expires": past, "owner": "test"}),
+        })
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=str(project))), 1)
+
+    def test_baseline_deletion_fails(self):
+        project = self._repo({
+            "tools/a/one.py": "def f():\n    return 1\n",
+            "state/dup-ratchet.json": json.dumps(
+                {"baseline": 0, "reason": "", "expires": "", "owner": ""}),
+        }, {})
+        (project / "state" / "dup-ratchet.json").unlink()
+        subprocess.run(["git", "add", "-A"], cwd=project, check=True)
+        subprocess.run(["git", "commit", "-q", "-m", "delete baseline"],
+                       cwd=project, check=True)
         self.assertEqual(D.cmd_check(argparse.Namespace(
             project=str(project))), 1)
 

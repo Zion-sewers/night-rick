@@ -20,11 +20,21 @@ a self-serve knob. First, the baseline is judged as it stood at the base
 ref: a raise inside the very diff it would silence does not take effect
 until that raise merges, so a PR must land the raise first and the
 duplication second. Second, a raise above 0 needs a non-empty reason, a
-future expiry date, and an owner, and `check` fails once the expiry passes
-until the baseline is lowered or re-justified. The file is in the diff, so
-every raise is visible to panel review instead of silent. Lowering is the
-documented happy path: when a PR's count drops below the baseline, the
-author may lower the baseline to the new count in the same PR.
+future expiry date, and an owner. The expiry bounds the raise in time, and
+an expired raise LAPSES rather than locking the repo: once the expiry
+passes, the effective baseline is 0, a clean PR passes, and a PR with
+duplication fails on the count against 0 with a note that the raise
+lapsed. The raise is a dated exception, not a permanent allowance, and
+expiry must never turn into a repo-wide block on clean work: the issue's
+first mechanism is that legacy debt never blocks, and a clean PR adds no
+new duplication. The file is in the diff, so every raise is visible to
+panel review instead of silent. Deleting the baseline file is not an
+escape: a diff that deletes it fails closed with a message naming the
+lowering path. Lowering is the documented happy path: when a PR's count
+drops below the baseline, the author may lower the baseline to the new
+count in the same PR. Owner is attribution, not verification: the tool
+checks only that the field is non-empty, and review is the backstop for a
+lazy expiry or owner.
 
 WHAT COUNTS AS A DUPLICATE
 
@@ -47,12 +57,16 @@ THE EXTRACTION GATE
 Cross-module extraction requires regression tests first. When the diff
 removes a repeated 6-line block AND the same block appears as added lines
 in a different file (the code moved to a shared home), the extraction is
-exempt only when a test file in the diff has added lines referencing the
-destination module (its stem, e.g. `shared` for `tools/a/shared.py`).
-A test file that never names the extracted module does not exempt; neither
-does a test that asserts nothing about it. A reference is necessary, not
-sufficient, for characterization: the gate is a floor, not a proof that the
-test is good.
+exempt only when an added test line CALLS the destination module (its stem
+followed by `(`, or `stem.attr(...)`), or imports the destination module
+(`from ... import stem` or `import ...stem`). The stem must appear as a
+whole identifier token: `shared_cache`, `ratio` against a stem of `io`, and
+a bare assignment such as `shared = 1` do not exempt. String literals and
+comments never count: `assert "shared" in "shared_name"` is a mention, not
+a test. A call is necessary, not sufficient, for characterization: the gate
+is a floor, not a proof that the test is good. An import alone exempts only
+because it names the module as a dependency; a test that imports and never
+calls still characterizes nothing, and review is the backstop there.
 
 WHAT THIS DOES NOT DO
 
@@ -131,6 +145,7 @@ class CheckResult(TypedDict):
     added_lines: int
     duplicated_lines: int
     baseline: int
+    baseline_lapsed: str
     baseline_errors: list[str]
     blocks: list[Block]
     test_blocks: list[Block]
@@ -328,10 +343,40 @@ def find_blocks(
     return blocks, len(marked)
 
 
+def _strip_code_text(line: str) -> str:
+    """A test line with string literals and comments removed.
+
+    Only code counts toward a reference: a stem inside a string literal
+    ("shared" in "shared_name") or a comment (# call shared()) is a
+    mention, not a use.
+    """
+    s = re.sub(r"'[^']*'|\"[^\"]*\"", "''", line)
+    s = s.split("#", 1)[0]
+    s = s.split("//", 1)[0]
+    return s
+
+
 def _references_dest(test_lines: list[str], dest: str) -> bool:
-    """Does any added test line name the destination module?"""
+    """Does any added test line call or import the destination module?
+
+    The stem must appear as a whole identifier token in a call
+    (shared(), shared.compute()), an attribute use (shared.VALUE), or an
+    import of the destination module. A bare assignment (shared = 1), a
+    variable that merely contains the stem (shared_cache), a stem inside
+    an ordinary word (ratio against io), and a string mention do not count.
+    """
     stem = Path(dest).stem
-    return any(stem in line for line in test_lines)
+    call = re.compile(rf"\b{re.escape(stem)}\s*\(")
+    attr = re.compile(rf"\b{re.escape(stem)}\.[A-Za-z_]\w*")
+    token = re.compile(rf"\b{re.escape(stem)}\b")
+    for raw in test_lines:
+        line = _strip_code_text(raw)
+        if call.search(line) or attr.search(line):
+            return True
+        stripped = line.strip()
+        if stripped.startswith(("import ", "from ")) and token.search(line):
+            return True
+    return False
 
 
 def find_extractions(
@@ -432,7 +477,27 @@ def load_baseline_at_ref(project: Path, ref: str) -> Baseline:
         raise BaselineError(f"baseline at {ref} unreadable: {exc}")
 
 
+def _baseline_expired(rec: Baseline, today: date) -> bool:
+    """True when a raise above 0 has passed its expiry date.
+
+    This is the single comparison the expiry mechanism rests on: the
+    mutation spec neuters it, and the lapsed-baseline cases catch that.
+    """
+    try:
+        return rec["baseline"] > 0 \
+            and date.fromisoformat(rec["expires"]) < today
+    except ValueError:
+        return False
+
+
 def validate_baseline(rec: Baseline, today: date) -> list[str]:
+    """Shape errors in one baseline record.
+
+    This validates a record as written: a raise above 0 needs a reason, a
+    valid future expiry, and an owner. It never judges whether the record
+    on main has expired: that is the lapse rule in evaluate(), not an
+    error in the record being validated.
+    """
     errors: list[str] = []
     if rec["baseline"] <= 0:
         return errors
@@ -440,17 +505,48 @@ def validate_baseline(rec: Baseline, today: date) -> list[str]:
         errors.append("baseline raised without a recorded reason in "
                       f"{BASELINE_PATH}")
     try:
-        expires = date.fromisoformat(rec["expires"])
+        date.fromisoformat(rec["expires"])
     except ValueError:
         errors.append(f"baseline expires {rec['expires']!r} is not an ISO date")
         return errors
-    if expires < today:
-        errors.append(f"baseline expired on {expires.isoformat()}: lower it "
-                      "or re-justify with a new expiry")
+    if _baseline_expired(rec, today):
+        errors.append(f"baseline expiry {rec['expires']} is in the past: "
+                      "set a future expiry or lower the baseline to 0")
     if not rec["owner"].strip():
         errors.append("baseline raised without a recorded owner in "
                       f"{BASELINE_PATH}")
     return errors
+
+
+def _baseline_deleted(diff: str) -> bool:
+    """True when the diff deletes the baseline file outright."""
+    lines = diff.splitlines()
+    for i, raw in enumerate(lines[:-1]):
+        if raw == f"--- a/{BASELINE_PATH}" and lines[i + 1] == "+++ /dev/null":
+            return True
+    return False
+
+
+def _raw_added_test_lines(diffs: list[str]) -> list[str]:
+    """Raw added lines of test files, for the extraction reference check.
+
+    Import lines are needed here (an import of the destination module
+    exempts), and normalize() drops them, so the reference check reads
+    raw added lines instead of the normalized stream.
+    """
+    lines: list[str] = []
+    path: str | None = None
+    for diff in diffs:
+        for raw in diff.splitlines():
+            if raw.startswith("+++ b/"):
+                path = raw[6:]
+            elif raw.startswith("+++ "):
+                path = None
+            elif path is not None and raw.startswith("+") \
+                    and not raw.startswith("+++"):
+                if is_test_file(path):
+                    lines.append(raw[1:])
+    return lines
 
 
 def evaluate(project: Path) -> CheckResult:
@@ -475,32 +571,47 @@ def evaluate(project: Path) -> CheckResult:
     cross = [b for b in combined
              if any(is_test_file(loc["path"]) for loc in b["locations"])
              and any(not is_test_file(loc["path"]) for loc in b["locations"])]
-    test_lines = [t for p, lines in added.items() if is_test_file(p)
-                  for t, _ in lines]
+    test_lines = _raw_added_test_lines(diffs)
     extraction = find_extractions(added, removed, test_lines)
     today = date.today()
     errors: list[str] = []
+    lapsed = ""
+    if any(_baseline_deleted(diff) for diff in diffs):
+        errors.append(
+            f"{BASELINE_PATH} deleted in this diff: lower the baseline to 0 "
+            "instead of deleting the record")
     try:
         new_baseline = load_baseline(project)
     except BaselineError as exc:
         errors.append(str(exc))
         new_baseline = {"baseline": 0, "reason": "", "expires": "", "owner": ""}
     if BASELINE_PATH in files:
-        # The ratchet judges against the baseline as it stood at the base
-        # ref. A raise inside this diff takes effect only after it merges.
+        # Two judgements, split. The count is judged against the OLD
+        # baseline number, so a raise cannot silence its own diff. The
+        # metadata (reason, expiry, owner) is judged on the NEW record
+        # only, so a diff that lowers or re-justifies an expired baseline
+        # is not failed by the record it replaces.
         try:
-            effective = load_baseline_at_ref(project, base)
-        except BaselineError as exc:
-            errors.append(str(exc))
-            effective = new_baseline
+            old = load_baseline_at_ref(project, base)
+        except BaselineError:
+            old = {"baseline": 0, "reason": "", "expires": "", "owner": ""}
         errors.extend(validate_baseline(new_baseline, today))
+        effective = old["baseline"]
+    elif _baseline_expired(new_baseline, today):
+        # An expired raise lapses to 0 instead of blocking clean work: a
+        # clean PR passes, and a PR with duplication fails on the count
+        # against 0. The record on main stays as written; the next PR that
+        # touches the file must lower it or re-justify it.
+        lapsed = new_baseline["expires"]
+        effective = 0
     else:
-        effective = new_baseline
-    errors.extend(validate_baseline(effective, today))
+        errors.extend(validate_baseline(new_baseline, today))
+        effective = new_baseline["baseline"]
     return {
         "added_lines": sum(len(v) for v in added.values()),
         "duplicated_lines": dup,
-        "baseline": effective["baseline"],
+        "baseline": effective,
+        "baseline_lapsed": lapsed,
         "baseline_errors": errors,
         "blocks": blocks,
         "test_blocks": test_blocks,
@@ -546,10 +657,17 @@ def cmd_check(a: argparse.Namespace) -> int:
                   f"{hit['dest']['path']}:{hit['dest']['start_line']}-"
                   f"{hit['dest']['end_line']}: {hit['sample']}")
     failures: list[str] = list(result["baseline_errors"])
+    if result["baseline_lapsed"]:
+        print(f"  note: the recorded baseline raise expired on "
+              f"{result['baseline_lapsed']} and has lapsed; the count is "
+              "judged against 0")
     if result["duplicated_lines"] > result["baseline"]:
         failures.append(
             f"duplicated added lines {result['duplicated_lines']} exceed "
-            f"baseline {result['baseline']}")
+            f"baseline {result['baseline']}"
+            + (f" (the recorded raise expired on "
+               f"{result['baseline_lapsed']} and has lapsed)"
+               if result["baseline_lapsed"] else ""))
     if result["extraction"]:
         failures.append("extraction without regression tests in the diff")
     if result["added_lines"] == 0 and not failures:
@@ -566,15 +684,15 @@ def cmd_check(a: argparse.Namespace) -> int:
                   "not this one). See "
                   "docs/specs/2026-11-08-dup-ratchet.md")
         if result["extraction"]:
-            print("  fix: add a regression test in the diff that references "
-                  "the extracted module (import it and assert on its "
+            print("  fix: add a regression test in the diff that calls the "
+                  "extracted module (import it and assert on its "
                   "behavior). See docs/specs/2026-11-08-dup-ratchet.md")
         return 1
     if result["duplicated_lines"] < result["baseline"]:
         print(f"\n  note: duplicated lines are below baseline; the baseline "
               f"can be lowered to {result['duplicated_lines']} in a "
               "follow-up with reason 'lowered after dedup'")
-    print("\nVERDICT: PASS")
+    print("\nVERDICT: PASS (no byte-identical 6-line repeats in added lines)")
     return 0
 
 
@@ -646,6 +764,9 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
 
     def future(days: int = 90) -> str:
         return (date.today() + timedelta(days=days)).isoformat()
+
+    def past(days: int = 1) -> str:
+        return (date.today() - timedelta(days=days)).isoformat()
 
     block = "\n".join(f"    value_{i} = compute_{i}(row)" for i in range(6)) + "\n"
     base_files = {"tools/a/one.py": "def f():\n    return 1\n"}
@@ -731,6 +852,29 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
     code, res = run_check(repo)
     check("extraction with an unrelated test still fails",
           code == 1 and len(res["extraction"]) > 0, json.dumps(res))
+    repo = make_repo(extract_base)
+    commit(repo, {**extract_pr,
+                  "tests/test_shared.py":
+                      "from tools.a.shared import shared\n"})
+    code, res = run_check(repo)
+    check("extraction with an import-only test passes",
+          code == 0 and res["extraction"] == [], json.dumps(res))
+    repo = make_repo(extract_base)
+    commit(repo, {**extract_pr,
+                  "tests/test_shared.py":
+                      "shared = 1\n\n\n"
+                      "def test_shared():\n    assert shared == 1\n"})
+    code, res = run_check(repo)
+    check("extraction with a bare-assignment test still fails",
+          code == 1 and len(res["extraction"]) > 0, json.dumps(res))
+    repo = make_repo(extract_base)
+    commit(repo, {**extract_pr,
+                  "tests/test_shared.py":
+                      "def test_shared():\n"
+                      '    assert "shared" in "shared_name"\n'})
+    code, res = run_check(repo)
+    check("extraction with a string-mention test still fails",
+          code == 1 and len(res["extraction"]) > 0, json.dumps(res))
 
     # 6. empty diff passes
     repo = make_repo(base_files)
@@ -802,6 +946,71 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
     check("baseline raised in the same diff does not silence the gate",
           code == 1 and res["baseline"] == 0
           and res["duplicated_lines"] >= 6, json.dumps(res))
+
+    # 12. an expired raise lapses instead of locking the repo
+    expired_base = {**base_files, BASELINE_PATH: json.dumps(
+        {"baseline": 6, "reason": "sibling scripts, recorded",
+         "expires": past(), "owner": "claude-376-test"})}
+    # (a) re-justifying with a future expiry passes, judged vs old number 6
+    repo = make_repo(expired_base)
+    commit(repo, {
+        BASELINE_PATH: json.dumps(
+            {"baseline": 6, "reason": "re-justified",
+             "expires": future(), "owner": "claude-376-test"}),
+        "tools/a/two.py": "def g():\n" + block,
+        "tools/a/three.py": "def h():\n" + block,
+    })
+    code, res = run_check(repo)
+    check("re-justifying an expired baseline passes",
+          code == 0 and res["baseline"] == 6, json.dumps(res))
+    # (b) lowering to 0 passes
+    repo = make_repo(expired_base)
+    commit(repo, {
+        BASELINE_PATH: json.dumps(
+            {"baseline": 0, "reason": "lowered after expiry",
+             "expires": "", "owner": ""}),
+    })
+    code, res = run_check(repo)
+    check("lowering an expired baseline to 0 passes",
+          code == 0, json.dumps(res))
+    # (c) an unrelated clean PR passes with an expired baseline on main
+    repo = make_repo(expired_base)
+    commit(repo, {"tools/a/clean.py": "def c():\n    return 2\n"})
+    code, res = run_check(repo)
+    check("clean PR passes with an expired baseline on main",
+          code == 0 and res["baseline_lapsed"] != "", json.dumps(res))
+    # (d) a PR with duplication and no baseline change fails vs lapsed 0
+    repo = make_repo(expired_base)
+    commit(repo, {
+        "tools/a/two.py": "def g():\n" + block,
+        "tools/a/three.py": "def h():\n" + block,
+    })
+    code, res = run_check(repo)
+    check("duplication with a lapsed baseline fails against 0",
+          code == 1 and res["baseline"] == 0
+          and res["baseline_lapsed"] != "", json.dumps(res))
+
+    # 13. a new record with a past expiry fails
+    repo = make_repo(base_files)
+    commit(repo, {
+        BASELINE_PATH: json.dumps(
+            {"baseline": 6, "reason": "raise with a past expiry",
+             "expires": past(), "owner": "claude-376-test"}),
+    })
+    code, res = run_check(repo)
+    check("new baseline record with a past expiry fails",
+          code == 1 and len(res["baseline_errors"]) > 0, json.dumps(res))
+
+    # 14. deleting the baseline file fails closed
+    repo = make_repo({**base_files, BASELINE_PATH: json.dumps(
+        {"baseline": 0, "reason": "", "expires": "", "owner": ""})})
+    (repo / BASELINE_PATH).unlink()
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "delete baseline"],
+                   cwd=repo, check=True)
+    code, res = run_check(repo)
+    check("deleting the baseline file fails closed",
+          code == 1 and len(res["baseline_errors"]) > 0, json.dumps(res))
 
     print("\nVERDICT: {}".format(
         "duplication on changed lines is reported, the ratchet holds, and "

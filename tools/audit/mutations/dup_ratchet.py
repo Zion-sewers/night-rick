@@ -47,22 +47,41 @@ MUTATIONS = [
     ),
     (
         "reference requirement dropped, any test file exempts",
-        "The destination-reference check always returns True, so an "
-        "extraction with no test file at all, or with an unrelated test "
-        "file, passes. This is the exact hole the first review round "
+        "The destination-reference check returns True on the first test "
+        "line, so an extraction with any test file in the diff passes, "
+        "however unrelated. This is the exact hole the first review round "
         "proved with an unrelated test_other.py.",
-        "    stem = Path(dest).stem\n"
-        "    return any(stem in line for line in test_lines)",
-        "    stem = Path(dest).stem\n"
-        "    return True",
+        "    for raw in test_lines:\n"
+        "        line = _strip_code_text(raw)",
+        "    for raw in test_lines:\n"
+        "        return True",
+    ),
+    (
+        "reference loosened to a substring",
+        "The call/attribute match becomes a bare substring test, so a "
+        "test that only assigns `shared = 1`, mentions the stem in a "
+        "string, or uses a variable like `shared_cache` exempts an "
+        "extraction it never tests.",
+        "        if call.search(line) or attr.search(line):",
+        "        if stem in line:",
     ),
     (
         "old-baseline rule dropped, a raise silences its own diff",
         "evaluate() judges against the working-tree baseline instead of "
         "the baseline at the base ref, so a PR can raise the baseline and "
         "add the duplication in one diff and pass.",
-        "            effective = load_baseline_at_ref(project, base)",
-        "            effective = new_baseline",
+        "            old = load_baseline_at_ref(project, base)",
+        "            old = new_baseline",
+    ),
+    (
+        "expiry never lapses, an expired raise stays in force",
+        "The expiry comparison always returns False, so an expired "
+        "baseline keeps its old value forever: a PR with duplication and "
+        "no baseline change passes against the dead raise, and the lapse "
+        "never happens.",
+        "        return rec[\"baseline\"] > 0 \\\n"
+        "            and date.fromisoformat(rec[\"expires\"]) < today",
+        "        return False",
     ),
     (
         "reference check dropped, extraction always fails",

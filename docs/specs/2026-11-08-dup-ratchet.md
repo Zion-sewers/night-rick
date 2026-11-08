@@ -25,12 +25,12 @@ coverage_map domain was added in 2026-08-19):
 - `check [--project .]`: diff base...HEAD plus the working-tree diff, added
   lines only. FAIL when duplicated added lines exceed the baseline in
   `state/dup-ratchet.json` (0 at ship), or when the diff extracts a repeated
-  block into another file without a test file in the diff that references
-  the destination module, or when the baseline file is malformed, expired,
-  or raised without a recorded reason, expiry, or owner. The report lists
-  every location of every duplicate block (first occurrence included) and
-  the source and destination line numbers of every extraction hit, and
-  every FAIL names the fix and points here.
+  block into another file without a test in the diff that calls or imports
+  the destination module, or when the baseline file is malformed, deleted,
+  or raised without a recorded reason, a future expiry, or an owner. The
+  report lists every location of every duplicate block (first occurrence
+  included) and the source and destination line numbers of every
+  extraction hit, and every FAIL names the fix and points here.
 - `report [--project .]`: repo-wide legacy duplication count with the same
   detector. Informational only, never fails. Legacy debt is tracked
   separately and never blocks.
@@ -60,45 +60,83 @@ not a gate. The tool never suggests an extraction.
 The threshold was set from data, not guessed. A prototype detector ran over
 code-heavy merged commits with import lines and docstring fences excluded:
 
-| diff | added lines | N=6 groups / dup lines | N=8 | N=10 |
+| diff | added lines | N=6 blocks / dup lines | N=8 | N=10 |
 | --- | --- | --- | --- | --- |
-| 019f03c (8 corpus profile siblings) | 2113 | 129 / 1338 | 70 / 840 | 41 / 570 |
-| c3e0329 (enrichment_lag_profile) | 377 | 4 / 42 | 1 / 16 | 0 / 0 |
-| d36308d (edge_source_temporal_lag) | 305 | 3 / 18 | 0 / 0 | 0 / 0 |
-| 854357d (source_enrichment_completeness) | 322 | 2 / 12 | 0 / 0 | 0 / 0 |
-| 6f83d76 (simhash_edge_profile) | 296 | 3 / 24 | - | - |
-| 17d2c94 (version-source-profile) | 310 | 7 / 42 | - | - |
+| 019f03c (8 corpus profile siblings) | 2113 | 60 / 561 | 25 / 288 | 17 / 222 |
+| c3e0329 (enrichment_lag_profile) | 377 | 2 / 22 | 1 / 16 | 0 / 0 |
+| d36308d (edge_source_temporal_lag) | 305 | 2 / 13 | 0 / 0 | 0 / 0 |
+| 854357d (source_enrichment_completeness) | 322 | 1 / 7 | 0 / 0 | 0 / 0 |
+| 6f83d76 (simhash_edge_profile) | 296 | 3 / 19 | 0 / 0 | 0 / 0 |
+| 17d2c94 (version-source-profile) | 310 | 3 / 22 | 1 / 8 | 0 / 0 |
 | b01ee4a (cross_table_outlier_detector) | 344 | 0 / 0 | 0 / 0 | 0 / 0 |
 | 7045cee (E-0001..E-0003) | 365 | 0 / 0 | 0 / 0 | 0 / 0 |
-| 42c833d (version-fts-coverage) | 297 | 0 / 0 | - | - |
-| 0847fc8 (fts-edge-reachability) | 296 | 0 / 0 | - | - |
-| 7dc288d (edge text correlation) | 281 | 0 / 0 | - | - |
-| 771eb08 (publisher citation profile) | 284 | 0 / 0 | - | - |
+| 42c833d (version-fts-coverage) | 297 | 0 / 0 | 0 / 0 | 0 / 0 |
+| 0847fc8 (fts-edge-reachability) | 296 | 0 / 0 | 0 / 0 | 0 / 0 |
+| 7dc288d (edge text correlation) | 281 | 0 / 0 | 0 / 0 | 0 / 0 |
+| 771eb08 (publisher citation profile) | 284 | 0 / 0 | 0 / 0 | 0 / 0 |
+
+Counting rule: blocks are maximal merged repeats; dup lines are distinct
+added lines beyond the first occurrence, exactly as counted by
+`tools/audit/dup_ratchet.py` (the `find_blocks` marked set). An earlier
+version of this table used prototype numbers that counted each overlapping
+window separately; those inflated the magnitudes and were replaced with the
+shipped detector's numbers in the third review round.
 
 N=6 fires on the repo's copy-pasted corpus-profile blocks and stays silent
 on clean code diffs: 6 of 12 measured diffs fire, 6 stay silent, and every
 firing diff is a corpus-profile sibling. The six clean diffs include
 test-heavy and audit-family work, so the threshold is not tuned to one
-family of clean code. The first non-corpus PR to trip the gate is still the
-real calibration test: a false positive trains authors to reach for the
-baseline instead of the extraction, which is why the baseline raise is
-bounded (expiry, owner, old-baseline rule) rather than free.
+family of clean code. N=8 would miss d36308d, 854357d, and 6f83d76
+entirely, and N=10 would miss all but the largest diff, so N=6 is kept.
+
+N=6 also fires on ordinary boilerplate: two CLI entry points sharing a
+6-line argument-parsing idiom fail the gate, and the block grows past the
+idiom because the identical `def main():` and `return run(args)` lines
+join it. That is the gate working as designed, not a false positive: the
+block really is duplicated new code. When it fires on boilerplate, the
+author's options in order are: extract the shared idiom into a helper
+(the extraction gate then requires a test that calls it); restructure so
+the repeated lines differ; or record a bounded baseline raise with reason,
+expiry, and owner. Prefer extraction: a raise is global until its expiry,
+so it permits the same count in every area. The first non-corpus PR to
+trip the gate is still the real calibration test, and its remedy is now
+written down here instead of discovered live.
 
 ## The ratchet
 
 `state/dup-ratchet.json` holds one number, the baseline, plus a reason, an
 expiry date, and an owner. `check` fails when duplicated added lines exceed
 it. A raise above 0 needs all three: a non-empty reason, a future expiry
-date, and an owner. `check` fails once the expiry passes until the baseline
-is lowered or re-justified with a new expiry.
+date, and an owner. Owner is attribution, not verification: the tool
+checks only that the field is non-empty, and review is the backstop for a
+lazy expiry or owner. The same holds for the expiry date itself, which is
+self-asserted; nothing in the tool can tell a genuine 90-day exception
+from a 2099 placeholder.
 
-Two properties make the ratchet real rather than a self-serve knob. First,
-the baseline is judged as it stood at the base ref: a raise inside the very
-diff it would silence does not take effect until that raise merges, so a PR
-must land the raise first and the duplication second. Second, the expiry
-bounds every raise in time. A malformed baseline file (invalid JSON, a
-negative or non-integer baseline) fails cleanly with the parse error,
-never with a traceback.
+Two judgements are split, and the split is the whole mechanism. The count
+is judged against the baseline as it stood at the base ref: a raise inside
+the very diff it would silence does not take effect until that raise
+merges, so a PR must land the raise first and the duplication second. The
+metadata (reason, expiry, owner) is judged on the NEW record only. A diff
+that lowers an expired baseline to 0, or re-justifies it with a future
+expiry, passes: it is not failed by the record it replaces.
+
+Expiry LAPSES the raise instead of locking the repo. Once the expiry
+passes, the effective baseline is 0: a clean PR passes, and a PR with
+duplication fails on the count against 0 with a note that the raise
+lapsed. The record on main stays as written; the next PR that touches the
+file must lower it or re-justify it, and every check prints the lapsed
+note while it sits there, so the stale record is visible, not silent. The
+alternative was a tripwire: fail every PR until someone fixes the file.
+That was rejected, because a clean PR adds no new duplication, and the
+issue's first mechanism is that legacy debt never blocks. Expiry bounds
+the raise's value in time; it does not punish authors who were not the
+ones who raised it.
+
+Deleting the baseline file is not an escape: a diff that deletes
+`state/dup-ratchet.json` fails closed with a message naming the lowering
+path. A malformed baseline file (invalid JSON, a negative or non-integer
+baseline) fails cleanly with the parse error, never with a traceback.
 
 The global raise is the honest consequence to state plainly: raising the
 baseline permits that many duplicated lines in every future PR in every
@@ -119,12 +157,18 @@ it.
 Cross-module extraction requires regression tests first. When the diff
 removes a repeated 6-line block AND the same block appears as added lines
 in a different file (the code moved to a shared home), `check` fails unless
-a test file in the diff has added lines referencing the destination module
-(its stem, e.g. `shared` for `tools/a/shared.py`): an import of it, or an
-assertion calling it. A test file that never names the extracted module
-does not exempt, however it is named, and neither does a test that asserts
-nothing about it. A reference is necessary, not sufficient, for
-characterization: the gate is a floor, not a proof that the test is good.
+an added test line calls the destination module (its stem followed by `(`
+or `stem.attr(...)`) or imports the destination module (`from ... import
+stem`, `import ...stem`). The stem must appear as a whole identifier
+token: `shared_cache`, `ratio` against a stem of `io`, and a bare
+assignment such as `shared = 1` do not exempt. String literals and
+comments never count: `assert "shared" in "shared_name"` is a mention,
+not a test. A call is necessary, not sufficient, for characterization:
+the gate is a floor, not a proof that the test is good. An import alone
+exempts only because it names the module as a dependency; a test that
+imports and never calls still characterizes nothing, and review is the
+backstop there. Known limit: the gate cannot resolve imports, so importing
+a name that collides with the module stem counts as importing the module.
 Deleting duplicated code without adding a shared home is not an extraction
 and is not gated. Moving a block inside the same file is not gated either.
 
@@ -164,12 +208,17 @@ extraction gate, and whether the runner has a pinned-binary install path.
 
 ## Verification
 
-- `python tools/audit/dup_ratchet.py selftest` (14 planted checks)
-- `python -m pytest tests/test_dup_ratchet.py -q` (20 tests)
-- `python tools/audit/mutate.py --spec dup_ratchet` (8 mutations)
+- `python tools/audit/dup_ratchet.py selftest` (23 planted checks)
+- `python -m pytest tests/test_dup_ratchet.py -q` (38 tests)
+- `python tools/audit/mutate.py --spec dup_ratchet` (10 mutations)
 - ruff check on tools/audit/dup_ratchet.py and tests/test_dup_ratchet.py;
   mypy --strict on tools/audit/dup_ratchet.py
 - The new domain runs in CI through `gate.py run`; no ship-gate.yml change.
+
+A PASS means no byte-identical 6-line repeats in added lines. It does not
+mean no duplication of any shape: a copied block with one renamed
+identifier sails through by design (see the criterion-3 narrowing above),
+and the verdict line says so.
 
 ## Follow-ups (not merge blockers)
 
@@ -177,7 +226,13 @@ extraction gate, and whether the runner has a pinned-binary install path.
   (gate.py, panel.py, this tool) with the same candidate order and the same
   HEAD~1 fallback. Tools are run as scripts, so there is no importable home
   for it today; extracting one is itself a cross-module extraction under
-  this gate and needs regression tests first.
+  this gate and needs regression tests first. When the shared home is
+  built, it should follow `panel.py`'s copy, which skips a candidate that
+  resolves to HEAD and falls back to the empty tree, instead of `gate.py`'s
+  copy, which returns `origin/main` even when it is HEAD and makes the
+  diff empty. A second note for that follow-up: `load_baseline_at_ref`
+  ignores the `git show` return code, so a genuinely unreadable base ref
+  is indistinguishable from "no baseline file".
 - Per-path baselines, so a raise for the corpus-profile family does not
   permit the same count in every area.
 - Re-measure N=6 false positives after the first month of live gating.

@@ -26,6 +26,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import date, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -93,7 +94,9 @@ class TestFindBlocks(unittest.TestCase):
         blocks, dup = D.find_blocks(streams)
         self.assertEqual(dup, 6)
         self.assertEqual(len(blocks), 1)
-        self.assertEqual(blocks[0]["path"], "b.py")
+        self.assertEqual(blocks[0]["path"], "a.py")
+        self.assertEqual({loc["path"] for loc in blocks[0]["locations"]},
+                         {"a.py", "b.py"})
 
     def test_five_line_repeat_is_not_a_duplicate(self):
         short = BLOCK[:5]
@@ -156,30 +159,41 @@ class TestParseAdded(unittest.TestCase):
 class TestExtraction(unittest.TestCase):
     def _setup(self):
         added = D.parse_added(_diff_for({"tools/a/shared.py": BLOCK}))
-        # Removed lines arrive normalized, exactly as parse_removed returns.
+        # Removed lines arrive normalized with line numbers, exactly as
+        # parse_removed returns.
         norm = [D.normalize(line, "tools/a/one.py") for line in BLOCK]
-        removed = {"tools/a/one.py": norm, "tools/a/two.py": norm}
+        removed = {
+            path: [(t, i + 1) for i, t in enumerate(norm)]
+            for path in ("tools/a/one.py", "tools/a/two.py")
+        }
         return added, removed
 
     def test_extraction_without_tests_is_a_hit(self):
         added, removed = self._setup()
-        hits = D.find_extractions(
-            added, removed, ["tools/a/one.py", "tools/a/two.py",
-                             "tools/a/shared.py"])
+        hits = D.find_extractions(added, removed, [])
         self.assertEqual(len(hits), 1)
+        self.assertEqual(hits[0]["dest"]["path"], "tools/a/shared.py")
+        self.assertEqual(len(hits[0]["sources"]), 2)
 
-    def test_extraction_with_tests_is_not_a_hit(self):
+    def test_extraction_with_referencing_test_is_not_a_hit(self):
         added, removed = self._setup()
         hits = D.find_extractions(
-            added, removed, ["tools/a/one.py", "tools/a/two.py",
-                             "tools/a/shared.py", "tests/test_shared.py"])
+            added, removed,
+            ["from tools.a.shared import shared", "assert shared() == 15"])
         self.assertEqual(hits, [])
+
+    def test_extraction_with_unrelated_test_is_a_hit(self):
+        added, removed = self._setup()
+        hits = D.find_extractions(
+            added, removed, ["def test_other():", "assert 1 == 1"])
+        self.assertEqual(len(hits), 1)
 
     def test_single_removal_is_not_an_extraction(self):
         added, _ = self._setup()
         hits = D.find_extractions(
-            added, {"tools/a/one.py": BLOCK},
-            ["tools/a/one.py", "tools/a/shared.py"])
+            added, {"tools/a/one.py": [(t, i + 1) for i, t in enumerate(
+                [D.normalize(line, "tools/a/one.py") for line in BLOCK])]},
+            [])
         self.assertEqual(hits, [])
 
 
@@ -213,22 +227,50 @@ class TestEvaluateEndToEnd(unittest.TestCase):
             project=str(project))), 0)
 
     def test_baseline_with_reason_is_honoured(self):
+        # The raise must already be on main: a raise inside the diff under
+        # review does not take effect until it merges.
         block = "\n".join(BLOCK) + "\n"
-        project = self._repo({"tools/a/one.py": "def f():\n    return 1\n"}, {})
-        (project / "state").mkdir(exist_ok=True)
-        (project / "state" / "dup-ratchet.json").write_text(json.dumps(
-            {"baseline": 6, "reason": "sibling scripts, recorded"}),
-            encoding="utf-8")
-        for path, text in {
+        future = (date.today() + timedelta(days=90)).isoformat()
+        base = {
+            "tools/a/one.py": "def f():\n    return 1\n",
+            "state/dup-ratchet.json": json.dumps(
+                {"baseline": 6, "reason": "sibling scripts, recorded",
+                 "expires": future, "owner": "test"}),
+        }
+        project = self._repo(base, {
             "tools/a/two.py": "def g():\n" + block,
             "tools/a/three.py": "def h():\n" + block,
-        }.items():
-            p = project / path
-            p.write_text(text, encoding="utf-8")
-        subprocess.run(["git", "add", "-A"], cwd=project, check=True)
-        subprocess.run(["git", "commit", "-q", "-m", "pr"], cwd=project, check=True)
+        })
         self.assertEqual(D.cmd_check(argparse.Namespace(
             project=str(project))), 0)
+
+    def test_raise_inside_the_diff_does_not_silence_the_gate(self):
+        block = "\n".join(BLOCK) + "\n"
+        future = (date.today() + timedelta(days=90)).isoformat()
+        base = {
+            "tools/a/one.py": "def f():\n    return 1\n",
+            "state/dup-ratchet.json": json.dumps(
+                {"baseline": 0, "reason": "", "expires": "", "owner": ""}),
+        }
+        project = self._repo(base, {
+            "state/dup-ratchet.json": json.dumps(
+                {"baseline": 6, "reason": "raise in this diff",
+                 "expires": future, "owner": "test"}),
+            "tools/a/two.py": "def g():\n" + block,
+            "tools/a/three.py": "def h():\n" + block,
+        })
+        code = D.cmd_check(argparse.Namespace(project=str(project)))
+        res = D.evaluate(project)
+        self.assertEqual(code, 1)
+        self.assertEqual(res["baseline"], 0)
+
+    def test_malformed_baseline_fails_cleanly(self):
+        project = self._repo({"tools/a/one.py": "def f():\n    return 1\n"}, {})
+        (project / "state").mkdir(exist_ok=True)
+        (project / "state" / "dup-ratchet.json").write_text(
+            "{not json", encoding="utf-8")
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=str(project))), 1)
 
 
 if __name__ == "__main__":

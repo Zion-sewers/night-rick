@@ -1,6 +1,8 @@
 {
   "baseline": 0,
   "reason": "",
+  "expires": "",
+  "owner": "",
   "updated": "2026-11-08",
-  "note": "Ratchet on new-code duplication (night-rick#376). Duplicated added lines in a diff must not exceed baseline. Raise only by a reviewed commit to this file carrying a non-empty reason; a raised baseline without a reason fails the check."
+  "note": "Ratchet on new-code duplication (night-rick#376). Duplicated added lines in a diff must not exceed baseline. A raise above 0 needs a non-empty reason, a future expiry date, and an owner; check fails once the expiry passes. A raise inside the diff under review does not take effect until it merges: the ratchet judges against the baseline as it stood at the base ref. Lower the baseline when a PR's count drops below it."
 }

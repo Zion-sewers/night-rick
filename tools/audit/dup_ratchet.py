@@ -13,38 +13,54 @@ separately (`report`) and never blocks.
 
 THE RATCHET
 
-`state/dup-ratchet.json` holds one number, the baseline (0 at ship). `check`
-fails when duplicated-added-lines exceed it. The baseline may only be raised
-by a reviewed commit to that file carrying a non-empty reason; a raised
-baseline without a reason fails the check. The file is in the diff, so the
-exception is visible to panel review instead of silent.
+`state/dup-ratchet.json` holds one number, the baseline (0 at ship), plus a
+reason, an expiry date, and an owner. `check` fails when duplicated added
+lines exceed the baseline. Two properties make the ratchet real rather than
+a self-serve knob. First, the baseline is judged as it stood at the base
+ref: a raise inside the very diff it would silence does not take effect
+until that raise merges, so a PR must land the raise first and the
+duplication second. Second, a raise above 0 needs a non-empty reason, a
+future expiry date, and an owner, and `check` fails once the expiry passes
+until the baseline is lowered or re-justified. The file is in the diff, so
+every raise is visible to panel review instead of silent. Lowering is the
+documented happy path: when a PR's count drops below the baseline, the
+author may lower the baseline to the new count in the same PR.
 
 WHAT COUNTS AS A DUPLICATE
 
 An exact repeat, not a similarity score. After normalization (blank lines
 dropped, full-line comments dropped, import lines and bare docstring fences
 dropped, whitespace collapsed), a run of 6 consecutive added lines that
-appears at 2+ locations is a duplicate block. Same-looking code that is not
-textually identical does NOT fire: same-looking code may encode different
-concepts, and abstracting it is a judgement call this tool refuses to make
-for the author. The threshold (6) was calibrated against real merged diffs
-(see docs/specs/2026-11-08-dup-ratchet.md): N=6 fires on the repo's
-copy-pasted corpus-profile blocks and stays silent on clean code diffs.
+appears at 2 or more locations is a duplicate block. Same-looking code that
+is not textually identical does NOT fire: same-looking code may encode
+different concepts, and abstracting it is a judgement call this tool
+refuses to make for the author. Similar-but-not-identical matches are out
+of scope by design: no shared-meaning justification is collected or
+checked, and the "abstraction needs a shared-meaning justification" line
+on each reported group is a reminder, not a gate. The threshold (6) was
+calibrated against real merged diffs (see
+docs/specs/2026-11-08-dup-ratchet.md): N=6 fires on the repo's copy-pasted
+corpus-profile blocks and stays silent on clean code diffs.
 
 THE EXTRACTION GATE
 
 Cross-module extraction requires regression tests first. When the diff
-removes a repeated 6-line block AND the same block appears as added lines in
-a different file (the code moved to a shared home) with no test file in the
-diff, `check` fails. A test file in the diff satisfies it.
+removes a repeated 6-line block AND the same block appears as added lines
+in a different file (the code moved to a shared home), the extraction is
+exempt only when a test file in the diff has added lines referencing the
+destination module (its stem, e.g. `shared` for `tools/a/shared.py`).
+A test file that never names the extracted module does not exempt; neither
+does a test that asserts nothing about it. A reference is necessary, not
+sufficient, for characterization: the gate is a floor, not a proof that the
+test is good.
 
 WHAT THIS DOES NOT DO
 
-It never suggests an extraction and never rewrites code. Every reported
-group carries the line "abstraction requires a shared-meaning justification".
-Test files are excluded from the ratchet FAIL (fixture repetition is
-characterized by the test itself) but are listed in the report, so the
-exclusion is visible, not silent.
+It never suggests an extraction and never rewrites code. Test files are
+excluded from the ratchet FAIL (fixture repetition is characterized by the
+test itself) but are listed in the report, so the exclusion is visible, not
+silent. A block appearing once in production code and once in a test file
+is reported as a cross-copy, also informationally.
 """
 
 from __future__ import annotations
@@ -56,6 +72,7 @@ import subprocess
 import sys
 import tempfile
 from collections import Counter, defaultdict
+from datetime import date, timedelta
 from pathlib import Path
 from typing import TypedDict
 
@@ -85,6 +102,14 @@ LINE_COMMENT = (
 class Baseline(TypedDict):
     baseline: int
     reason: str
+    expires: str
+    owner: str
+
+
+class Location(TypedDict):
+    path: str
+    start_line: int
+    end_line: int
 
 
 class Block(TypedDict):
@@ -93,17 +118,30 @@ class Block(TypedDict):
     end_line: int
     lines: int
     sample: str
+    locations: list[Location]
+
+
+class ExtractionHit(TypedDict):
+    sources: list[Location]
+    dest: Location
+    sample: str
 
 
 class CheckResult(TypedDict):
     added_lines: int
     duplicated_lines: int
     baseline: int
+    baseline_errors: list[str]
     blocks: list[Block]
     test_blocks: list[Block]
     test_duplicated_lines: int
-    extraction: list[str]
+    cross_blocks: list[Block]
+    extraction: list[ExtractionHit]
     changed_files: list[str]
+
+
+class BaselineError(ValueError):
+    """The baseline file is unreadable or malformed."""
 
 
 def is_code(path: str) -> bool:
@@ -115,6 +153,7 @@ def is_test_file(path: str) -> bool:
     name = Path(path).name
     return (
         path.startswith("tests/")
+        or name == "test.py"
         or name.startswith("test_")
         or "_test." in name
         or ".test." in name
@@ -144,6 +183,9 @@ def git(project: Path, args: str) -> str:
 
 
 def default_base(project: Path) -> str:
+    # Mirrors gate.py default_base (same candidate order, same HEAD~1
+    # fallback). A shared home for the three copies (gate.py, panel.py,
+    # here) is a follow-up; see docs/specs/2026-11-08-dup-ratchet.md.
     for cand in ("origin/main", "origin/master", "main", "master"):
         if git(project, f"rev-parse --verify --quiet {cand}").strip():
             return cand
@@ -164,6 +206,8 @@ def parse_added(diff: str) -> dict[str, list[tuple[str, int]]]:
         elif raw.startswith("@@ ") and path is not None:
             m = re.search(r"\+(\d+)", raw)
             lineno = int(m.group(1)) if m else 0
+        elif path is not None and raw.startswith(" "):
+            lineno += 1
         elif path is not None and raw.startswith("+") and not raw.startswith("+++"):
             if is_code(path):
                 norm = normalize(raw[1:], path)
@@ -173,19 +217,28 @@ def parse_added(diff: str) -> dict[str, list[tuple[str, int]]]:
     return added
 
 
-def parse_removed(diff: str) -> dict[str, list[str]]:
-    removed: dict[str, list[str]] = defaultdict(list)
+def parse_removed(diff: str) -> dict[str, list[tuple[str, int]]]:
+    """Removed normalized lines per file: {path: [(text, old_lineno)]}."""
+    removed: dict[str, list[tuple[str, int]]] = defaultdict(list)
     path: str | None = None
+    lineno = 0
     for raw in diff.splitlines():
         if raw.startswith("--- a/"):
             path = raw[6:]
+            lineno = 0
         elif raw.startswith("--- "):
             path = None
+        elif raw.startswith("@@ ") and path is not None:
+            m = re.search(r"-(\d+)", raw)
+            lineno = int(m.group(1)) if m else 0
+        elif path is not None and raw.startswith(" "):
+            lineno += 1
         elif path is not None and raw.startswith("-") and not raw.startswith("---"):
             if is_code(path):
                 norm = normalize(raw[1:], path)
                 if norm is not None:
-                    removed[path].append(norm)
+                    removed[path].append((norm, lineno))
+            lineno += 1
     return removed
 
 
@@ -200,137 +253,299 @@ def changed_files(diff: str) -> list[str]:
 def find_blocks(
     streams: dict[str, list[tuple[str, int]]],
 ) -> tuple[list[Block], int]:
-    """Merge overlapping duplicate windows into blocks; count dup lines."""
+    """Group duplicate windows into maximal blocks; count distinct dup lines.
+
+    The count is the set of distinct added lines inside any duplicate
+    window beyond the first occurrence, so a 12-line repeat counts 12
+    lines in one block, not 7 overlapping windows. Reporting groups
+    windows into maximal families: a family is a maximal run of consecutive
+    windows whose location set shifts with the window. Every location of
+    every family is reported, first occurrence included.
+    """
     windows: dict[tuple[str, ...], list[tuple[str, int]]] = defaultdict(list)
     for path, lines in streams.items():
         for i in range(len(lines) - WINDOW + 1):
             windows[tuple(t for t, _ in lines[i:i + WINDOW])].append((path, i))
     marked: set[tuple[str, int]] = set()
-    intervals: dict[str, list[tuple[int, int]]] = defaultdict(list)
     for locs in windows.values():
         if len(locs) < 2:
             continue
         for path, i in locs[1:]:
             for j in range(i, i + WINDOW):
                 marked.add((path, j))
-            intervals[path].append((i, i + WINDOW))
     blocks: list[Block] = []
-    for path, ivs in intervals.items():
-        lines = streams[path]
-        merged: list[tuple[int, int]] = []
-        for start, end in sorted(ivs):
-            if merged and start <= merged[-1][1]:
-                merged[-1] = (merged[-1][0], max(merged[-1][1], end))
-            else:
-                merged.append((start, end))
-        for start, end in merged:
+    seen: set[tuple[tuple[tuple[str, int], ...], int]] = set()
+    for path, lines in streams.items():
+        i = 0
+        while i <= len(lines) - WINDOW:
+            key = tuple(t for t, _ in lines[i:i + WINDOW])
+            locs = windows.get(key, [])
+            if len(locs) < 2:
+                i += 1
+                continue
+            if i > 0:
+                prev = tuple(t for t, _ in lines[i - 1:i - 1 + WINDOW])
+                prev_locs = windows.get(prev, [])
+                shifted = sorted((p, idx + 1) for p, idx in prev_locs)
+                if len(prev_locs) >= 2 and sorted(locs) == shifted:
+                    i += 1
+                    continue
+            j = i
+            run_locs = locs
+            while j + 1 <= len(lines) - WINDOW:
+                nxt = tuple(t for t, _ in lines[j + 1:j + 1 + WINDOW])
+                nxt_locs = windows.get(nxt, [])
+                shifted = sorted((p, idx + 1) for p, idx in run_locs)
+                if len(nxt_locs) >= 2 and sorted(nxt_locs) == shifted:
+                    j += 1
+                    run_locs = nxt_locs
+                else:
+                    break
+            span = j - i + WINDOW
+            family_key = (tuple(sorted(locs)), span)
+            if family_key in seen:
+                i = j + 1
+                continue
+            seen.add(family_key)
+            locations: list[Location] = []
+            for p, idx in locs:
+                plines = streams[p]
+                locations.append({
+                    "path": p,
+                    "start_line": plines[idx][1],
+                    "end_line": plines[idx + span - 1][1],
+                })
             blocks.append({
                 "path": path,
-                "start_line": lines[start][1],
-                "end_line": lines[end - 1][1],
-                "lines": end - start,
-                "sample": lines[start][0][:100],
+                "start_line": lines[i][1],
+                "end_line": lines[j + WINDOW - 1][1],
+                "lines": span,
+                "sample": lines[i][0][:100],
+                "locations": sorted(
+                    locations, key=lambda loc: (loc["path"], loc["start_line"])),
             })
+            i = j + 1
     return blocks, len(marked)
+
+
+def _references_dest(test_lines: list[str], dest: str) -> bool:
+    """Does any added test line name the destination module?"""
+    stem = Path(dest).stem
+    return any(stem in line for line in test_lines)
 
 
 def find_extractions(
     added: dict[str, list[tuple[str, int]]],
-    removed: dict[str, list[str]],
-    files: list[str],
-) -> list[str]:
-    """Removed repeated block reappearing as added lines in another file."""
+    removed: dict[str, list[tuple[str, int]]],
+    test_lines: list[str],
+) -> list[ExtractionHit]:
+    """Removed repeated block reappearing as added lines in another file.
+
+    A hit is exempt only when an added test line references the
+    destination module. A test file that never names the extracted module
+    does not exempt, however it is named.
+    """
     removed_windows: dict[tuple[str, ...], set[str]] = defaultdict(set)
     removed_counts: Counter[tuple[str, ...]] = Counter()
     for path, lines in removed.items():
         for i in range(len(lines) - WINDOW + 1):
-            window = tuple(lines[i:i + WINDOW])
+            window = tuple(t for t, _ in lines[i:i + WINDOW])
             removed_windows[window].add(path)
             removed_counts[window] += 1
-    added_windows: dict[tuple[str, ...], set[str]] = defaultdict(set)
-    for path, alines in added.items():
-        for i in range(len(alines) - WINDOW + 1):
-            added_windows[tuple(t for t, _ in alines[i:i + WINDOW])].add(path)
-    hits: list[str] = []
+    added_windows: dict[tuple[str, ...], list[tuple[str, int]]] = defaultdict(list)
+    for path, lines in added.items():
+        for i in range(len(lines) - WINDOW + 1):
+            added_windows[tuple(t for t, _ in lines[i:i + WINDOW])].append((path, i))
+    merged: dict[tuple[tuple[str, ...], str], ExtractionHit] = {}
     for window, rpaths in removed_windows.items():
         # A removed block counts as repeated when it occurs 2+ times among
         # removed lines: same window seen from 2 files, or twice in one file.
         if removed_counts[window] < 2:
             continue
-        hits.extend(
-            f"{sorted(rpaths)[0]} (+{len(rpaths) - 1} more) -> {apath}"
-            for apath in added_windows.get(window, set())
-            if apath not in rpaths
-        )
-    return sorted(set(hits)) if not any(is_test_file(f) for f in files) else []
+        for apath, aidx in added_windows.get(window, []):
+            if apath in rpaths:
+                continue
+            if _references_dest(test_lines, apath):
+                continue
+            sources: list[Location] = [
+                {
+                    "path": rpath,
+                    "start_line": removed[rpath][i][1],
+                    "end_line": removed[rpath][i + WINDOW - 1][1],
+                }
+                for rpath in sorted(rpaths)
+                for i in range(len(removed[rpath]) - WINDOW + 1)
+                if tuple(t for t, _ in removed[rpath][i:i + WINDOW]) == window
+            ]
+            alines = added[apath]
+            dest: Location = {
+                "path": apath,
+                "start_line": alines[aidx][1],
+                "end_line": alines[aidx + WINDOW - 1][1],
+            }
+            key = (tuple(sorted(rpaths)), apath)
+            hit = merged.get(key)
+            if hit is None:
+                merged[key] = {
+                    "sources": sources,
+                    "dest": dest,
+                    "sample": window[0][:100],
+                }
+            else:
+                hit["dest"]["end_line"] = max(
+                    hit["dest"]["end_line"], dest["end_line"])
+    return sorted(merged.values(),
+                  key=lambda h: (h["dest"]["path"], h["dest"]["start_line"]))
+
+
+def _parse_baseline(data: object) -> Baseline:
+    if not isinstance(data, dict):
+        raise BaselineError("baseline is not a JSON object")
+    baseline = data.get("baseline", 0)
+    if not isinstance(baseline, int) or isinstance(baseline, bool) or baseline < 0:
+        raise BaselineError("baseline is not a non-negative integer")
+    return {
+        "baseline": baseline,
+        "reason": str(data.get("reason", "")),
+        "expires": str(data.get("expires", "")),
+        "owner": str(data.get("owner", "")),
+    }
 
 
 def load_baseline(project: Path) -> Baseline:
     p = project / BASELINE_PATH
     if not p.exists():
-        return {"baseline": 0, "reason": ""}
-    data = json.loads(p.read_text(encoding="utf-8"))
-    return {"baseline": int(data.get("baseline", 0)),
-            "reason": str(data.get("reason", ""))}
+        return {"baseline": 0, "reason": "", "expires": "", "owner": ""}
+    try:
+        return _parse_baseline(json.loads(p.read_text(encoding="utf-8")))
+    except (ValueError, OSError) as exc:
+        raise BaselineError(f"baseline unreadable: {exc}")
+
+
+def load_baseline_at_ref(project: Path, ref: str) -> Baseline:
+    out = git(project, f"show {ref}:{BASELINE_PATH}")
+    if not out.strip():
+        return {"baseline": 0, "reason": "", "expires": "", "owner": ""}
+    try:
+        return _parse_baseline(json.loads(out))
+    except ValueError as exc:
+        raise BaselineError(f"baseline at {ref} unreadable: {exc}")
+
+
+def validate_baseline(rec: Baseline, today: date) -> list[str]:
+    errors: list[str] = []
+    if rec["baseline"] <= 0:
+        return errors
+    if not rec["reason"].strip():
+        errors.append("baseline raised without a recorded reason in "
+                      f"{BASELINE_PATH}")
+    try:
+        expires = date.fromisoformat(rec["expires"])
+    except ValueError:
+        errors.append(f"baseline expires {rec['expires']!r} is not an ISO date")
+        return errors
+    if expires < today:
+        errors.append(f"baseline expired on {expires.isoformat()}: lower it "
+                      "or re-justify with a new expiry")
+    if not rec["owner"].strip():
+        errors.append("baseline raised without a recorded owner in "
+                      f"{BASELINE_PATH}")
+    return errors
 
 
 def evaluate(project: Path) -> CheckResult:
     base = default_base(project)
     diffs = [git(project, f"diff -U0 {base}...HEAD"), git(project, "diff -U0 HEAD")]
     added: dict[str, list[tuple[str, int]]] = defaultdict(list)
-    removed: dict[str, list[str]] = defaultdict(list)
+    removed: dict[str, list[tuple[str, int]]] = defaultdict(list)
     files: set[str] = set()
     for diff in diffs:
         for path, lines in parse_added(diff).items():
             seen = {(t, n) for t, n in added[path]}
             added[path].extend([(t, n) for t, n in lines if (t, n) not in seen])
         for path, rlines in parse_removed(diff).items():
-            removed[path].extend(rlines)
+            seen_r = {(t, n) for t, n in removed[path]}
+            removed[path].extend([(t, n) for t, n in rlines if (t, n) not in seen_r])
         files.update(changed_files(diff))
     blocks, dup = find_blocks(
         {p: lines for p, lines in added.items() if not is_test_file(p)})
     test_blocks, test_dup = find_blocks(
         {p: lines for p, lines in added.items() if is_test_file(p)})
-    extraction = find_extractions(added, removed, sorted(files))
-    base_rec = load_baseline(project)
+    combined, _ = find_blocks(added)
+    cross = [b for b in combined
+             if any(is_test_file(loc["path"]) for loc in b["locations"])
+             and any(not is_test_file(loc["path"]) for loc in b["locations"])]
+    test_lines = [t for p, lines in added.items() if is_test_file(p)
+                  for t, _ in lines]
+    extraction = find_extractions(added, removed, test_lines)
+    today = date.today()
+    errors: list[str] = []
+    try:
+        new_baseline = load_baseline(project)
+    except BaselineError as exc:
+        errors.append(str(exc))
+        new_baseline = {"baseline": 0, "reason": "", "expires": "", "owner": ""}
+    if BASELINE_PATH in files:
+        # The ratchet judges against the baseline as it stood at the base
+        # ref. A raise inside this diff takes effect only after it merges.
+        try:
+            effective = load_baseline_at_ref(project, base)
+        except BaselineError as exc:
+            errors.append(str(exc))
+            effective = new_baseline
+        errors.extend(validate_baseline(new_baseline, today))
+    else:
+        effective = new_baseline
+    errors.extend(validate_baseline(effective, today))
     return {
         "added_lines": sum(len(v) for v in added.values()),
         "duplicated_lines": dup,
-        "baseline": base_rec["baseline"],
+        "baseline": effective["baseline"],
+        "baseline_errors": errors,
         "blocks": blocks,
         "test_blocks": test_blocks,
         "test_duplicated_lines": test_dup,
+        "cross_blocks": cross,
         "extraction": extraction,
         "changed_files": sorted(files),
     }
 
 
+def _fmt_locations(locations: list[Location]) -> str:
+    return ", ".join(
+        f"{loc['path']}:{loc['start_line']}-{loc['end_line']}"
+        for loc in locations)
+
+
+def _print_blocks(heading: str, blocks: list[Block]) -> None:
+    if not blocks:
+        return
+    print(f"\n{heading}")
+    for b in blocks[:10]:
+        print(f"  {b['path']}:{b['start_line']}-{b['end_line']} "
+              f"({b['lines']} lines): {b['sample']}")
+        print(f"    copies: {_fmt_locations(b['locations'])}")
+
+
 def cmd_check(a: argparse.Namespace) -> int:
     project = Path(a.project).resolve()
     result = evaluate(project)
-    base_rec = load_baseline(project)
     print(f"added code lines: {result['added_lines']}")
     print(f"duplicated added lines: {result['duplicated_lines']} "
           f"(baseline: {result['baseline']})")
-    if result["blocks"]:
-        print("\nDUPLICATE BLOCKS (abstraction needs a shared-meaning "
-              "justification):")
-        for b in result["blocks"][:10]:
-            print(f"  {b['path']}:{b['start_line']}-{b['end_line']} "
-                  f"({b['lines']} lines): {b['sample']}")
-    if result["test_blocks"]:
-        print("\nTEST-FILE DUPLICATION (informational, not ratcheted):")
-        for b in result["test_blocks"][:10]:
-            print(f"  {b['path']}:{b['start_line']}-{b['end_line']} "
-                  f"({b['lines']} lines): {b['sample']}")
+    _print_blocks("DUPLICATE BLOCKS (abstraction needs a shared-meaning "
+                  "justification):", result["blocks"])
+    _print_blocks("TEST-FILE DUPLICATION (informational, not ratcheted):",
+                  result["test_blocks"])
+    _print_blocks("CROSS-COPIES, production code and test file "
+                  "(informational, not ratcheted):", result["cross_blocks"])
     if result["extraction"]:
         print("\nEXTRACTION WITHOUT REGRESSION TESTS:")
         for hit in result["extraction"]:
-            print(f"  {hit}")
-    failures: list[str] = []
-    if result["baseline"] > 0 and not base_rec["reason"].strip():
-        failures.append("baseline raised without a recorded reason in "
-                        f"{BASELINE_PATH}")
+            print(f"  {_fmt_locations(hit['sources'])} -> "
+                  f"{hit['dest']['path']}:{hit['dest']['start_line']}-"
+                  f"{hit['dest']['end_line']}: {hit['sample']}")
+    failures: list[str] = list(result["baseline_errors"])
     if result["duplicated_lines"] > result["baseline"]:
         failures.append(
             f"duplicated added lines {result['duplicated_lines']} exceed "
@@ -344,7 +559,21 @@ def cmd_check(a: argparse.Namespace) -> int:
         print("\nVERDICT: FAIL")
         for f in failures:
             print(f"  [FAIL] {f}")
+        if result["duplicated_lines"] > result["baseline"]:
+            print("  fix: deduplicate the listed blocks, or raise the "
+                  f"baseline in {BASELINE_PATH} with a recorded reason, "
+                  "expiry and owner (a raise takes effect for later diffs, "
+                  "not this one). See "
+                  "docs/specs/2026-11-08-dup-ratchet.md")
+        if result["extraction"]:
+            print("  fix: add a regression test in the diff that references "
+                  "the extracted module (import it and assert on its "
+                  "behavior). See docs/specs/2026-11-08-dup-ratchet.md")
         return 1
+    if result["duplicated_lines"] < result["baseline"]:
+        print(f"\n  note: duplicated lines are below baseline; the baseline "
+              f"can be lowered to {result['duplicated_lines']} in a "
+              "follow-up with reason 'lowered after dedup'")
     print("\nVERDICT: PASS")
     return 0
 
@@ -372,6 +601,7 @@ def cmd_report(a: argparse.Namespace) -> int:
     total = sum(len(v) for v in streams.values())
     print(f"tracked code lines: {total}")
     print(f"legacy duplicated lines: {dup} in {len(blocks)} block(s)")
+    _print_blocks("LEGACY BLOCKS (locations, informational only):", blocks)
     print("VERDICT: REPORT ONLY (legacy debt never blocks)")
     return 0
 
@@ -413,6 +643,9 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
 
     def run_check(project: Path) -> tuple[int, CheckResult]:
         return cmd_check(argparse.Namespace(project=str(project))), evaluate(project)
+
+    def future(days: int = 90) -> str:
+        return (date.today() + timedelta(days=days)).isoformat()
 
     block = "\n".join(f"    value_{i} = compute_{i}(row)" for i in range(6)) + "\n"
     base_files = {"tools/a/one.py": "def f():\n    return 1\n"}
@@ -457,16 +690,26 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
     code, res = run_check(repo)
     check("same shape with different identifiers passes", code == 0, json.dumps(res))
 
-    # 5. extraction without tests fails; with a test file passes
+    # 5. extraction without tests fails; with a referencing test passes;
+    #    with an unrelated test still fails
+    extract_body = (
+        "    total = 0\n"
+        "    total += 1\n"
+        "    total += 2\n"
+        "    total += 3\n"
+        "    total += 4\n"
+        "    total += 5\n"
+        "    return total\n"
+    )
     extract_base = {
-        "tools/a/one.py": "def f():\n" + block,
-        "tools/a/two.py": "def g():\n" + block,
+        "tools/a/one.py": "def f():\n" + extract_body,
+        "tools/a/two.py": "def g():\n" + extract_body,
         "tools/a/shared.py": "def s():\n    return 0\n",
     }
     extract_pr = {
         "tools/a/one.py": "def f():\n    return shared()\n",
         "tools/a/two.py": "def g():\n    return shared()\n",
-        "tools/a/shared.py": "def shared():\n" + block,
+        "tools/a/shared.py": "def shared():\n" + extract_body,
     }
     repo = make_repo(extract_base)
     commit(repo, extract_pr)
@@ -475,10 +718,19 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
           code == 1 and len(res["extraction"]) > 0, json.dumps(res))
     repo = make_repo(extract_base)
     commit(repo, {**extract_pr,
-                  "tests/test_shared.py": "def test_shared():\n    assert True\n"})
+                  "tests/test_shared.py":
+                      "from tools.a.shared import shared\n\n\n"
+                      "def test_shared():\n    assert shared() == 15\n"})
     code, res = run_check(repo)
-    check("extraction with a test file in the diff passes",
+    check("extraction with a test referencing the module passes",
           code == 0 and res["extraction"] == [], json.dumps(res))
+    repo = make_repo(extract_base)
+    commit(repo, {**extract_pr,
+                  "tests/test_other.py":
+                      "def test_other():\n    assert 1 == 1\n"})
+    code, res = run_check(repo)
+    check("extraction with an unrelated test still fails",
+          code == 1 and len(res["extraction"]) > 0, json.dumps(res))
 
     # 6. empty diff passes
     repo = make_repo(base_files)
@@ -486,28 +738,29 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
     check("empty diff passes (no added code lines)",
           code == 0 and res["added_lines"] == 0, json.dumps(res))
 
-    # 7. baseline respected; raised baseline without a reason fails
-    repo = make_repo(base_files)
-    (repo / BASELINE_PATH).parent.mkdir(parents=True, exist_ok=True)
-    (repo / BASELINE_PATH).write_text(json.dumps(
-        {"baseline": 6, "reason": "sibling profile scripts, recorded"}),
-        encoding="utf-8")
+    # 7. baseline respected; raised baseline without a reason fails.
+    #    The raise must already be on main: a raise inside the diff under
+    #    review does not take effect until it merges (case 11).
+    repo = make_repo({**base_files, BASELINE_PATH: json.dumps(
+        {"baseline": 6, "reason": "sibling profile scripts, recorded",
+         "expires": future(), "owner": "claude-376-test"})})
     commit(repo, {
         "tools/a/two.py": "def g():\n" + block,
         "tools/a/three.py": "def h():\n" + block,
     })
     code, res = run_check(repo)
     check("count at baseline passes", code == 0, json.dumps(res))
-    repo = make_repo(base_files)
-    (repo / BASELINE_PATH).parent.mkdir(parents=True, exist_ok=True)
-    (repo / BASELINE_PATH).write_text(json.dumps(
-        {"baseline": 6, "reason": ""}), encoding="utf-8")
-    subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
-    subprocess.run(["git", "commit", "-q", "-m", "baseline"], cwd=repo, check=True)
+    repo = make_repo({**base_files, BASELINE_PATH: json.dumps(
+        {"baseline": 6, "reason": "", "expires": future(),
+         "owner": "claude-376-test"})})
+    commit(repo, {
+        "tools/a/two.py": "def g():\n" + block,
+        "tools/a/three.py": "def h():\n" + block,
+    })
     code, res = run_check(repo)
     check("raised baseline without a reason fails", code == 1, json.dumps(res))
 
-    # 9. the same repeat inside test files is informational, not a FAIL
+    # 8. the same repeat inside test files is informational, not a FAIL
     repo = make_repo(base_files)
     commit(repo, {
         "tests/test_two.py": "def test_g():\n" + block,
@@ -518,7 +771,7 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
           code == 0 and res["duplicated_lines"] == 0
           and res["test_duplicated_lines"] >= 6, json.dumps(res))
 
-    # 8. report never fails, even with duplication present
+    # 9. report never fails, even with duplication present
     repo = make_repo(base_files)
     commit(repo, {
         "tools/a/two.py": "def g():\n" + block,
@@ -526,6 +779,29 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
     })
     check("report exits 0 with duplication present",
           cmd_report(argparse.Namespace(project=str(repo))) == 0)
+
+    # 10. a malformed baseline file fails cleanly, not with a traceback
+    repo = make_repo(base_files)
+    (repo / BASELINE_PATH).parent.mkdir(parents=True, exist_ok=True)
+    (repo / BASELINE_PATH).write_text("{not json", encoding="utf-8")
+    code, res = run_check(repo)
+    check("malformed baseline fails cleanly",
+          code == 1 and len(res["baseline_errors"]) > 0, json.dumps(res))
+
+    # 11. a raise inside the diff under review does not silence the gate
+    repo = make_repo({**base_files, BASELINE_PATH: json.dumps(
+        {"baseline": 0, "reason": "", "expires": "", "owner": ""})})
+    commit(repo, {
+        BASELINE_PATH: json.dumps(
+            {"baseline": 6, "reason": "raise in this diff",
+             "expires": future(), "owner": "claude-376-test"}),
+        "tools/a/two.py": "def g():\n" + block,
+        "tools/a/three.py": "def h():\n" + block,
+    })
+    code, res = run_check(repo)
+    check("baseline raised in the same diff does not silence the gate",
+          code == 1 and res["baseline"] == 0
+          and res["duplicated_lines"] >= 6, json.dumps(res))
 
     print("\nVERDICT: {}".format(
         "duplication on changed lines is reported, the ratchet holds, and "

@@ -25,8 +25,12 @@ coverage_map domain was added in 2026-08-19):
 - `check [--project .]`: diff base...HEAD plus the working-tree diff, added
   lines only. FAIL when duplicated added lines exceed the baseline in
   `state/dup-ratchet.json` (0 at ship), or when the diff extracts a repeated
-  block into another file without a test file in the diff, or when the
-  baseline was raised without a recorded reason.
+  block into another file without a test file in the diff that references
+  the destination module, or when the baseline file is malformed, expired,
+  or raised without a recorded reason, expiry, or owner. The report lists
+  every location of every duplicate block (first occurrence included) and
+  the source and destination line numbers of every extraction hit, and
+  every FAIL names the fix and points here.
 - `report [--project .]`: repo-wide legacy duplication count with the same
   detector. Informational only, never fails. Legacy debt is tracked
   separately and never blocks.
@@ -41,12 +45,15 @@ dropped, whitespace collapsed), a run of 6 consecutive added lines that
 appears at 2 or more locations is a duplicate block. The count is the number
 of distinct added lines inside duplicate blocks beyond the first occurrence.
 
-Same-looking code that is not textually identical does NOT fire. The issue
-says same-looking code may encode different concepts and abstraction needs a
-shared-meaning justification; a similarity score would fire exactly on the
-matches the issue says need human judgement. The tool never suggests an
-extraction. Every reported group carries the line "abstraction requires a
-shared-meaning justification".
+Same-looking code that is not textually identical does NOT fire, and that
+narrowing is explicit, not an accident of the detector. The issue's
+criterion 3 says same-looking code may encode different concepts and
+abstraction needs a shared-meaning justification; a similarity score would
+fire exactly on the matches the issue says need human judgement. This tool
+collects no shared-meaning justification and checks none: similar-but-not-
+identical matches are out of scope by design, and the "abstraction needs a
+shared-meaning justification" line on each reported group is a reminder,
+not a gate. The tool never suggests an extraction.
 
 ## Calibration (measured 2026-11-08 on real merged diffs)
 
@@ -59,42 +66,75 @@ code-heavy merged commits with import lines and docstring fences excluded:
 | c3e0329 (enrichment_lag_profile) | 377 | 4 / 42 | 1 / 16 | 0 / 0 |
 | d36308d (edge_source_temporal_lag) | 305 | 3 / 18 | 0 / 0 | 0 / 0 |
 | 854357d (source_enrichment_completeness) | 322 | 2 / 12 | 0 / 0 | 0 / 0 |
+| 6f83d76 (simhash_edge_profile) | 296 | 3 / 24 | - | - |
+| 17d2c94 (version-source-profile) | 310 | 7 / 42 | - | - |
 | b01ee4a (cross_table_outlier_detector) | 344 | 0 / 0 | 0 / 0 | 0 / 0 |
 | 7045cee (E-0001..E-0003) | 365 | 0 / 0 | 0 / 0 | 0 / 0 |
+| 42c833d (version-fts-coverage) | 297 | 0 / 0 | - | - |
+| 0847fc8 (fts-edge-reachability) | 296 | 0 / 0 | - | - |
+| 7dc288d (edge text correlation) | 281 | 0 / 0 | - | - |
+| 771eb08 (publisher citation profile) | 284 | 0 / 0 | - | - |
 
 N=6 fires on the repo's copy-pasted corpus-profile blocks and stays silent
-on clean code diffs. The firing diffs are all tools/corpus profile scripts:
-per-subcommand query blocks repeated inside one file, and sibling files
-sharing the same structure. That repetition is real by the issue's
-definition, so N=6 is kept and the escape hatch is a recorded baseline
-raise, not a carve-out: the first corpus-profile PR after this gate lands
-either extracts the shared query helper or raises the baseline with a
-reason in state/dup-ratchet.json, visible in the diff to panel review.
+on clean code diffs: 6 of 12 measured diffs fire, 6 stay silent, and every
+firing diff is a corpus-profile sibling. The six clean diffs include
+test-heavy and audit-family work, so the threshold is not tuned to one
+family of clean code. The first non-corpus PR to trip the gate is still the
+real calibration test: a false positive trains authors to reach for the
+baseline instead of the extraction, which is why the baseline raise is
+bounded (expiry, owner, old-baseline rule) rather than free.
 
 ## The ratchet
 
-`state/dup-ratchet.json` holds one number, the baseline, plus a reason and
-an update date. `check` fails when duplicated added lines exceed it. The
-baseline may only be raised by a reviewed commit to that file carrying a
-non-empty reason; a raised baseline without a reason fails the check. The
-file is in the diff, so the exception is visible instead of silent. There is
-no command that raises the baseline: the author edits the file, and review
-sees it.
+`state/dup-ratchet.json` holds one number, the baseline, plus a reason, an
+expiry date, and an owner. `check` fails when duplicated added lines exceed
+it. A raise above 0 needs all three: a non-empty reason, a future expiry
+date, and an owner. `check` fails once the expiry passes until the baseline
+is lowered or re-justified with a new expiry.
+
+Two properties make the ratchet real rather than a self-serve knob. First,
+the baseline is judged as it stood at the base ref: a raise inside the very
+diff it would silence does not take effect until that raise merges, so a PR
+must land the raise first and the duplication second. Second, the expiry
+bounds every raise in time. A malformed baseline file (invalid JSON, a
+negative or non-integer baseline) fails cleanly with the parse error,
+never with a traceback.
+
+The global raise is the honest consequence to state plainly: raising the
+baseline permits that many duplicated lines in every future PR in every
+area until the expiry date, not just in the area that justified the raise.
+Per-path baselines would scope the exception; they are not implemented.
+The mitigation is the bound, not the scope: expiry, owner, and the
+old-baseline rule, with the raise visible in the diff to panel review.
+
+Lowering is the documented happy path. When a PR's count drops below the
+baseline, the author may lower the baseline to the new count in the same
+PR with reason "lowered after dedup". A lowering PR passes because the
+ratchet judges against the old, higher baseline. There is no command that
+raises or lowers the baseline: the author edits the file, and review sees
+it.
 
 ## The extraction gate
 
 Cross-module extraction requires regression tests first. When the diff
 removes a repeated 6-line block AND the same block appears as added lines
-in a different file (the code moved to a shared home) with no test file in
-the diff, `check` fails. A test file in the diff satisfies it. Deleting
-duplicated code without adding a shared home is not an extraction and is
-not gated. Moving a block inside the same file is not gated either.
+in a different file (the code moved to a shared home), `check` fails unless
+a test file in the diff has added lines referencing the destination module
+(its stem, e.g. `shared` for `tools/a/shared.py`): an import of it, or an
+assertion calling it. A test file that never names the extracted module
+does not exempt, however it is named, and neither does a test that asserts
+nothing about it. A reference is necessary, not sufficient, for
+characterization: the gate is a floor, not a proof that the test is good.
+Deleting duplicated code without adding a shared home is not an extraction
+and is not gated. Moving a block inside the same file is not gated either.
 
 ## Exclusions, and why each is stated
 
 - tests/ and test files are excluded from the ratchet FAIL: fixture
   repetition is characterized by the test itself. They are still listed in
-  the report, so the exclusion is visible, not silent.
+  the report, so the exclusion is visible, not silent. A block appearing
+  once in production code and once in a test file is reported as a
+  cross-copy, also informationally.
 - dot-codex/skills/.system/, research-papers/, work-docs/audits/ are
   out of scope, mirroring the codemap out-of-scope list: installed
   payload, corpus evidence, and dated audit scripts.
@@ -124,9 +164,20 @@ extraction gate, and whether the runner has a pinned-binary install path.
 
 ## Verification
 
-- `python tools/audit/dup_ratchet.py selftest` (11 planted cases)
-- `python -m pytest tests/test_dup_ratchet.py -q` (17 tests)
-- `python tools/audit/mutate.py --spec dup_ratchet` (7 mutations)
+- `python tools/audit/dup_ratchet.py selftest` (14 planted checks)
+- `python -m pytest tests/test_dup_ratchet.py -q` (20 tests)
+- `python tools/audit/mutate.py --spec dup_ratchet` (8 mutations)
 - ruff check on tools/audit/dup_ratchet.py and tests/test_dup_ratchet.py;
   mypy --strict on tools/audit/dup_ratchet.py
 - The new domain runs in CI through `gate.py run`; no ship-gate.yml change.
+
+## Follow-ups (not merge blockers)
+
+- A shared home for `default_base`: the helper exists three times now
+  (gate.py, panel.py, this tool) with the same candidate order and the same
+  HEAD~1 fallback. Tools are run as scripts, so there is no importable home
+  for it today; extracting one is itself a cross-module extraction under
+  this gate and needs regression tests first.
+- Per-path baselines, so a raise for the corpus-profile family does not
+  permit the same count in every area.
+- Re-measure N=6 false positives after the first month of live gating.

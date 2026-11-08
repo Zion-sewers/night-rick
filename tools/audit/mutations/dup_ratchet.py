@@ -22,8 +22,10 @@ MUTATIONS = [
         "baseline ignored, the ratchet never fires",
         "The duplicated-lines-vs-baseline comparison becomes `if False`, "
         "so a diff over baseline passes and the ratchet is decoration.",
-        '    if result["duplicated_lines"] > result["baseline"]:',
-        "    if False:  # baseline ignored",
+        '    if result["duplicated_lines"] > result["baseline"]:\n'
+        '        failures.append(',
+        "    if False:  # baseline ignored\n"
+        "        failures.append(",
     ),
     (
         "duplicate lines undercounted to one per window",
@@ -40,35 +42,47 @@ MUTATIONS = [
         "extraction gate dropped",
         "find_extractions is replaced with an empty list, so a cross-module "
         "extraction with no regression tests in the diff passes.",
-        "    extraction = find_extractions(added, removed, sorted(files))",
+        "    extraction = find_extractions(added, removed, test_lines)",
         "    extraction = []",
     ),
     (
-        "test-file exemption swallowed, extraction always fails",
-        "The return drops the `else []`, so an extraction WITH tests in the "
-        "diff still fails. This is the fail-closed direction, and it must "
-        "still be caught: a gate that cries wolf on every tested extraction "
-        "gets disabled, which is the same loss as the gate that never fires.",
-        "    return sorted(set(hits)) if not any(is_test_file(f) for f in files) else []",
-        "    return sorted(set(hits))",
+        "reference requirement dropped, any test file exempts",
+        "The destination-reference check always returns True, so an "
+        "extraction with no test file at all, or with an unrelated test "
+        "file, passes. This is the exact hole the first review round "
+        "proved with an unrelated test_other.py.",
+        "    stem = Path(dest).stem\n"
+        "    return any(stem in line for line in test_lines)",
+        "    stem = Path(dest).stem\n"
+        "    return True",
     ),
     (
-        "test-file exclusion dropped, fixtures trip the ratchet",
-        "evaluate() stops splitting test streams out, so the repeated "
-        "fixture setup every test file carries counts toward the ratchet "
-        "and a test-only diff fails.",
-        "    blocks, dup = find_blocks(\n"
-        "        {p: lines for p, lines in added.items() if not is_test_file(p)})\n"
-        "    test_blocks, test_dup = find_blocks(\n"
-        "        {p: lines for p, lines in added.items() if is_test_file(p)})",
-        "    blocks, dup = find_blocks(added)\n"
-        "    test_blocks, test_dup = [], 0",
+        "old-baseline rule dropped, a raise silences its own diff",
+        "evaluate() judges against the working-tree baseline instead of "
+        "the baseline at the base ref, so a PR can raise the baseline and "
+        "add the duplication in one diff and pass.",
+        "            effective = load_baseline_at_ref(project, base)",
+        "            effective = new_baseline",
+    ),
+    (
+        "reference check dropped, extraction always fails",
+        "The exemption call becomes `if False`, so an extraction WITH a "
+        "test referencing the module still fails. This is the fail-closed "
+        "direction, and it must still be caught: a gate that cries wolf on "
+        "every tested extraction gets disabled, which is the same loss as "
+        "the gate that never fires.",
+        "            if _references_dest(test_lines, apath):\n"
+        "                continue",
+        "            if False:  # reference check dropped\n"
+        "                continue",
     ),
     (
         "missing baseline defaults to 999",
         "A project with no baseline file reads as baseline 999 instead of "
         "0, so the first duplicated diff in a fresh checkout passes.",
-        '        return {"baseline": 0, "reason": ""}',
-        '        return {"baseline": 999, "reason": "x"}',
+        '    if not p.exists():\n'
+        '        return {"baseline": 0, "reason": "", "expires": "", "owner": ""}',
+        '    if not p.exists():\n'
+        '        return {"baseline": 999, "reason": "x", "expires": "", "owner": ""}',
     ),
 ]

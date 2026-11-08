@@ -1,7 +1,7 @@
 {
  "component": "tools/skilleval",
  "reviewed": "2026-07-29",
- "recheck_after": "2027-02-06",
+ "recheck_after": "2027-01-25",
  "verdict": "split (run.py grades 5/92 and uncovered grew 42 to 87; skill-reach is the new collision detector to evaluate)",
  "verdict_class": "split",
  "absorption_status": "rejected-with-reason",

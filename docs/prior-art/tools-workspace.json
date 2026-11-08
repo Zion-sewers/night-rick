@@ -1,7 +1,7 @@
 {
  "component": "tools/workspace",
  "reviewed": "2026-07-29",
- "recheck_after": "2027-02-06",
+ "recheck_after": "2027-01-25",
  "verdict": "split (log_session_lesson.py still inert: move to out-of-scope.txt as a follow-up; mutate_launcher_check SURVIVED x2 is a pwsh-absent skip, not dead tests)",
  "verdict_class": "split",
  "absorption_status": "rejected-with-reason",

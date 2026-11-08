@@ -1,7 +1,7 @@
 {
  "component": "tools/ghpub",
  "reviewed": "2026-07-31",
- "recheck_after": "2027-02-06",
+ "recheck_after": "2027-01-27",
  "verdict": "keep-ours",
  "verdict_class": "keep-ours",
  "absorption_status": "rejected-with-reason",

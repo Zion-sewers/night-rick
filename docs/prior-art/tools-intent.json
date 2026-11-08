@@ -1,7 +1,7 @@
 {
   "component": "tools/intent",
   "reviewed": "2026-07-31",
-  "recheck_after": "2027-02-06",
+  "recheck_after": "2027-01-27",
   "verdict": "keep-the-ledger-design, delete resources.py (noted 0.7% < 1% on 2026-11-08); deletion is a named follow-up unit",
   "verdict_class": "split",
   "absorption_status": "rejected-with-reason",

@@ -1,7 +1,7 @@
 {
   "component": "dot-claude/skills/syndication-engine",
   "reviewed": "2026-07-31",
-  "recheck_after": "2027-02-06",
+  "recheck_after": "2027-01-27",
   "verdict": "cut to dev.to poster + publish-order checklist; delete the rest (spans.py single-article model, X/Medium/Reddit legs)",
   "verdict_class": "delete-ours",
   "absorption_status": "adopted",

@@ -1,7 +1,7 @@
 {
   "component": "dot-claude/skills/voice-metrics",
   "reviewed": "2026-07-31",
-  "recheck_after": "2027-02-06",
+  "recheck_after": "2027-01-27",
   "verdict": "split",
   "verdict_class": "split",
   "absorption_status": "rejected-with-reason",

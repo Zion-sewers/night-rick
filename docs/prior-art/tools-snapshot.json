@@ -1,7 +1,7 @@
 {
  "component": "tools/snapshot",
  "reviewed": "2026-07-29",
- "recheck_after": "2027-02-06",
+ "recheck_after": "2027-01-25",
  "verdict": "keep-ours",
  "verdict_class": "keep-ours",
  "absorption_status": "rejected-with-reason",

@@ -1,7 +1,7 @@
 {
   "component": "dot-claude/bin",
   "reviewed": "2026-07-29",
-  "recheck_after": "2027-02-06",
+  "recheck_after": "2027-01-25",
   "verdict": "split",
   "verdict_class": "split",
   "absorption_status": "rejected-with-reason",

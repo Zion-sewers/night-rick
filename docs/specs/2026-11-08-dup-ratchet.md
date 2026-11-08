@@ -25,12 +25,18 @@ coverage_map domain was added in 2026-08-19):
 - `check [--project .]`: diff base...HEAD plus the working-tree diff, added
   lines only. FAIL when duplicated added lines exceed the baseline in
   `state/dup-ratchet.json` (0 at ship), or when the diff extracts a repeated
-  block into another file without a test in the diff that calls or imports
-  the destination module, or when the baseline file is malformed, deleted,
-  or raised without a recorded reason, a future expiry, or an owner. The
+  block into another file without a test in the diff that calls the
+  destination module, or when the baseline file is malformed, deleted,
+  or raised without a recorded reason, a future expiry, or an owner, or
+  when the diff cannot be obtained at all (not a git repository,
+  unresolvable base ref, git failure: "cannot measure", exit 1). The
   report lists every location of every duplicate block (first occurrence
   included) and the source and destination line numbers of every
-  extraction hit, and every FAIL names the fix and points here.
+  extraction hit, and every FAIL names the fix and points here. One
+  exception to "cannot measure": when the base ref resolves to HEAD
+  (running `check` on main, which ship-gate does on main pushes), the
+  diff is empty and the check passes vacuously; diff-scoped checks in
+  this repo share that convention.
 - `report [--project .]`: repo-wide legacy duplication count with the same
   detector. Informational only, never fails. Legacy debt is tracked
   separately and never blocks.
@@ -57,7 +63,7 @@ not a gate. The tool never suggests an extraction.
 
 ## Calibration (measured 2026-11-08 on real merged diffs)
 
-The threshold was set from data, not guessed. A prototype detector ran over
+The threshold was set from data, not guessed. The shipped detector ran over
 code-heavy merged commits with import lines and docstring fences excluded:
 
 | diff | added lines | N=6 blocks / dup lines | N=8 | N=10 |
@@ -80,14 +86,19 @@ added lines beyond the first occurrence, exactly as counted by
 `tools/audit/dup_ratchet.py` (the `find_blocks` marked set). An earlier
 version of this table used prototype numbers that counted each overlapping
 window separately; those inflated the magnitudes and were replaced with the
-shipped detector's numbers in the third review round.
+shipped detector's numbers in the third review round. The "added lines"
+column counts every added normalized line including test files; the N
+columns exclude test files (for example 7045cee: 365 added lines, 238 of
+them non-test).
 
 N=6 fires on the repo's copy-pasted corpus-profile blocks and stays silent
 on clean code diffs: 6 of 12 measured diffs fire, 6 stay silent, and every
-firing diff is a corpus-profile sibling. The six clean diffs include
-test-heavy and audit-family work, so the threshold is not tuned to one
-family of clean code. N=8 would miss d36308d, 854357d, and 6f83d76
-entirely, and N=10 would miss all but the largest diff, so N=6 is kept.
+firing diff is a corpus-profile sibling. The six clean diffs are five
+corpus-profile tools plus one anatomy E-rows diff (7045cee, with one test
+file); none of the twelve diffs touches `tools/audit`, so no audit-family
+diff is in the set, and the sample is 11 of 12 corpus-profile diffs. N=8
+would miss d36308d, 854357d, and 6f83d76 entirely, and N=10 would miss all
+but the largest diff, so N=6 is kept.
 
 N=6 also fires on ordinary boilerplate: two CLI entry points sharing a
 6-line argument-parsing idiom fail the gate, and the block grows past the
@@ -136,7 +147,11 @@ ones who raised it.
 Deleting the baseline file is not an escape: a diff that deletes
 `state/dup-ratchet.json` fails closed with a message naming the lowering
 path. A malformed baseline file (invalid JSON, a negative or non-integer
-baseline) fails cleanly with the parse error, never with a traceback.
+baseline) fails cleanly with the parse error, never with a traceback. A
+malformed record on main fails every PR until it is fixed: that is a
+fail-closed choice, not legacy duplication debt blocking work, and the
+repair path is a PR that fixes the file (the new record loads, and the
+count is judged against the old baseline of 0).
 
 The global raise is the honest consequence to state plainly: raising the
 baseline permits that many duplicated lines in every future PR in every
@@ -158,26 +173,43 @@ Cross-module extraction requires regression tests first. When the diff
 removes a repeated 6-line block AND the same block appears as added lines
 in a different file (the code moved to a shared home), `check` fails unless
 an added test line calls the destination module (its stem followed by `(`
-or `stem.attr(...)`) or imports the destination module (`from ... import
-stem`, `import ...stem`). The stem must appear as a whole identifier
-token: `shared_cache`, `ratio` against a stem of `io`, and a bare
-assignment such as `shared = 1` do not exempt. String literals and
-comments never count: `assert "shared" in "shared_name"` is a mention,
+or `stem.attr(...)`). An import alone does NOT exempt: a test that imports
+and never calls still characterizes nothing. The stem must appear as a
+whole identifier token: `shared_cache`, `ratio` against a stem of `io`,
+and a bare assignment such as `shared = 1` do not exempt. String literals
+and comments never count: `assert "shared" in "shared_name"` is a mention,
 not a test. A call is necessary, not sufficient, for characterization:
-the gate is a floor, not a proof that the test is good. An import alone
-exempts only because it names the module as a dependency; a test that
-imports and never calls still characterizes nothing, and review is the
-backstop there. Known limit: the gate cannot resolve imports, so importing
-a name that collides with the module stem counts as importing the module.
-Deleting duplicated code without adding a shared home is not an extraction
-and is not gated. Moving a block inside the same file is not gated either.
+the gate is a floor, not a proof that the test is good. Known limit: the
+gate cannot resolve imports, so a stem collision (a test calling the
+stdlib `io.open(` for a destination stemmed `io`) can exempt; path-aware
+matching is not implemented. A test that already exists on main does not
+count: the calling test must be in the diff. Deleting duplicated code
+without adding a shared home is not an extraction and is not gated.
+Moving a block inside the same file is not gated either.
+
+"Repeated" has two shapes. The clean-room shape is a block removed from
+two or more places at once. The partial-migration shape is a block
+removed from one place while the block was already duplicated before the
+diff: the gate counts the block's occurrences in the base tree (via
+`git archive`) and fires when the block occurred twice or more there. A
+unique block that merely moves (one base-tree occurrence) is not an
+extraction. The destination may itself be one of the files the block was
+removed from (consolidation into an existing holder file); it is skipped
+only when it is the SOLE file the block was removed from.
+
+Known limit: a move rewritten past git's rename-detection threshold can
+trip both gates (the moved lines appear as removed and added), because
+the detector is diff-based and has no rename awareness. The common pure
+move, and a move with a one-line touch, do not trip it.
 
 ## Exclusions, and why each is stated
 
 - tests/ and test files are excluded from the ratchet FAIL: fixture
-  repetition is characterized by the test itself. They are still listed in
-  the report, so the exclusion is visible, not silent. A block appearing
-  once in production code and once in a test file is reported as a
+  repetition is characterized by the test itself. A test file is any file
+  under `tests/` or `__tests__/`, or named `test_*`, `spec_*`, `*_test.*`,
+  `*.test.*`, `*.spec.*`, `*_spec.*`, or literally `test.py`. They are still
+  listed in the report, so the exclusion is visible, not silent. A block
+  appearing once in production code and once in a test file is reported as a
   cross-copy, also informationally.
 - dot-codex/skills/.system/, research-papers/, work-docs/audits/ are
   out of scope, mirroring the codemap out-of-scope list: installed
@@ -208,9 +240,9 @@ extraction gate, and whether the runner has a pinned-binary install path.
 
 ## Verification
 
-- `python tools/audit/dup_ratchet.py selftest` (23 planted checks)
-- `python -m pytest tests/test_dup_ratchet.py -q` (38 tests)
-- `python tools/audit/mutate.py --spec dup_ratchet` (10 mutations)
+- `python tools/audit/dup_ratchet.py selftest` (28 planted checks)
+- `python -m pytest tests/test_dup_ratchet.py -q` (48 tests)
+- `python tools/audit/mutate.py --spec dup_ratchet` (13 mutations)
 - ruff check on tools/audit/dup_ratchet.py and tests/test_dup_ratchet.py;
   mypy --strict on tools/audit/dup_ratchet.py
 - The new domain runs in CI through `gate.py run`; no ship-gate.yml change.
@@ -226,13 +258,14 @@ and the verdict line says so.
   (gate.py, panel.py, this tool) with the same candidate order and the same
   HEAD~1 fallback. Tools are run as scripts, so there is no importable home
   for it today; extracting one is itself a cross-module extraction under
-  this gate and needs regression tests first. When the shared home is
-  built, it should follow `panel.py`'s copy, which skips a candidate that
-  resolves to HEAD and falls back to the empty tree, instead of `gate.py`'s
-  copy, which returns `origin/main` even when it is HEAD and makes the
-  diff empty. A second note for that follow-up: `load_baseline_at_ref`
-  ignores the `git show` return code, so a genuinely unreadable base ref
-  is indistinguishable from "no baseline file".
+  this gate and needs regression tests first. The fail-closed half is done
+  in this tool: `git` return codes are checked, a missing repo or an
+  unresolvable base ref fails with "cannot measure", and
+  `load_baseline_at_ref` checks the ref resolves before reading it. The
+  base==HEAD vacuous PASS stays by repo convention (ship-gate runs on
+  main pushes, where base==HEAD): when the shared home is built, it
+  should keep that convention for diff-scoped checks and fail closed
+  only on a diff that cannot be obtained at all.
 - Per-path baselines, so a raise for the corpus-profile family does not
   permit the same count in every area.
 - Re-measure N=6 false positives after the first month of live gating.

@@ -169,12 +169,12 @@ class TestReferencesDest(unittest.TestCase):
         self.assertTrue(D._references_dest(
             ["assert shared.VALUE == 15"], "tools/a/shared.py"))
 
-    def test_import_from_counts(self):
-        self.assertTrue(D._references_dest(
+    def test_import_from_does_not_count(self):
+        self.assertFalse(D._references_dest(
             ["from tools.a.shared import shared"], "tools/a/shared.py"))
 
-    def test_import_dotted_counts(self):
-        self.assertTrue(D._references_dest(
+    def test_import_dotted_does_not_count(self):
+        self.assertFalse(D._references_dest(
             ["import tools.a.shared"], "tools/a/shared.py"))
 
     def test_bare_assignment_does_not_count(self):
@@ -201,12 +201,18 @@ class TestReferencesDest(unittest.TestCase):
         self.assertFalse(D._references_dest(
             ["from fixtures import other"], "tools/a/shared.py"))
 
-    def test_import_name_collision_counts(self):
-        # Documented limit: the gate cannot resolve imports, so importing
-        # a name that collides with the module stem counts as an import
-        # of the module. The call pattern is the strong signal.
-        self.assertTrue(D._references_dest(
+    def test_import_name_collision_does_not_count(self):
+        # An import alone never exempts, so importing a name that
+        # collides with the module stem does not exempt either. The
+        # gate cannot resolve imports, but it no longer needs to: only
+        # a call is the signal.
+        self.assertFalse(D._references_dest(
             ["from fixtures import shared"], "tools/a/shared.py"))
+
+    def test_import_plus_call_counts(self):
+        self.assertTrue(D._references_dest(
+            ["from tools.a.shared import shared", "assert shared() == 15"],
+            "tools/a/shared.py"))
 
 
 class TestExtraction(unittest.TestCase):
@@ -235,6 +241,76 @@ class TestExtraction(unittest.TestCase):
             ["from tools.a.shared import shared", "assert shared() == 15"])
         self.assertEqual(hits, [])
 
+    def test_extraction_with_import_only_test_is_a_hit(self):
+        added, removed = self._setup()
+        hits = D.find_extractions(
+            added, removed, ["from tools.a.shared import shared"])
+        self.assertEqual(len(hits), 1)
+
+    def test_partial_migration_is_an_extraction(self):
+        # Removed from one of two files, re-added as a shared home,
+        # no test: the base tree shows the block was duplicated
+        # before the diff (2 occurrences), so the gate fires.
+        added, _ = self._setup()
+        window = tuple(
+            D.normalize(line, "tools/a/one.py") for line in BLOCK)
+        removed = {
+            "tools/a/one.py": [(t, i + 1) for i, t in enumerate(
+                [D.normalize(line, "tools/a/one.py") for line in BLOCK])],
+        }
+        hits = D.find_extractions(
+            added, removed, [], {window: 2})
+        self.assertEqual(len(hits), 1)
+
+    def test_partial_migration_of_unique_block_is_not(self):
+        # Same shape, but the block occurred once in the base tree:
+        # a unique block that merely moves is not an extraction.
+        added, _ = self._setup()
+        window = tuple(
+            D.normalize(line, "tools/a/one.py") for line in BLOCK)
+        removed = {
+            "tools/a/one.py": [(t, i + 1) for i, t in enumerate(
+                [D.normalize(line, "tools/a/one.py") for line in BLOCK])],
+        }
+        hits = D.find_extractions(
+            added, removed, [], {window: 1})
+        self.assertEqual(hits, [])
+
+    def test_consolidation_into_holder_is_an_extraction(self):
+        # Removed from two files, re-added in one of them (the holder):
+        # the destination is a removal source, but not the sole one.
+        added = D.parse_added(_diff_for({"tools/a/two.py": BLOCK}))
+        norm = [D.normalize(line, "tools/a/one.py") for line in BLOCK]
+        removed = {
+            path: [(t, i + 1) for i, t in enumerate(norm)]
+            for path in ("tools/a/one.py", "tools/a/two.py")
+        }
+        hits = D.find_extractions(added, removed, [])
+        self.assertEqual(len(hits), 1)
+
+    def test_in_place_rewrite_is_not_an_extraction(self):
+        # Removed from and re-added in the same single file: an
+        # in-place edit, not a move to a shared home.
+        added = D.parse_added(_diff_for({"tools/a/one.py": BLOCK}))
+        norm = [D.normalize(line, "tools/a/one.py") for line in BLOCK]
+        removed = {
+            "tools/a/one.py": [(t, i + 1) for i, t in enumerate(norm)],
+        }
+        hits = D.find_extractions(added, removed, [])
+        self.assertEqual(hits, [])
+
+    def test_seven_identical_lines_single_removal_is_not(self):
+        # Seven identical lines are one occurrence (overlapping windows
+        # collapse), so a single removal is not a repeated block.
+        seven = ["    pass"] * 7
+        added = D.parse_added(_diff_for({"tools/a/shared.py": seven}))
+        norm = [D.normalize(line, "tools/a/one.py") for line in seven]
+        removed = {
+            "tools/a/one.py": [(t, i + 1) for i, t in enumerate(norm)],
+        }
+        hits = D.find_extractions(added, removed, [])
+        self.assertEqual(hits, [])
+
     def test_extraction_with_unrelated_test_is_a_hit(self):
         added, removed = self._setup()
         hits = D.find_extractions(
@@ -248,6 +324,36 @@ class TestExtraction(unittest.TestCase):
                 [D.normalize(line, "tools/a/one.py") for line in BLOCK])]},
             [])
         self.assertEqual(hits, [])
+
+
+class TestPrintBlocks(unittest.TestCase):
+    def test_all_blocks_printed_not_just_the_first_ten(self):
+        import io
+        from contextlib import redirect_stdout
+        blocks = [{
+            "path": f"a{i}.py",
+            "start_line": 1,
+            "end_line": 6,
+            "lines": 6,
+            "sample": "x = 1",
+            "locations": [{"path": f"a{i}.py", "start_line": 1,
+                           "end_line": 6}],
+        } for i in range(12)]
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            D._print_blocks("BLOCKS:", blocks)
+        out = buf.getvalue()
+        for i in range(12):
+            self.assertIn(f"a{i}.py:1-6", out)
+
+
+class TestIsTestFile(unittest.TestCase):
+    def test_tests_directory_variants(self):
+        self.assertTrue(D.is_test_file("tools/a/__tests__/x.ts"))
+        self.assertTrue(D.is_test_file("__tests__/x.js"))
+        self.assertTrue(D.is_test_file("tools/a/x.spec.ts"))
+        self.assertTrue(D.is_test_file("tools/a/x_spec.py"))
+        self.assertFalse(D.is_test_file("tools/a/x.py"))
 
 
 class TestEvaluateEndToEnd(unittest.TestCase):
@@ -396,6 +502,11 @@ class TestEvaluateEndToEnd(unittest.TestCase):
                        cwd=project, check=True)
         self.assertEqual(D.cmd_check(argparse.Namespace(
             project=str(project))), 1)
+
+    def test_check_outside_a_git_repo_fails_closed(self):
+        td = tempfile.mkdtemp()
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=td)), 1)
 
 
 if __name__ == "__main__":

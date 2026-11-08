@@ -58,15 +58,38 @@ Cross-module extraction requires regression tests first. When the diff
 removes a repeated 6-line block AND the same block appears as added lines
 in a different file (the code moved to a shared home), the extraction is
 exempt only when an added test line CALLS the destination module (its stem
-followed by `(`, or `stem.attr(...)`), or imports the destination module
-(`from ... import stem` or `import ...stem`). The stem must appear as a
-whole identifier token: `shared_cache`, `ratio` against a stem of `io`, and
-a bare assignment such as `shared = 1` do not exempt. String literals and
+followed by `(`, or `stem.attr(...)`). An import alone does NOT exempt: a
+test that imports and never calls still characterizes nothing, and a call
+is necessary, not sufficient, for characterization: the gate is a floor,
+not a proof that the test is good. The stem must appear as a whole
+identifier token: `shared_cache`, `ratio` against a stem of `io`, and a
+bare assignment such as `shared = 1` do not exempt. String literals and
 comments never count: `assert "shared" in "shared_name"` is a mention, not
-a test. A call is necessary, not sufficient, for characterization: the gate
-is a floor, not a proof that the test is good. An import alone exempts only
-because it names the module as a dependency; a test that imports and never
-calls still characterizes nothing, and review is the backstop there.
+a test.
+
+"Repeated" has two shapes, and both are gated. The clean-room shape is a
+block removed from two or more places at once. The partial-migration
+shape is a block removed from one place while the block was already
+duplicated before the diff: the surviving copy is invisible to a
+diff-only detector, so the gate counts the block's occurrences in the
+base tree (via `git archive`) and fires when the block occurred twice or
+more there. A unique block that merely moves (one base-tree occurrence)
+is not an extraction and is not gated. The destination may itself be one
+of the files the block was removed from (consolidation into an existing
+holder file); it is skipped only when it is the SOLE file the block was
+removed from, which is an in-place edit, not a move. Deleting duplicated
+code without adding a shared home is not an extraction and is not gated.
+
+MEASUREMENT
+
+A check that cannot obtain a diff fails closed instead of passing
+vacuously: outside a git repository, with an unresolvable base ref, or
+when `git diff` itself errors, `check` exits 1 with "cannot measure".
+One case stays a vacuous PASS by repo convention: when the base ref
+resolves to HEAD (running `check` on main, which ship-gate does on main
+pushes), the diff is empty and there is nothing to ratchet. Diff-scoped
+checks in this repo share that convention; the fail-closed rule covers
+only a diff that cannot be obtained at all.
 
 WHAT THIS DOES NOT DO
 
@@ -159,6 +182,10 @@ class BaselineError(ValueError):
     """The baseline file is unreadable or malformed."""
 
 
+class CheckError(Exception):
+    """The check cannot measure (not a repo, unresolvable base, git failed)."""
+
+
 def is_code(path: str) -> bool:
     ext = Path(path).suffix.lower()
     return ext in CODE_EXTS and not path.startswith(OUT_OF_SCOPE_PREFIXES)
@@ -167,11 +194,14 @@ def is_code(path: str) -> bool:
 def is_test_file(path: str) -> bool:
     name = Path(path).name
     return (
-        path.startswith("tests/")
+        path.startswith(("tests/", "__tests__/"))
+        or "/__tests__/" in path
         or name == "test.py"
-        or name.startswith("test_")
+        or name.startswith(("test_", "spec_"))
         or "_test." in name
         or ".test." in name
+        or ".spec." in name
+        or "_spec." in name
     )
 
 
@@ -190,10 +220,14 @@ def normalize(line: str, path: str) -> str | None:
     return re.sub(r"\s+", " ", s)
 
 
-def git(project: Path, args: str) -> str:
+def git(project: Path, args: str, check: bool = False) -> str:
     r = subprocess.run(
         ["git"] + args.split(), cwd=project, capture_output=True, text=True
     )
+    if check and r.returncode != 0:
+        raise CheckError(
+            f"git {' '.join(args.split())} failed "
+            f"(exit {r.returncode}): {r.stderr.strip()[:200]}")
     return r.stdout
 
 
@@ -357,58 +391,140 @@ def _strip_code_text(line: str) -> str:
 
 
 def _references_dest(test_lines: list[str], dest: str) -> bool:
-    """Does any added test line call or import the destination module?
+    """Does any added test line call the destination module?
 
     The stem must appear as a whole identifier token in a call
-    (shared(), shared.compute()), an attribute use (shared.VALUE), or an
-    import of the destination module. A bare assignment (shared = 1), a
-    variable that merely contains the stem (shared_cache), a stem inside
-    an ordinary word (ratio against io), and a string mention do not count.
+    (shared(), shared.compute()) or an attribute use (shared.VALUE). A
+    bare assignment (shared = 1), a variable that merely contains the
+    stem (shared_cache), a stem inside an ordinary word (ratio against
+    io), and a string mention do not count. An import alone does NOT
+    count: importing a module and never calling it characterizes
+    nothing, so `from ... import shared` without a call does not exempt.
     """
     stem = Path(dest).stem
     call = re.compile(rf"\b{re.escape(stem)}\s*\(")
     attr = re.compile(rf"\b{re.escape(stem)}\.[A-Za-z_]\w*")
-    token = re.compile(rf"\b{re.escape(stem)}\b")
     for raw in test_lines:
         line = _strip_code_text(raw)
         if call.search(line) or attr.search(line):
             return True
-        stripped = line.strip()
-        if stripped.startswith(("import ", "from ")) and token.search(line):
-            return True
     return False
+
+
+def _distinct_starts(starts: list[int]) -> list[int]:
+    """Start indices with overlapping windows collapsed (greedy, in order).
+
+    Seven identical consecutive lines form two overlapping 6-line
+    windows, but they are one occurrence, not two: a start that falls
+    inside an already-taken window is not a second occurrence.
+    """
+    taken: list[int] = []
+    last_end = -1
+    for s in sorted(starts):
+        if s >= last_end:
+            taken.append(s)
+            last_end = s + WINDOW
+    return taken
+
+
+def _base_tree_window_counts(
+    project: Path, base: str, candidates: set[tuple[str, ...]]
+) -> dict[tuple[str, ...], int]:
+    """Distinct base-tree occurrences of each candidate window.
+
+    Reads the base tree once via `git archive` and counts, per window,
+    the distinct (file, start) occurrences with overlapping windows
+    collapsed. Only candidate windows are counted, so the memory cost is
+    bounded by the candidate set, not the tree. Raises CheckError when
+    the base tree cannot be read: a partial-migration verdict must not
+    rest on an unread tree.
+    """
+    import io
+    import tarfile
+
+    try:
+        r = subprocess.run(
+            ["git", "archive", base], cwd=project, capture_output=True)
+    except OSError as exc:
+        raise CheckError(f"cannot read the base tree at {base}: {exc}")
+    if r.returncode != 0:
+        raise CheckError(
+            f"cannot read the base tree at {base}: "
+            f"{r.stderr.decode('utf-8', 'replace').strip()[:200]}")
+    counts: Counter[tuple[str, ...]] = Counter()
+    with tarfile.open(fileobj=io.BytesIO(r.stdout)) as tf:
+        for member in tf.getmembers():
+            if not member.isfile() or not is_code(member.name):
+                continue
+            extracted = tf.extractfile(member)
+            if extracted is None:
+                continue
+            try:
+                text = extracted.read().decode("utf-8")
+            except UnicodeDecodeError:
+                continue
+            lines = [
+                norm for line in text.splitlines()
+                if (norm := normalize(line, member.name)) is not None
+            ]
+            positions: dict[tuple[str, ...], list[int]] = defaultdict(list)
+            for i in range(len(lines) - WINDOW + 1):
+                window = tuple(lines[i:i + WINDOW])
+                if window in candidates:
+                    positions[window].append(i)
+            for window, starts in positions.items():
+                counts[window] += len(_distinct_starts(starts))
+    return dict(counts)
 
 
 def find_extractions(
     added: dict[str, list[tuple[str, int]]],
     removed: dict[str, list[tuple[str, int]]],
     test_lines: list[str],
+    base_windows: dict[tuple[str, ...], int] | None = None,
 ) -> list[ExtractionHit]:
     """Removed repeated block reappearing as added lines in another file.
 
-    A hit is exempt only when an added test line references the
-    destination module. A test file that never names the extracted module
-    does not exempt, however it is named.
+    A hit is exempt only when an added test line CALLS the destination
+    module. A test file that never calls the extracted module does not
+    exempt, however it is named, and an import alone does not exempt.
+
+    "Repeated" has two shapes. The clean-room shape: the block was
+    removed from two or more distinct places in the diff. The
+    partial-migration shape: the block was removed from one place, but
+    `base_windows` (distinct occurrences in the base tree) shows it
+    occurred twice or more before the diff, so a copy survives outside
+    the diff. A unique block that merely moves (one base-tree
+    occurrence) is not an extraction. The destination is skipped only
+    when it is the SOLE file the block was removed from (an in-place
+    edit); consolidation into an existing holder file still fires.
     """
     removed_windows: dict[tuple[str, ...], set[str]] = defaultdict(set)
-    removed_counts: Counter[tuple[str, ...]] = Counter()
+    removed_positions: dict[tuple[str, ...], list[tuple[str, int]]] = defaultdict(list)
     for path, lines in removed.items():
+        starts: dict[tuple[str, ...], list[int]] = defaultdict(list)
         for i in range(len(lines) - WINDOW + 1):
             window = tuple(t for t, _ in lines[i:i + WINDOW])
+            starts[window].append(i)
+        for window, idxs in starts.items():
             removed_windows[window].add(path)
-            removed_counts[window] += 1
+            for s in _distinct_starts(idxs):
+                removed_positions[window].append((path, s))
     added_windows: dict[tuple[str, ...], list[tuple[str, int]]] = defaultdict(list)
     for path, lines in added.items():
         for i in range(len(lines) - WINDOW + 1):
             added_windows[tuple(t for t, _ in lines[i:i + WINDOW])].append((path, i))
+    base_counts = base_windows or {}
     merged: dict[tuple[tuple[str, ...], str], ExtractionHit] = {}
     for window, rpaths in removed_windows.items():
-        # A removed block counts as repeated when it occurs 2+ times among
-        # removed lines: same window seen from 2 files, or twice in one file.
-        if removed_counts[window] < 2:
+        # A removed block counts as repeated when it occurs 2+ distinct
+        # times among removed lines, or occurred 2+ times in the base
+        # tree (partial migration: one copy removed, one surviving).
+        if len(removed_positions[window]) < 2 \
+                and base_counts.get(window, 0) < 2:
             continue
         for apath, aidx in added_windows.get(window, []):
-            if apath in rpaths:
+            if rpaths == {apath}:
                 continue
             if _references_dest(test_lines, apath):
                 continue
@@ -418,9 +534,7 @@ def find_extractions(
                     "start_line": removed[rpath][i][1],
                     "end_line": removed[rpath][i + WINDOW - 1][1],
                 }
-                for rpath in sorted(rpaths)
-                for i in range(len(removed[rpath]) - WINDOW + 1)
-                if tuple(t for t, _ in removed[rpath][i:i + WINDOW]) == window
+                for rpath, i in sorted(removed_positions[window])
             ]
             alines = added[apath]
             dest: Location = {
@@ -468,6 +582,8 @@ def load_baseline(project: Path) -> Baseline:
 
 
 def load_baseline_at_ref(project: Path, ref: str) -> Baseline:
+    if not git(project, f"rev-parse --verify --quiet {ref}").strip():
+        raise BaselineError(f"baseline ref {ref} is not resolvable")
     out = git(project, f"show {ref}:{BASELINE_PATH}")
     if not out.strip():
         return {"baseline": 0, "reason": "", "expires": "", "owner": ""}
@@ -530,9 +646,10 @@ def _baseline_deleted(diff: str) -> bool:
 def _raw_added_test_lines(diffs: list[str]) -> list[str]:
     """Raw added lines of test files, for the extraction reference check.
 
-    Import lines are needed here (an import of the destination module
-    exempts), and normalize() drops them, so the reference check reads
-    raw added lines instead of the normalized stream.
+    The reference check reads raw lines (not normalized ones) so its
+    own string-literal and comment stripping sees the original text:
+    normalize() drops import lines and full-line comments, which would
+    hide a call written on such a line from the check.
     """
     lines: list[str] = []
     path: str | None = None
@@ -550,8 +667,13 @@ def _raw_added_test_lines(diffs: list[str]) -> list[str]:
 
 
 def evaluate(project: Path) -> CheckResult:
+    if not git(project, "rev-parse --git-dir").strip():
+        raise CheckError(f"{project} is not a git repository")
     base = default_base(project)
-    diffs = [git(project, f"diff -U0 {base}...HEAD"), git(project, "diff -U0 HEAD")]
+    if not git(project, f"rev-parse --verify --quiet {base}").strip():
+        raise CheckError(f"base ref {base} is not resolvable in {project}")
+    diffs = [git(project, f"diff -U0 {base}...HEAD", check=True),
+             git(project, "diff -U0 HEAD", check=True)]
     added: dict[str, list[tuple[str, int]]] = defaultdict(list)
     removed: dict[str, list[tuple[str, int]]] = defaultdict(list)
     files: set[str] = set()
@@ -572,7 +694,25 @@ def evaluate(project: Path) -> CheckResult:
              if any(is_test_file(loc["path"]) for loc in b["locations"])
              and any(not is_test_file(loc["path"]) for loc in b["locations"])]
     test_lines = _raw_added_test_lines(diffs)
-    extraction = find_extractions(added, removed, test_lines)
+    # Partial migration needs the base tree: a removed window re-added
+    # elsewhere with only one distinct removal is an extraction only
+    # when the block was already duplicated before the diff. Read the
+    # base tree only when such a candidate exists.
+    base_windows: dict[tuple[str, ...], int] = {}
+    removed_set = {
+        tuple(t for t, _ in lines[i:i + WINDOW])
+        for lines in removed.values()
+        for i in range(len(lines) - WINDOW + 1)
+    }
+    added_set = {
+        tuple(t for t, _ in lines[i:i + WINDOW])
+        for lines in added.values()
+        for i in range(len(lines) - WINDOW + 1)
+    }
+    if removed_set & added_set:
+        base_windows = _base_tree_window_counts(
+            project, base, removed_set & added_set)
+    extraction = find_extractions(added, removed, test_lines, base_windows)
     today = date.today()
     errors: list[str] = []
     lapsed = ""
@@ -632,7 +772,7 @@ def _print_blocks(heading: str, blocks: list[Block]) -> None:
     if not blocks:
         return
     print(f"\n{heading}")
-    for b in blocks[:10]:
+    for b in blocks:
         print(f"  {b['path']}:{b['start_line']}-{b['end_line']} "
               f"({b['lines']} lines): {b['sample']}")
         print(f"    copies: {_fmt_locations(b['locations'])}")
@@ -640,12 +780,21 @@ def _print_blocks(heading: str, blocks: list[Block]) -> None:
 
 def cmd_check(a: argparse.Namespace) -> int:
     project = Path(a.project).resolve()
-    result = evaluate(project)
+    try:
+        result = evaluate(project)
+    except CheckError as exc:
+        print(f"cannot measure duplication: {exc}")
+        print("\nVERDICT: FAIL")
+        print(f"  [FAIL] cannot measure: {exc}")
+        return 1
     print(f"added code lines: {result['added_lines']}")
     print(f"duplicated added lines: {result['duplicated_lines']} "
           f"(baseline: {result['baseline']})")
     _print_blocks("DUPLICATE BLOCKS (abstraction needs a shared-meaning "
                   "justification):", result["blocks"])
+    if result["blocks"]:
+        print("  (duplicated lines count distinct added lines beyond the "
+              "first occurrence of each block)")
     _print_blocks("TEST-FILE DUPLICATION (informational, not ratcheted):",
                   result["test_blocks"])
     _print_blocks("CROSS-COPIES, production code and test file "
@@ -681,12 +830,15 @@ def cmd_check(a: argparse.Namespace) -> int:
             print("  fix: deduplicate the listed blocks, or raise the "
                   f"baseline in {BASELINE_PATH} with a recorded reason, "
                   "expiry and owner (a raise takes effect for later diffs, "
-                  "not this one). See "
+                  "not this one). Extracting a shared idiom will also "
+                  "require a test that calls it. See "
                   "docs/specs/2026-11-08-dup-ratchet.md")
         if result["extraction"]:
             print("  fix: add a regression test in the diff that calls the "
                   "extracted module (import it and assert on its "
-                  "behavior). See docs/specs/2026-11-08-dup-ratchet.md")
+                  "behavior). Tests already on main do not count: the "
+                  "test must be in the diff. See "
+                  "docs/specs/2026-11-08-dup-ratchet.md")
         return 1
     if result["duplicated_lines"] < result["baseline"]:
         print(f"\n  note: duplicated lines are below baseline; the baseline "
@@ -857,8 +1009,8 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
                   "tests/test_shared.py":
                       "from tools.a.shared import shared\n"})
     code, res = run_check(repo)
-    check("extraction with an import-only test passes",
-          code == 0 and res["extraction"] == [], json.dumps(res))
+    check("extraction with an import-only test still fails",
+          code == 1 and len(res["extraction"]) > 0, json.dumps(res))
     repo = make_repo(extract_base)
     commit(repo, {**extract_pr,
                   "tests/test_shared.py":
@@ -1011,6 +1163,81 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
     code, res = run_check(repo)
     check("deleting the baseline file fails closed",
           code == 1 and len(res["baseline_errors"]) > 0, json.dumps(res))
+
+    # 15. partial migration: the block is removed from ONE of two files
+    #    and re-added as a shared home, with no test, while the second
+    #    copy survives outside the diff. The base tree shows the block
+    #    was duplicated before the diff, so the extraction gate fires;
+    #    a calling test exempts it.
+    partial_base = {
+        "tools/a/one.py": "def f():\n" + extract_body,
+        "tools/a/two.py": "def g():\n" + extract_body,
+        "tools/a/shared.py": "def s():\n    return 0\n",
+    }
+    partial_pr = {
+        "tools/a/one.py": "def f():\n    return shared()\n",
+        "tools/a/shared.py": "def shared():\n" + extract_body,
+    }
+    repo = make_repo(partial_base)
+    commit(repo, partial_pr)
+    code, res = run_check(repo)
+    check("partial migration without a test fails",
+          code == 1 and len(res["extraction"]) > 0, json.dumps(res))
+    repo = make_repo(partial_base)
+    commit(repo, {**partial_pr,
+                  "tests/test_shared.py":
+                      "from tools.a.shared import shared\n\n\n"
+                      "def test_shared():\n    assert shared() == 15\n"})
+    code, res = run_check(repo)
+    check("partial migration with a calling test passes",
+          code == 0 and res["extraction"] == [], json.dumps(res))
+
+    # 16. consolidation into an existing holder file: the block is
+    #    removed from two files and re-added in one of them (the holder),
+    #    with no test. The holder's copy is reindented under the new
+    #    `def shared():`, so the raw diff shows it removed and re-added
+    #    (normalization collapses the indent, so it is the same window).
+    #    The destination is a removal source, but not the sole one, so
+    #    the gate fires.
+    holder_base = {
+        "tools/a/one.py": "def f():\n" + extract_body,
+        "tools/a/two.py": "def g():\n    if True:\n"
+        + "".join("        " + line.lstrip() + "\n"
+                  for line in extract_body.splitlines()) + "",
+    }
+    holder_pr = {
+        "tools/a/one.py": "def f():\n    return shared()\n",
+        "tools/a/two.py": "def shared():\n" + extract_body,
+    }
+    repo = make_repo(holder_base)
+    commit(repo, holder_pr)
+    code, res = run_check(repo)
+    check("consolidation into an existing holder without a test fails",
+          code == 1 and len(res["extraction"]) > 0, json.dumps(res))
+
+    # 17. a check that cannot obtain a diff fails closed, not vacuously
+    td = tempfile.mkdtemp()
+    code = cmd_check(argparse.Namespace(project=td))
+    check("check outside a git repository fails closed",
+          code == 1, "")
+
+    # 18. seven identical consecutive lines removed once and re-added
+    #    elsewhere are one occurrence, not two overlapping windows, so
+    #    the extraction gate does not fire on a single removal.
+    seven = "".join("    pass\n" for _ in range(7))
+    seven_base = {
+        "tools/a/one.py": "def f():\n" + seven,
+        "tools/a/shared.py": "def s():\n    return 0\n",
+    }
+    seven_pr = {
+        "tools/a/one.py": "def f():\n    return shared()\n",
+        "tools/a/shared.py": "def shared():\n" + seven,
+    }
+    repo = make_repo(seven_base)
+    commit(repo, seven_pr)
+    code, res = run_check(repo)
+    check("single removal of 7 identical lines is not an extraction",
+          res["extraction"] == [], json.dumps(res))
 
     print("\nVERDICT: {}".format(
         "duplication on changed lines is reported, the ratchet holds, and "

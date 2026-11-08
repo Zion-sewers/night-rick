@@ -42,7 +42,8 @@ MUTATIONS = [
         "extraction gate dropped",
         "find_extractions is replaced with an empty list, so a cross-module "
         "extraction with no regression tests in the diff passes.",
-        "    extraction = find_extractions(added, removed, test_lines)",
+        "    extraction = find_extractions(added, removed, test_lines, "
+        "base_windows)",
         "    extraction = []",
     ),
     (
@@ -93,6 +94,41 @@ MUTATIONS = [
         "            if _references_dest(test_lines, apath):\n"
         "                continue",
         "            if False:  # reference check dropped\n"
+        "                continue",
+    ),
+    (
+        "import alone exempts again",
+        "The call-only rule gains an import branch, so a test file "
+        "that merely imports the destination module exempts an "
+        "extraction it never calls. The flipped selftest case (an "
+        "import-only test still fails) must catch this.",
+        "        if call.search(line) or attr.search(line):\n"
+        "            return True",
+        "        if call.search(line) or attr.search(line) \\\n"
+        "                or line.strip().startswith((\"import \", \"from \")):\n"
+        "            return True",
+    ),
+    (
+        "partial migration ignored, base tree unread",
+        "The base-tree occurrence clause is dropped, so a block "
+        "removed from one of two files and re-added as a shared home "
+        "passes with no test: the surviving copy is invisible to a "
+        "diff-only detector, which is exactly the hole the base-tree "
+        "read closes.",
+        "        if len(removed_positions[window]) < 2 \\\n"
+        "                and base_counts.get(window, 0) < 2:\n"
+        "            continue",
+        "        if len(removed_positions[window]) < 2:\n"
+        "            continue",
+    ),
+    (
+        "holder consolidation skipped again",
+        "The destination skip goes back to exempting any destination "
+        "that is also a removal source, so consolidating duplicated "
+        "code into an existing holder file passes with no test.",
+        "            if rpaths == {apath}:\n"
+        "                continue",
+        "            if apath in rpaths:\n"
         "                continue",
     ),
     (

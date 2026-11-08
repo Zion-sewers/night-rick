@@ -198,6 +198,12 @@
       "timeout": 60,
       "cmd": "python tools/audit/gate_health.py check --project .",
       "_note": "state/gate-runs.jsonl is the meta-record of every quality gate run (19K+ rows). This domain validates its structural integrity: every row parses as valid JSON, required fields (ts, project, commit, verdict, domains) are present, and verdict values are recognised. Data quality issues in existing rows (non-string domain verdicts from a gate.py builtin handler bug) are warnings because the ledger is append-only."
+    },
+    "dup_ratchet": {
+      "required": true,
+      "timeout": 60,
+      "cmd": "python tools/audit/dup_ratchet.py check --project .",
+      "_note": "Added 2026-11-08, night-rick#376 (Perplexity corpus, DRY/AHA/WET balance): duplication is reported on changed lines first, not as a repo-wide legacy debt dump; a ratchet on new code (duplicated added lines must not exceed the baseline in state/dup-ratchet.json, 0 at ship); legacy debt is measured separately by `dup_ratchet.py report` and never blocks; a cross-module extraction (removed repeated block reappearing as added lines in another file) without a test file in the diff fails. Only exact normalized 6-line repeats fire: same-looking code that is not textually identical never does, so abstraction stays a judgement call for the author. Threshold calibrated against real merged diffs, see docs/specs/2026-11-08-dup-ratchet.md."
     }
   }
 }

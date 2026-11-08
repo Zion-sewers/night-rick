@@ -1,7 +1,7 @@
 {
   "component": "tools/trycmd",
   "reviewed": "2026-07-30",
-  "recheck_after": "2026-10-28",
+  "recheck_after": "2027-02-06",
   "verdict": "absorb-mechanism",
   "verdict_class": "absorb",
   "absorption_status": "absorbed",
@@ -12,7 +12,11 @@
     "url": "https://crates.io/crates/trycmd",
     "license": "MIT OR Apache-2.0",
     "recent_downloads": 1400000,
-    "also": {"crate": "snapbox", "version": "0.6.21", "what": "the line matcher and the elide rule"},
+    "also": {
+      "crate": "snapbox",
+      "version": "0.6.21",
+      "what": "the line matcher and the elide rule"
+    },
     "what_was_taken": "The mechanism, ported to stdlib Python. No Rust code was vendored and no dependency was added.",
     "source_files_read": [
       "trycmd-1.2.1/src/lib.rs:1-140 (format documentation and the TRYCMD=overwrite workflow)",
@@ -83,5 +87,7 @@
       "python -m pytest tests/test_trycmd.py -q"
     ]
   },
-  "recheck": "Re-run the three commands. Then count how many times `overwrite` was run against tests/cmd since this date and why: more than two cosmetic regenerations means the brittleness objection won and the argparse --help blocks should be dropped in favour of exit-code-and-mode-list assertions only. Also re-check whether cram has gained a snapbox-style normalizer, which would make porting redundant and adoption correct."
+  "recheck": "Re-run the three commands. Then count how many times `overwrite` was run against tests/cmd since this date and why: more than two cosmetic regenerations means the brittleness objection won and the argparse --help blocks should be dropped in favour of exit-code-and-mode-list assertions only. Also re-check whether cram has gained a snapbox-style normalizer, which would make porting redundant and adoption correct.",
+  "rechecked": "2026-11-08",
+  "recheck_result": "Rechecked 2026-11-08: selftest RC=0 ('0 checks failed'); trycmd.py check -v runs 8 steps with 1 failed, and the single failure is docmap.py selftest, which fails only on this unit's scope (41 expired + DOCMAP drift) and heals on renewal. pytest tests/test_trycmd.py::TestRepoIntegration::test_repo_cases_pass fails for the same scope reason. git log since 2026-10-28 touching tests/cmd is EMPTY, so overwrite ran 0 times and the '>2 cosmetic regenerations' trigger does NOT fire. cram/snapbox: snapbox ships redactions (a normalizer-adjacent mechanism) but it is Rust; no Python-side normalizer appeared. Absorption stays absorbed (mechanism already named)."
 }

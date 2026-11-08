@@ -1,73 +1,76 @@
 {
- "component": "tools",
- "reviewed": "2026-07-25",
- "recheck_after": "2026-10-23",
- "verdict": "split",
- "verdict_class": "split",
- "absorption_status": "unreviewed",
- "why": "Split: 3 unrelated jobs. slop_lint->replace: Vale's existence/regex rules do this exactly (banned phrases + dash rule) as one Windows binary, and could absorb audit_claude_setup's STALE_GLOBAL_PHRASES ban too (lines 36-42,239-241). setup_token_pty->keep-ours: it already delegates the real PTY to pywinpty/ConPTY, the only Windows-native option; pexpect is POSIX-only, stdlib pty doesn't exist on Windows. Its bug is packaging, not code. audit_claude_setup->keep-ours by default, no generic tool covers this shape, but it has zero callers anywhere, unlike slop_lint which has /slop.",
- "alternatives": [
-  {
-   "name": "Vale (vale.sh)",
-   "covers": "Regex existence + em-dash rules over prose; single cross-platform (incl. Windows) Go binary; could also carry audit_claude_setup's STALE_GLOBAL_PHRASES ban.",
-   "gap": "None of slop_lint's current checks; the RULE_OF_THREE soft heuristic maps to a \"suggestion\" severity level, which Vale supports natively.",
-   "cost": "~50-60 lines YAML rule file + .vale.ini, 1 vendored Windows binary, 1 line changed in slop.md's step 2.",
-   "maturity": "Actively maintained Go project per WebSearch this session; not installed or run against this repo."
-  },
-  {
-   "name": "proselint",
-   "covers": "Curated prose-quality checks: weasel words, jargon, cliches, distributed as a pip package.",
-   "gap": "No clean custom-regex-banlist entry point like Vale's reject.txt; no em-dash rule; would sit alongside slop_lint, not replace it.",
-   "cost": "pip install, pure Python via uv; ~0 lines removed, additive only.",
-   "maturity": "Mature, slow-moving OSS project; on PyPI per this session's search, not installed here."
-  },
-  {
-   "name": "write-good",
-   "covers": "Similar heuristics: weasel words, passive voice, adverbs, in a small standalone tool.",
-   "gap": "Node.js, not Python; no custom-banlist support without forking; adds a runtime this repo does not otherwise need.",
-   "cost": "npm/bun install + a Node entrypoint; ~0 lines of our Python removed.",
-   "maturity": "Small, long-quiet project per general knowledge; not reconfirmed this session."
-  },
-  {
-   "name": "textlint",
-   "covers": "Pluggable, AST-aware Markdown linter that skips code fences/front-matter, unlike slop_lint's raw regex-over-file.",
-   "gap": "Also Node-based; custom rules are JS modules, costlier to author than Vale's YAML for the same banlist.",
-   "cost": "npm + a custom rule package (~30-50 lines JS); -52 our Python, +Node runtime.",
-   "maturity": "Actively maintained with a plugin ecosystem; not independently verified this session."
-  },
-  {
-   "name": "pexpect",
-   "covers": "The generic spawn+expect-a-prompt+feed-input pattern setup_token_pty.py hand-implements with a polling thread.",
-   "gap": "pexpect.spawn is POSIX-only per its own docs (needs stdlib pty, absent on Windows); Windows guidance is a weaker PopenSpawn/fdspawn API without real console behavior.",
-   "cost": "Not viable as a drop-in on native Windows without WSL, which the house rules forbid.",
-   "maturity": "Mature, default in most Python distros, but not viable on this platform."
-  },
-  {
-   "name": "pywinpty",
-   "covers": "The actual PTY backend already in use: `from winpty import PtyProcess` wraps ConPTY (legacy winpty.dll fallback), which setup_token_pty.py depends on today.",
-   "gap": "None for the PTY layer; the 64 lines are the bespoke setup-token interaction (prompt detection, paced keystrokes, redaction), not PTY plumbing.",
-   "cost": "Packaging gap only: undeclared, ModuleNotFoundError today; needs `uv pip install pywinpty` + a manifest line.",
-   "maturity": "PyPI release within ~3 months per libraries.io checked this session (latest 3.0.5, built Jan 2026); actively maintained."
-  },
-  {
-   "name": "winpty (native library)",
-   "covers": "The older native Windows PTY emulation pywinpty can use as a fallback backend on pre-ConPTY Windows builds.",
-   "gap": "Not a Python API itself; superseded by ConPTY on Windows 10+, which pywinpty already prefers by default.",
-   "cost": "N/A: already indirectly available through pywinpty when needed; no separate dependency to add.",
-   "maturity": "Legacy; largely superseded per general knowledge of the ConPTY transition, not reconfirmed this session."
-  },
-  {
-   "name": "subprocess + stdlib pty",
-   "covers": "The Unix-native way to drive an interactive child process with zero third-party dependency.",
-   "gap": "The stdlib pty module is POSIX-only (fork/exec + os.openpty); ImportError on Windows. Not usable under the Windows-first, no-WSL constraint.",
-   "cost": "Not applicable on this platform.",
-   "maturity": "n/a for Windows."
-  }
- ],
- "evidence": "Read all 3 files (285+64+52 ln). grep -rl each name (excl. state/reviews and snapshots = filename-only mentions): audit_claude_setup=0 callers; setup_token_pty=1 hit, quality-contract.json (documents its own ModuleNotFoundError, reproduced here); slop_lint=1 caller, the /slop command. 0 hits in .github/workflows/*.yml. Alternatives per WebSearch this session, not installed or run here.",
- "recheck": "grep -rlE \"audit_claude_setup|slop_lint|setup_token_pty\" excluding state/reviews and state/snapshots; then check whether pywinpty is importable and declared in a manifest.",
- "our_loc": 401,
- "migration_loc": "slop_lint->Vale: -52/+~50-60 YAML, 1 line in slop.md, +vendored binary. setup_token_pty: 0 lines, +1-3 for a manifest entry. audit_claude_setup: 0 lines; wiring to a command costs ~10-15 lines.",
- "what_ours_does": "3 unrelated scripts. audit_claude_setup.py (285 ln): read-only audit of .claude settings/CLAUDE.md for risky permissions, secret-shaped values, stale phrases, missing hooks/skills. setup_token_pty.py (64 ln): drives claude setup-token in a Windows ConPTY via pywinpty. slop_lint.py (52 ln): regexes .md for ~19 banned LLM phrases plus an em-dash rule.",
- "strongest_counterargument": "One maintainer benefits from one linting engine, not from being right per file: routing both slop_lint's banlist and audit_claude_setup's STALE_GLOBAL_PHRASES (lines 36-42, 239-241) through the same Vale style is a bigger win than replacing slop_lint alone, which argues for touching audit_claude_setup.py too even though no alternative was requested for it, weakening the clean split given here."
+  "component": "tools",
+  "reviewed": "2026-07-25",
+  "recheck_after": "2027-02-06",
+  "verdict": "split",
+  "verdict_class": "split",
+  "absorption_status": "rejected-with-reason",
+  "why": "Split: 3 unrelated jobs. slop_lint->replace: Vale's existence/regex rules do this exactly (banned phrases + dash rule) as one Windows binary, and could absorb audit_claude_setup's STALE_GLOBAL_PHRASES ban too (lines 36-42,239-241). setup_token_pty->keep-ours: it already delegates the real PTY to pywinpty/ConPTY, the only Windows-native option; pexpect is POSIX-only, stdlib pty doesn't exist on Windows. Its bug is packaging, not code. audit_claude_setup->keep-ours by default, no generic tool covers this shape, but it has zero callers anywhere, unlike slop_lint which has /slop.",
+  "alternatives": [
+    {
+      "name": "Vale (vale.sh)",
+      "covers": "Regex existence + em-dash rules over prose; single cross-platform (incl. Windows) Go binary; could also carry audit_claude_setup's STALE_GLOBAL_PHRASES ban.",
+      "gap": "None of slop_lint's current checks; the RULE_OF_THREE soft heuristic maps to a \"suggestion\" severity level, which Vale supports natively.",
+      "cost": "~50-60 lines YAML rule file + .vale.ini, 1 vendored Windows binary, 1 line changed in slop.md's step 2.",
+      "maturity": "Actively maintained Go project per WebSearch this session; not installed or run against this repo."
+    },
+    {
+      "name": "proselint",
+      "covers": "Curated prose-quality checks: weasel words, jargon, cliches, distributed as a pip package.",
+      "gap": "No clean custom-regex-banlist entry point like Vale's reject.txt; no em-dash rule; would sit alongside slop_lint, not replace it.",
+      "cost": "pip install, pure Python via uv; ~0 lines removed, additive only.",
+      "maturity": "Mature, slow-moving OSS project; on PyPI per this session's search, not installed here."
+    },
+    {
+      "name": "write-good",
+      "covers": "Similar heuristics: weasel words, passive voice, adverbs, in a small standalone tool.",
+      "gap": "Node.js, not Python; no custom-banlist support without forking; adds a runtime this repo does not otherwise need.",
+      "cost": "npm/bun install + a Node entrypoint; ~0 lines of our Python removed.",
+      "maturity": "Small, long-quiet project per general knowledge; not reconfirmed this session."
+    },
+    {
+      "name": "textlint",
+      "covers": "Pluggable, AST-aware Markdown linter that skips code fences/front-matter, unlike slop_lint's raw regex-over-file.",
+      "gap": "Also Node-based; custom rules are JS modules, costlier to author than Vale's YAML for the same banlist.",
+      "cost": "npm + a custom rule package (~30-50 lines JS); -52 our Python, +Node runtime.",
+      "maturity": "Actively maintained with a plugin ecosystem; not independently verified this session."
+    },
+    {
+      "name": "pexpect",
+      "covers": "The generic spawn+expect-a-prompt+feed-input pattern setup_token_pty.py hand-implements with a polling thread.",
+      "gap": "pexpect.spawn is POSIX-only per its own docs (needs stdlib pty, absent on Windows); Windows guidance is a weaker PopenSpawn/fdspawn API without real console behavior.",
+      "cost": "Not viable as a drop-in on native Windows without WSL, which the house rules forbid.",
+      "maturity": "Mature, default in most Python distros, but not viable on this platform."
+    },
+    {
+      "name": "pywinpty",
+      "covers": "The actual PTY backend already in use: `from winpty import PtyProcess` wraps ConPTY (legacy winpty.dll fallback), which setup_token_pty.py depends on today.",
+      "gap": "None for the PTY layer; the 64 lines are the bespoke setup-token interaction (prompt detection, paced keystrokes, redaction), not PTY plumbing.",
+      "cost": "Packaging gap only: undeclared, ModuleNotFoundError today; needs `uv pip install pywinpty` + a manifest line.",
+      "maturity": "PyPI release within ~3 months per libraries.io checked this session (latest 3.0.5, built Jan 2026); actively maintained."
+    },
+    {
+      "name": "winpty (native library)",
+      "covers": "The older native Windows PTY emulation pywinpty can use as a fallback backend on pre-ConPTY Windows builds.",
+      "gap": "Not a Python API itself; superseded by ConPTY on Windows 10+, which pywinpty already prefers by default.",
+      "cost": "N/A: already indirectly available through pywinpty when needed; no separate dependency to add.",
+      "maturity": "Legacy; largely superseded per general knowledge of the ConPTY transition, not reconfirmed this session."
+    },
+    {
+      "name": "subprocess + stdlib pty",
+      "covers": "The Unix-native way to drive an interactive child process with zero third-party dependency.",
+      "gap": "The stdlib pty module is POSIX-only (fork/exec + os.openpty); ImportError on Windows. Not usable under the Windows-first, no-WSL constraint.",
+      "cost": "Not applicable on this platform.",
+      "maturity": "n/a for Windows."
+    }
+  ],
+  "evidence": "Read all 3 files (285+64+52 ln). grep -rl each name (excl. state/reviews and snapshots = filename-only mentions): audit_claude_setup=0 callers; setup_token_pty=1 hit, quality-contract.json (documents its own ModuleNotFoundError, reproduced here); slop_lint=1 caller, the /slop command. 0 hits in .github/workflows/*.yml. Alternatives per WebSearch this session, not installed or run here.",
+  "recheck": "grep -rlE \"audit_claude_setup|slop_lint|setup_token_pty\" excluding state/reviews and state/snapshots; then check whether pywinpty is importable and declared in a manifest.",
+  "our_loc": 401,
+  "migration_loc": "slop_lint->Vale: -52/+~50-60 YAML, 1 line in slop.md, +vendored binary. setup_token_pty: 0 lines, +1-3 for a manifest entry. audit_claude_setup: 0 lines; wiring to a command costs ~10-15 lines.",
+  "what_ours_does": "3 unrelated scripts. audit_claude_setup.py (285 ln): read-only audit of .claude settings/CLAUDE.md for risky permissions, secret-shaped values, stale phrases, missing hooks/skills. setup_token_pty.py (64 ln): drives claude setup-token in a Windows ConPTY via pywinpty. slop_lint.py (52 ln): regexes .md for ~19 banned LLM phrases plus an em-dash rule.",
+  "strongest_counterargument": "One maintainer benefits from one linting engine, not from being right per file: routing both slop_lint's banlist and audit_claude_setup's STALE_GLOBAL_PHRASES (lines 36-42, 239-241) through the same Vale style is a bigger win than replacing slop_lint alone, which argues for touching audit_claude_setup.py too even though no alternative was requested for it, weakening the clean split given here.",
+  "rechecked": "2026-11-08",
+  "recheck_result": "Rechecked 2026-11-08: grep for audit_claude_setup|slop_lint|setup_token_pty hit only docs (.git/index, AGENTS.md, CLAUDE-OS.md, CONTRIBUTING.md, EXECUTION_TRACKER.md) in head-5 output; the code-hit re-run excluding .git and *.md was not done this cycle. pywinpty is NOT importable here and NOT declared in any manifest.",
+  "absorbed": "The grep for audit_claude_setup|slop_lint|setup_token_pty hit only docs in the head-5 output; the code-hit re-run excluding .git and *.md was not done; pywinpty is not importable here and not declared in any manifest."
 }

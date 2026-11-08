@@ -1,10 +1,10 @@
 {
   "component": "tools/reclaim",
   "reviewed": "2026-07-30",
-  "recheck_after": "2026-10-28",
+  "recheck_after": "2027-02-06",
   "verdict": "keep-ours",
   "verdict_class": "keep-ours",
-  "absorption_status": "unreviewed",
+  "absorption_status": "rejected-with-reason",
   "why": "Two scripts, 457 lines: reclaim.py reclaims space across the home tree from an operator-approved candidate list, and temp_sweep.py removes scratch directories THIS repository created in the system temp directory. What general cleaners cannot do is the part that makes them safe here: prove a directory is ours before removing it. temp_sweep matches only prefixes this repo creates, verifies each gate-extra directory still has the shape the test fixture produces (a git repo whose only content is a README and optional gate artifacts), quarantines anything that does not match instead of deleting it, and writes an fsynced manifest row BEFORE each action rather than after. A general cleaner deletes by age or by pattern and cannot tell a leaked test fixture from a running installer's working directory. The measured driver: 1,884 directories, 16,279 files, 34,486,913 bytes of gate-extra scratch, leaked one per test run by a cleanup that used shutil.rmtree(ignore_errors=True) and therefore could not fail on Windows read-only git pack files.",
   "what_ours_does": "Dry run by default, --execute to act, separate --allow-delete on reclaim.py, a hardcoded never-touch list (claude* session scratch), shape verification before deletion, quarantine rather than delete on mismatch, and an append-only fsynced manifest at state/reclaim-manifest.jsonl. Re-runs its invariants immediately before acting rather than trusting the scan.",
   "our_loc": 457,
@@ -60,5 +60,8 @@
       "python -m pytest tests/test_gate_extra_domains.py -q"
     ]
   },
-  "recheck": "Re-run: python tools/reclaim/temp_sweep.py and confirm the eligible count is near zero, which proves the test fix is holding. Then check whether Storage Sense has been enabled, because if it has, the deletion half of this tool is redundant and only the manifest and shape check justify it. Also revisit czkawka for the dedup stage rather than growing a hashing pass here."
+  "recheck": "Re-run: python tools/reclaim/temp_sweep.py and confirm the eligible count is near zero, which proves the test fix is holding. Then check whether Storage Sense has been enabled, because if it has, the deletion half of this tool is redundant and only the manifest and shape check justify it. Also revisit czkawka for the dedup stage rather than growing a hashing pass here.",
+  "rechecked": "2026-11-08",
+  "recheck_result": "Rechecked 2026-11-08: temp_sweep.py DRY RUN (needs --execute) finds near-zero eligible items; Storage Sense is a Windows feature and cannot be checked on this Linux VM. czkawka is alive and actively maintained (12.0.2, 9 Sep 2026): exact-hash Duplicate Files, perceptual-hash Similar Images, CLI dumps CSV/JSON. The dedup half has a real adopt candidate; wiring czkawka_cli as the dedup path is a named follow-up unit.",
+  "absorbed": "temp_sweep.py dry run finds near-zero eligible items and Storage Sense is a Windows feature that cannot be checked here; czkawka 12.0.2 is alive and is the dedup adopt candidate for a follow-up unit."
 }

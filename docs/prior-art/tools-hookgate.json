@@ -1,10 +1,10 @@
 {
   "component": "tools/hookgate",
   "reviewed": "2026-07-30",
-  "recheck_after": "2026-10-28",
-  "verdict": "keep-ours-with-a-named-improvement",
+  "recheck_after": "2027-02-06",
+  "verdict": "keep-ours-with-a-named-improvement (fancy-regex 0.20.0 unblocks the improvement_owed: start_bytes/required_bytes + hard lookbehinds; bump 0.14 to 0.20 and adopt the prefilter API as a follow-up unit)",
   "verdict_class": "keep-ours",
-  "absorption_status": "unreviewed",
+  "absorption_status": "rejected-with-reason",
   "why": "Filed because the prior-art gate fired on a response that presented this crate's prescan as a design of its own. It is not. Literal prefiltering, meaning cheap substring pre-checks that decide whether the expensive regex engine runs at all, is decades-old standard practice and ships inside the engines this crate already depends on: regex-automata carries a whole prefilter module including an Aho-Corasick prefilter for alternations, and RE2, Hyperscan and GNU grep all do a version of it. The closest analogue found is corazawaf/coraza PR #1534, which is the SAME PROBLEM AND THE SAME SOLUTION SHAPE: a ModSecurity-compatible WAF loading hundreds of @rx rules, each evaluated per request, given compile-time analysis of the patterns to build cheap pre-checks that skip evaluation when the input clearly cannot match, and explicitly returning maybe-match on any uncertainty (non-ASCII with (?i), unknown AST nodes, unparseable patterns). That maybe-match rule is exactly this crate's over-approximate-never-under-approximate invariant, arrived at independently and worth strictly less for having been. Nothing in the technique is ours. What is defensible about this implementation is narrower and only about correctness plumbing: the deny rules are GENERATED from safety_gate.py::RULES rather than retyped, a differential oracle establishes that Python's re and fancy-regex agree on the byte-identical patterns (123 commands, exact, both platforms), the literal groups are fuzz-verified against 3069 mutated candidates before rules.rs is emitted, and that verifier is itself mutation-tested against 8 deliberately unsound group sets. Coraza does not need the fuzz because it derives its pre-checks mechanically from the pattern AST, which makes soundness follow from the analysis instead of from a test. That is the better design and it is the improvement named below, not a defect that blocks shipping.",
   "alternatives": [
     {
@@ -84,5 +84,8 @@
       "python tools/hookgate/bench/bench_spawn.py"
     ]
   },
-  "recheck": "Re-run: python tools/hookgate/regen_rules.py --check && python tools/hookgate/diff_oracle.py && python -m pytest tests/test_hookgate.py -q. Then re-search whether fancy_regex has gained a literal extractor, and whether rust-lang/regex has landed the unbounded captureless lookbehind work tracked in issue #618 and discussion #910. Either one would unblock improvement_owed, and the second could remove the fancy-regex dependency entirely, which would also remove the 45 ms compile cost this crate works around."
+  "recheck": "Re-run: python tools/hookgate/regen_rules.py --check && python tools/hookgate/diff_oracle.py && python -m pytest tests/test_hookgate.py -q. Then re-search whether fancy_regex has gained a literal extractor, and whether rust-lang/regex has landed the unbounded captureless lookbehind work tracked in issue #618 and discussion #910. Either one would unblock improvement_owed, and the second could remove the fancy-regex dependency entirely, which would also remove the 45 ms compile cost this crate works around.",
+  "rechecked": "2026-11-08",
+  "recheck_result": "Rechecked 2026-11-08: regen_rules --check RC=0 (18 rules, 3124 fuzz candidates, was 3069 in the record); pytest tests/test_hookgate.py 12 passed, 4 skipped; diff_oracle SKIPPED (no hookgate binary; needs cargo build --release, not attempted). PARTIAL UNBLOCK: fancy-regex 0.20.0 (2026-10-24) adds start_bytes/required_bytes (build-your-own-prefilter), build_delegate_prefilter and variable-length hard lookbehinds, which is the vendor API path the improvement_owed ('derive literal groups mechanically, walk fancy_regex::Expr') needs; rust-lang/regex#618 closed/completed 2019-09-16 is a stale reference, not a lookbehind landing. Cargo.toml still pins fancy-regex 0.14, so the bump 0.14 to 0.20 plus adopting the prefilter API is a named follow-up unit.",
+  "absorbed": "fancy-regex 0.20.0 adds the prefilter API the improvement_owed needs (required_bytes/start_bytes + hard lookbehinds); Cargo.toml still pins 0.14, so the bump + adoption is a named follow-up."
 }

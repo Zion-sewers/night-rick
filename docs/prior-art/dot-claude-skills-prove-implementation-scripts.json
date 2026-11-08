@@ -1,80 +1,83 @@
 {
- "component": "dot-claude/skills/prove-implementation/scripts",
- "reviewed": "2026-07-26",
- "recheck_after": "2026-10-24",
- "verdict": "split",
- "verdict_class": "split",
- "absorption_status": "unreviewed",
- "why": "Default is ours loses, and mostly does: benchmark section is schema-only, hand-typed candidate_results, no timer run; loop_audit.py's IO_MARKERS misses .fetchall()/.json()/ORM .all(), measuring nothing radon/scalene would for real. But git-commit+diff-hash state binding, wired into a live pre_push_gate.py hook, is governance none of the 9 alternatives do - they measure, none gates a push on a written comparison. Split: keep gate/schema/provenance; replace loop heuristic with radon/scalene; require benchmark fields from real pytest-benchmark/pyperf JSON via run-check, not hand-typed.",
- "alternatives": [
-  {
-   "name": "hypothesis",
-   "covers": "Property-based test generation: creates/shrinks input cases to find edge-case failures automatically.",
-   "gap": "No decision record, no candidate comparison, no git-state binding, no push gate; strengthens an oracle, does not govern or gate a claim.",
-   "cost": "Free, pip install, pure Python, Windows-native.",
-   "maturity": "Very mature, actively maintained core PyPI testing library."
-  },
-  {
-   "name": "pytest-benchmark",
-   "covers": "Real statistical timing: calibrated rounds, min/max/mean/stddev, regression compare vs stored baseline JSON.",
-   "gap": "Numbers only; no acceptance-criteria mapping, no candidate rationale, no git-state binding, no push gate.",
-   "cost": "Free, pytest plugin, pip install, Windows-fine.",
-   "maturity": "Active; 5.2.3 released Mar 2026, Tidelift-backed (confirmed via WebSearch)."
-  },
-  {
-   "name": "pyperf",
-   "covers": "PSF-maintained low-level benchmark toolkit: process calibration, worker spawns, mean/stddev for microbenchmarks.",
-   "gap": "Timing only, no schema/gate/provenance; Windows worker-spawn behavior not independently verified here.",
-   "cost": "Free, pip install.",
-   "maturity": "Active; 2.10 released Feb 2026, PSF org (confirmed via WebSearch)."
-  },
-  {
-   "name": "mutmut",
-   "covers": "Mutation testing: injects bugs, checks whether the test suite actually kills them - measures oracle strength ours assumes.",
-   "gap": "No decision record, no push gate; docs require WSL on Windows, violating the 'No WSL dependency' house rule.",
-   "cost": "Free, pip install; Windows path needs WSL per project docs.",
-   "maturity": "Active; 3.3.1 current, maintained by boxed/mutmut (confirmed via WebSearch)."
-  },
-  {
-   "name": "radon",
-   "covers": "Computes real cyclomatic complexity and maintainability index by parsing code, not guessing from names.",
-   "gap": "No 'I/O inside loop' semantic flag, no review-question prompts, no git/push integration, no candidate comparison.",
-   "cost": "Free, pip install, pure Python, Windows-fine.",
-   "maturity": "Mature/stable, 4.1.0 current, modest churn (confirmed via WebSearch)."
-  },
-  {
-   "name": "vulture",
-   "covers": "Finds dead code: unused classes/functions/variables/imports.",
-   "gap": "Unrelated job; does not flag I/O-in-loop, does not benchmark, does not gate anything.",
-   "cost": "Free, pip install.",
-   "maturity": "Mature but quiet; last major release ~2023, still installable and functional."
-  },
-  {
-   "name": "scalene",
-   "covers": "Real dynamic CPU/GPU/memory profiler, line-level attribution, shows where time/memory actually goes.",
-   "gap": "No decision/evidence record, no acceptance-criteria mapping, no push gate; a profiler, not a governance layer.",
-   "cost": "Free, pip install; full Windows memory profiling shipped since v2.0 per project issue tracker.",
-   "maturity": "Active; repo updates through May 2026, UMass PLASMA lab project (confirmed via WebSearch)."
-  },
-  {
-   "name": "py-spy",
-   "covers": "Sampling profiler attaching to a live process without code changes; officially supports win-64.",
-   "gap": "Pure profiler; no schema, no candidate comparison, no push gate, no acceptance-criteria linkage.",
-   "cost": "Free, pip install, official Windows-64 binary.",
-   "maturity": "Active; update seen 2026-04-24 (confirmed via WebSearch)."
-  },
-  {
-   "name": "hand-written benchmark (timeit/perf_counter)",
-   "covers": "One real measured number from one real run, zero dependencies, full control of methodology.",
-   "gap": "No repeated-trial statistics unless self-coded, no comparison record, no push gate, no git-state binding.",
-   "cost": "Free, stdlib-only.",
-   "maturity": "N/A - a technique, not a maintained package; always available."
-  }
- ],
- "evidence": "Read implementation_proof.py:32-116,124-335 (schema+validator, structural), 378-479 (capture_repo_state: real git+diff sha256), 482-570 (run-check: subprocess+sha256). Read loop_audit.py:16-121,166-253 (heuristic, IO_MARKERS). Caller: pre_push_gate.py:136-209 + settings.json:103-108 (live hook); test_mastery_controls.py imports both; pytest = 18 passed. grep found no other callers.",
- "recheck": "cd C:/Users/shova/claude-setup && python -m pytest tests/test_mastery_controls.py -q && grep -rn \"loop_audit|implementation_proof\" dot-claude tests",
- "our_loc": 915,
- "migration_loc": "Delete loop_audit.py heuristic (~180 lines), add ~50-line radon/scalene wrapper; add ~40 lines ingesting pytest-benchmark/pyperf JSON; new pyproject.toml/uv.lock (~20 lines). Net approx -180/+110.",
- "what_ours_does": "implementation_proof.py: JSON schema + ~210-line validator enforcing report completeness, no execution. command_run_check subprocess.run()s a check, sha256-hashes output, capture_repo_state binds pass/fail to a real git commit+diff hash, consumed by a live pre_push_gate.py hook. loop_audit.py: static ast/regex heuristic flagging loops via a 25-word I/O name list; no execution, no metric.",
- "strongest_counterargument": "One maintainer, 915 lines, zero third-party deps, already tested (18 passing), already wired into a working push gate. loop_audit.py itself says \"review prompts, not proof of a defect\" - it never claimed oracle authority. Adding radon/pytest-benchmark/pyperf/scalene is new supply-chain surface for a solo tool whose real job is forcing a written comparison before push, not publishing a benchmark."
+  "component": "dot-claude/skills/prove-implementation/scripts",
+  "reviewed": "2026-07-26",
+  "recheck_after": "2027-02-06",
+  "verdict": "split",
+  "verdict_class": "split",
+  "absorption_status": "rejected-with-reason",
+  "why": "Default is ours loses, and mostly does: benchmark section is schema-only, hand-typed candidate_results, no timer run; loop_audit.py's IO_MARKERS misses .fetchall()/.json()/ORM .all(), measuring nothing radon/scalene would for real. But git-commit+diff-hash state binding, wired into a live pre_push_gate.py hook, is governance none of the 9 alternatives do - they measure, none gates a push on a written comparison. Split: keep gate/schema/provenance; replace loop heuristic with radon/scalene; require benchmark fields from real pytest-benchmark/pyperf JSON via run-check, not hand-typed.",
+  "alternatives": [
+    {
+      "name": "hypothesis",
+      "covers": "Property-based test generation: creates/shrinks input cases to find edge-case failures automatically.",
+      "gap": "No decision record, no candidate comparison, no git-state binding, no push gate; strengthens an oracle, does not govern or gate a claim.",
+      "cost": "Free, pip install, pure Python, Windows-native.",
+      "maturity": "Very mature, actively maintained core PyPI testing library."
+    },
+    {
+      "name": "pytest-benchmark",
+      "covers": "Real statistical timing: calibrated rounds, min/max/mean/stddev, regression compare vs stored baseline JSON.",
+      "gap": "Numbers only; no acceptance-criteria mapping, no candidate rationale, no git-state binding, no push gate.",
+      "cost": "Free, pytest plugin, pip install, Windows-fine.",
+      "maturity": "Active; 5.2.3 released Mar 2026, Tidelift-backed (confirmed via WebSearch)."
+    },
+    {
+      "name": "pyperf",
+      "covers": "PSF-maintained low-level benchmark toolkit: process calibration, worker spawns, mean/stddev for microbenchmarks.",
+      "gap": "Timing only, no schema/gate/provenance; Windows worker-spawn behavior not independently verified here.",
+      "cost": "Free, pip install.",
+      "maturity": "Active; 2.10 released Feb 2026, PSF org (confirmed via WebSearch)."
+    },
+    {
+      "name": "mutmut",
+      "covers": "Mutation testing: injects bugs, checks whether the test suite actually kills them - measures oracle strength ours assumes.",
+      "gap": "No decision record, no push gate; docs require WSL on Windows, violating the 'No WSL dependency' house rule.",
+      "cost": "Free, pip install; Windows path needs WSL per project docs.",
+      "maturity": "Active; 3.3.1 current, maintained by boxed/mutmut (confirmed via WebSearch)."
+    },
+    {
+      "name": "radon",
+      "covers": "Computes real cyclomatic complexity and maintainability index by parsing code, not guessing from names.",
+      "gap": "No 'I/O inside loop' semantic flag, no review-question prompts, no git/push integration, no candidate comparison.",
+      "cost": "Free, pip install, pure Python, Windows-fine.",
+      "maturity": "Mature/stable, 4.1.0 current, modest churn (confirmed via WebSearch)."
+    },
+    {
+      "name": "vulture",
+      "covers": "Finds dead code: unused classes/functions/variables/imports.",
+      "gap": "Unrelated job; does not flag I/O-in-loop, does not benchmark, does not gate anything.",
+      "cost": "Free, pip install.",
+      "maturity": "Mature but quiet; last major release ~2023, still installable and functional."
+    },
+    {
+      "name": "scalene",
+      "covers": "Real dynamic CPU/GPU/memory profiler, line-level attribution, shows where time/memory actually goes.",
+      "gap": "No decision/evidence record, no acceptance-criteria mapping, no push gate; a profiler, not a governance layer.",
+      "cost": "Free, pip install; full Windows memory profiling shipped since v2.0 per project issue tracker.",
+      "maturity": "Active; repo updates through May 2026, UMass PLASMA lab project (confirmed via WebSearch)."
+    },
+    {
+      "name": "py-spy",
+      "covers": "Sampling profiler attaching to a live process without code changes; officially supports win-64.",
+      "gap": "Pure profiler; no schema, no candidate comparison, no push gate, no acceptance-criteria linkage.",
+      "cost": "Free, pip install, official Windows-64 binary.",
+      "maturity": "Active; update seen 2026-04-24 (confirmed via WebSearch)."
+    },
+    {
+      "name": "hand-written benchmark (timeit/perf_counter)",
+      "covers": "One real measured number from one real run, zero dependencies, full control of methodology.",
+      "gap": "No repeated-trial statistics unless self-coded, no comparison record, no push gate, no git-state binding.",
+      "cost": "Free, stdlib-only.",
+      "maturity": "N/A - a technique, not a maintained package; always available."
+    }
+  ],
+  "evidence": "Read implementation_proof.py:32-116,124-335 (schema+validator, structural), 378-479 (capture_repo_state: real git+diff sha256), 482-570 (run-check: subprocess+sha256). Read loop_audit.py:16-121,166-253 (heuristic, IO_MARKERS). Caller: pre_push_gate.py:136-209 + settings.json:103-108 (live hook); test_mastery_controls.py imports both; pytest = 18 passed. grep found no other callers.",
+  "recheck": "cd C:/Users/shova/claude-setup && python -m pytest tests/test_mastery_controls.py -q && grep -rn \"loop_audit|implementation_proof\" dot-claude tests",
+  "our_loc": 915,
+  "migration_loc": "Delete loop_audit.py heuristic (~180 lines), add ~50-line radon/scalene wrapper; add ~40 lines ingesting pytest-benchmark/pyperf JSON; new pyproject.toml/uv.lock (~20 lines). Net approx -180/+110.",
+  "what_ours_does": "implementation_proof.py: JSON schema + ~210-line validator enforcing report completeness, no execution. command_run_check subprocess.run()s a check, sha256-hashes output, capture_repo_state binds pass/fail to a real git commit+diff hash, consumed by a live pre_push_gate.py hook. loop_audit.py: static ast/regex heuristic flagging loops via a 25-word I/O name list; no execution, no metric.",
+  "strongest_counterargument": "One maintainer, 915 lines, zero third-party deps, already tested (18 passing), already wired into a working push gate. loop_audit.py itself says \"review prompts, not proof of a defect\" - it never claimed oracle authority. Adding radon/pytest-benchmark/pyperf/scalene is new supply-chain surface for a solo tool whose real job is forcing a written comparison before push, not publishing a benchmark.",
+  "rechecked": "2026-11-08",
+  "recheck_result": "Rechecked 2026-11-08: pytest tests/test_mastery_controls.py 18 passed; implementation_proof.py is referenced in pre_push_gate.py and SKILL.md, so the proof mechanism is wired and live.",
+  "absorbed": "Mastery controls pass (18 tests); implementation_proof.py is referenced from pre_push_gate.py and SKILL.md, so the mechanism is live."
 }

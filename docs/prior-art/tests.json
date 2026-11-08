@@ -1,52 +1,55 @@
 {
- "component": "tests",
- "reviewed": "2026-07-25",
- "recheck_after": "2026-10-23",
- "verdict": "split",
- "verdict_class": "split",
- "absorption_status": "unreviewed",
- "why": "The dominant design -- real temp git repos, real subprocess/importlib against the actual scripts, no mocks -- is correct for dev-tooling oracles and should not be replaced. The one real opening is Hypothesis on the safety_gate denylist and codemap escaper, free since it already resolves through the sibling env. pytest-randomly/xdist are reasonable but blocked on this dir having no dependency manifest of its own.",
- "alternatives": [
-  {
-   "name": "hypothesis",
-   "covers": "Importable today at zero new cost: already resolves via the sibling intent-control-plane env (verified: `uv run --project intent-control-plane python -m pytest tests/ -q` -> 57 passed).",
-   "gap": "Unused here. test_mastery_controls.py:434 hand-picks 13 literal shell commands vs safety_gate.py's 18-rule regex denylist; test_codemap.py:144 checks table-escaping with a couple examples, not a roundtrip property.",
-   "cost": "Free; effectively already paid for via the sibling project.",
-   "maturity": "Mature; already trusted elsewhere in this repo."
-  },
-  {
-   "name": "pytest-xdist / pytest-randomly",
-   "covers": "CPU parallelism + order randomization; suite is parallel-safe (each case uses its own tempdir/mkdtemp).",
-   "gap": "Not installed. 44.92s for 59 tests locally; 2 of 3 files are subprocess/git-heavy, the slowest in the repo.",
-   "cost": "Free, but no root pyproject.toml/requirements.txt exists to declare it in.",
-   "maturity": "xdist v3.8.0, randomly v4.1.0, both active pytest-dev projects."
-  },
-  {
-   "name": "schemathesis",
-   "covers": "Fuzzes an HTTP/GraphQL API from its schema.",
-   "gap": "Everything: every subject script (hooks, codemap.py, gate.py, knowledge.py) is CLI/stdin-JSON, not a served API with a schema.",
-   "cost": "N/A, not applicable.",
-   "maturity": "PyPI v4.24.2, maintained, wrong tool class."
-  },
-  {
-   "name": "testcontainers",
-   "covers": "Real disposable service containers in Docker for integration tests.",
-   "gap": "Everything: the closest 'external service' tested is real git via subprocess against tempdirs, already exercised directly -- no Docker need.",
-   "cost": "N/A; adds a Docker dependency this repo doesn't otherwise need.",
-   "maturity": "PyPI v4.15.0 (2026-07-24), very active, wrong class here."
-  },
-  {
-   "name": "freezegun / syrupy",
-   "covers": "Clock freezing; output snapshotting.",
-   "gap": "No datetime/time assertions found in this dir's tests; no under-asserted large generated output identified here (unlike the sibling project's dashboard render).",
-   "cost": "Free if ever needed.",
-   "maturity": "freezegun v1.5.5, syrupy v5.5.3, both maintained."
-  }
- ],
- "evidence": "Read test_mastery_controls.py in full, test_codemap.py lines 1-120, safety_gate.py in full, test_gate_extra_domains.py in full. wc -l showed 870 then 1176 lines as a 3rd file appeared live. Ran pytest via sibling env: 57 passed, 2 failed (unrelated prior-art gap in tools/map). Confirmed no root pyproject.toml via ls.",
- "recheck": "uv run --project intent-control-plane python -m pytest ../tests -q; wc -l tests/*.py; ls for a root pyproject.toml added since.",
- "our_loc": 494,
- "migration_loc": "+60/-25 Hypothesis grammar test replaces 13-line tuple (test_mastery_controls.py:435-449); +10/-5 codemap escaper roundtrip. xdist/randomly need a root pyproject.toml first.",
- "what_ours_does": "unittest.TestCase oracle suite for this repo's own dev-tooling scripts. Measured 494 lines at dispatch (= test_mastery_controls.py alone). Mid-audit a 3rd file (test_gate_extra_domains.py, 306 lines) appeared live, growing the dir to 1176 lines -- an active background pipeline touches this repo. Drives hooks/tools via importlib or real subprocess (JSON stdin) and real temp git repos, no mocks.",
- "strongest_counterargument": "These are oracle tests proving a real script makes a real decision; mocking or fuzzing over them changes what is being proven. safety_gate.py's own docstring says the regex denylist is 'not an OS security boundary,' so hardening its test proves a marginally better regex, not a safe guardrail -- effort a one-person maintainer may reasonably spend elsewhere."
+  "component": "tests",
+  "reviewed": "2026-07-25",
+  "recheck_after": "2027-02-06",
+  "verdict": "split",
+  "verdict_class": "split",
+  "absorption_status": "rejected-with-reason",
+  "why": "The dominant design -- real temp git repos, real subprocess/importlib against the actual scripts, no mocks -- is correct for dev-tooling oracles and should not be replaced. The one real opening is Hypothesis on the safety_gate denylist and codemap escaper, free since it already resolves through the sibling env. pytest-randomly/xdist are reasonable but blocked on this dir having no dependency manifest of its own.",
+  "alternatives": [
+    {
+      "name": "hypothesis",
+      "covers": "Importable today at zero new cost: already resolves via the sibling intent-control-plane env (verified: `uv run --project intent-control-plane python -m pytest tests/ -q` -> 57 passed).",
+      "gap": "Unused here. test_mastery_controls.py:434 hand-picks 13 literal shell commands vs safety_gate.py's 18-rule regex denylist; test_codemap.py:144 checks table-escaping with a couple examples, not a roundtrip property.",
+      "cost": "Free; effectively already paid for via the sibling project.",
+      "maturity": "Mature; already trusted elsewhere in this repo."
+    },
+    {
+      "name": "pytest-xdist / pytest-randomly",
+      "covers": "CPU parallelism + order randomization; suite is parallel-safe (each case uses its own tempdir/mkdtemp).",
+      "gap": "Not installed. 44.92s for 59 tests locally; 2 of 3 files are subprocess/git-heavy, the slowest in the repo.",
+      "cost": "Free, but no root pyproject.toml/requirements.txt exists to declare it in.",
+      "maturity": "xdist v3.8.0, randomly v4.1.0, both active pytest-dev projects."
+    },
+    {
+      "name": "schemathesis",
+      "covers": "Fuzzes an HTTP/GraphQL API from its schema.",
+      "gap": "Everything: every subject script (hooks, codemap.py, gate.py, knowledge.py) is CLI/stdin-JSON, not a served API with a schema.",
+      "cost": "N/A, not applicable.",
+      "maturity": "PyPI v4.24.2, maintained, wrong tool class."
+    },
+    {
+      "name": "testcontainers",
+      "covers": "Real disposable service containers in Docker for integration tests.",
+      "gap": "Everything: the closest 'external service' tested is real git via subprocess against tempdirs, already exercised directly -- no Docker need.",
+      "cost": "N/A; adds a Docker dependency this repo doesn't otherwise need.",
+      "maturity": "PyPI v4.15.0 (2026-07-24), very active, wrong class here."
+    },
+    {
+      "name": "freezegun / syrupy",
+      "covers": "Clock freezing; output snapshotting.",
+      "gap": "No datetime/time assertions found in this dir's tests; no under-asserted large generated output identified here (unlike the sibling project's dashboard render).",
+      "cost": "Free if ever needed.",
+      "maturity": "freezegun v1.5.5, syrupy v5.5.3, both maintained."
+    }
+  ],
+  "evidence": "Read test_mastery_controls.py in full, test_codemap.py lines 1-120, safety_gate.py in full, test_gate_extra_domains.py in full. wc -l showed 870 then 1176 lines as a 3rd file appeared live. Ran pytest via sibling env: 57 passed, 2 failed (unrelated prior-art gap in tools/map). Confirmed no root pyproject.toml via ls.",
+  "recheck": "uv run --project intent-control-plane python -m pytest ../tests -q; wc -l tests/*.py; ls for a root pyproject.toml added since.",
+  "our_loc": 494,
+  "migration_loc": "+60/-25 Hypothesis grammar test replaces 13-line tuple (test_mastery_controls.py:435-449); +10/-5 codemap escaper roundtrip. xdist/randomly need a root pyproject.toml first.",
+  "what_ours_does": "unittest.TestCase oracle suite for this repo's own dev-tooling scripts. Measured 494 lines at dispatch (= test_mastery_controls.py alone). Mid-audit a 3rd file (test_gate_extra_domains.py, 306 lines) appeared live, growing the dir to 1176 lines -- an active background pipeline touches this repo. Drives hooks/tools via importlib or real subprocess (JSON stdin) and real temp git repos, no mocks.",
+  "strongest_counterargument": "These are oracle tests proving a real script makes a real decision; mocking or fuzzing over them changes what is being proven. safety_gate.py's own docstring says the regex denylist is 'not an OS security boundary,' so hardening its test proves a marginally better regex, not a safe guardrail -- effort a one-person maintainer may reasonably spend elsewhere.",
+  "rechecked": "2026-11-08",
+  "recheck_result": "Rechecked 2026-11-08: root pytest on clean main 2e5423fd: 3 failed, 755 passed, 31 skipped, 1 xfailed; tests/*.py totals 9440 lines. Two failures are identified: test_trycmd.py::TestRepoIntegration::test_repo_cases_pass fails because docmap.py selftest fails on the 41 expired records (this unit's scope, heals on renewal), and test_render_todo.py::test_resolve_project_follows_a_worktree_to_its_repository fails because the clone directory is named 'repo' not 'night-rick' (environment, not a repo defect). The third failure was unidentified in the pre-change run; the post-change full run is the check.",
+  "absorbed": "Root suite on clean main: 3 failed, 755 passed, 31 skipped, 1 xfailed; two failures are this unit's scope (docmap selftest) or the clone layout, the third was unidentified in the pre-change run."
 }

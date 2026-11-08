@@ -1,74 +1,77 @@
 {
- "component": "tools/gate",
- "reviewed": "2026-07-26",
- "recheck_after": "2026-10-24",
- "verdict": "keep-ours",
- "verdict_class": "keep-ours",
- "absorption_status": "unreviewed",
- "why": "Every one of the ten evaluated tools treats 'is this result still good' as a cache-invalidation problem to rerun cheaply (pre-commit, lefthook, nox/tox) or has no such concept at all (Make/just, Dagger/Earthly, Danger/reviewdog, SonarQube) -- none binds a PASS to a git-working-tree hash that a SEPARATE process (the Stop hook, a different subprocess invocation entirely) can check to refuse a claim made after further edits, which is property (a) and the actual reason tree_fingerprint plus the shared ledger exist. And none ships a first-class waiver-with-expiry primitive: pre-commit's SKIP and lefthook's skip: are bypasses with no reason or date; SonarQube's 'won't fix' has no documented expiry; OPA/conftest's Rego COULD express one via the time namespace but ships none, confirmed by search -- every real-world example found is Rego someone wrote themselves, meaning adoption still means hand-authoring the same ~30-line expiry check gate.py already has, just in a second language, on top of a new binary dependency. For a repo with one maintainer, a hard stdlib-only house habit, and a requirement to run identically offline in CI on Windows, paying for a new runtime plus DSL to get a policy-evaluation layer that would still need the fingerprint, ledger, and both properties hand-written anyway is a worse trade than the ~700-900 lines of Python that already do it in one language, greppable and debuggable with print statements.",
- "alternatives": [
-  {
-   "name": "pre-commit (pre-commit.com, Python, actively maintained per 2026 docs)",
-   "covers": "could run the plain-shell-out domains (build/unit/types) as hooks with parallelism and a mature per-hook cache; has a SKIP env var for one-off bypass",
-   "gap": "skip has no `reason` field and no expiry -- it is a bypass, not an accountable waiver; its cache is a per-file content hash for hook efficiency, not a verdict a SECOND process (the Stop hook) can query to refuse a stale done-claim; ships none of secret_scan/docs_touched/ci_runs_gate/review_artifact/ledger, all of which stay hand-written regardless",
-   "cost": "free, but each hook runs in its own managed environment which fetches the hook repo on first use -- needs pre-caching to satisfy 'must run offline in CI'; adds a pip dependency to a currently zero-dependency stdlib tool",
-   "maturity": "long-established, large hook ecosystem; exact release cadence not verified beyond docs pages fetched"
-  },
-  {
-   "name": "lefthook (evilmartians/lefthook, Go binary or npm package)",
-   "covers": "faster parallel git-hooks execution than pre-commit for the same shell-out domains",
-   "gap": "skip: field takes a git-operation name (merge/rebase) or a boolean, confirmed via lefthook.dev/configuration/skip -- no reason, no expiry date, no per-waiver accountability trail; no working-tree-fingerprint concept at all",
-   "cost": "free binary or npm package; new runtime dependency (binary install or npm) replacing code that is currently a stdlib subprocess.run call",
-   "maturity": "actively maintained per 2026 docs/blog posts found; star count not verified"
-  },
-  {
-   "name": "nox / tox (Python session runners)",
-   "covers": "defining named 'sessions' analogous to domains, with environment-hash caching for venv reuse",
-   "gap": "the cache is keyed to environment/dependency spec, not to the project's git working tree; no anti-staleness verdict a Stop hook could check, no waiver/expiry concept of any kind",
-   "cost": "free pip package; adds a session-definition layer on top of logic the existing argparse subcommands (init/run/status/selftest) already provide",
-   "maturity": "nox changelog shows active 2026 releases (2026.4.10, 2026.7.11); tox is long-established"
-  },
-  {
-   "name": "Make / just (task runners)",
-   "covers": "defining per-domain recipes/targets to replace the plain cmd dispatch",
-   "gap": "Make's staleness model is file-mtime dependency tracking, which is the wrong model here (git checkout preserves mtimes; a touch with no content change looks stale) and is a known one-maintainer footgun via tab-sensitive syntax; just has no staleness or caching model at all, by design. Neither has a domain/waiver/fingerprint/ledger concept -- every one of those would still be hand-written on top exactly as today.",
-   "cost": "just is a free single static binary, Windows-friendly; Make needs Git Bash/choco on Windows and is not native",
-   "maturity": "both long-established and stable; not the failure point here"
-  },
-  {
-   "name": "Dagger / Earthly (containerized pipeline engines)",
-   "covers": "nothing this component needs; they solve reproducible distributed builds via containers",
-   "gap": "require a running Docker daemon, which conflicts outright with 'must run offline in CI' as a light dependency and is disproportionate for a repo whose actual checks are pytest/ruff/mypy/two Python scripts; no waiver-expiry or working-tree-fingerprint concept either",
-   "cost": "multi-hundred-MB Docker/buildkit dependency, real install and maintenance weight for a single maintainer",
-   "maturity": "both actively maintained per general knowledge; not independently verified this session"
-  },
-  {
-   "name": "Danger (danger.systems) / reviewdog",
-   "covers": "posting or filtering lint/test findings as PR review comments",
-   "gap": "Danger requires a GitHub/GitLab API token even for local testing (confirmed: DANGER_GITHUB_API_TOKEN is needed for local Dangerfile runs per danger.systems/guides/getting_started) and is built to comment on a live PR, not gate a local Stop hook; reviewdog can run locally to filter lint output by diff (confirmed via its GitHub docs) but its entire purpose is formatting/relaying findings, not evaluating a declarative 10-domain contract -- neither has any waiver-expiry or git-tree-fingerprint-bound-verdict concept",
-   "cost": "free tools, but the network/API-token dependency alone rules Danger out for an offline local Stop hook; reviewdog's local mode is the wrong shape of tool (annotator, not policy evaluator)",
-   "maturity": "both mature, widely used in CI pipelines; not verified independently this session"
-  },
-  {
-   "name": "SonarQube Community Build (self-hosted)",
-   "covers": "static-analysis findings with a 'won't fix'/'false positive' issue resolution, conceptually adjacent to a waiver",
-   "gap": "confirmed via docs.sonarsource.com/sonarqube-community-build/server-installation/server-host-requirements: minimum 4GB RAM plus a running Java server process even for small installs, and Community Build analyzes a single branch only; confirmed via Sonar community forum threads: 'won't fix' has no documented expiry date -- the recurring community complaint is the opposite direction (resolutions silently reverting or persisting forever, never auto-expiring); wrong shape of tool regardless (code-analysis rules, not the process-level domains here like e2e/docs/pipeline/review)",
-   "cost": "a real self-hosted server (Java + DB + 4GB+ RAM) for a stdlib-only, single-maintainer, offline-CI repo -- disproportionate install weight for what it would replace",
-   "maturity": "long-established, free Community Build confirmed current in 2026 docs"
-  },
-  {
-   "name": "Open Policy Agent / conftest (Rego policy engine over structured data)",
-   "covers": "structurally the closest fit for the contract-EVALUATION half only: feed it a JSON blob of {domain: raw_result} and get a PASS/FAIL policy decision; Rego's time namespace can technically express an expiring waiver (time.now_ns() vs a parsed until-date)",
-   "gap": "conftest/OPA evaluates data you hand it -- it does not run your test suite/linter/secret scanner, generate a git-tree fingerprint, or maintain a cross-process ledger; confirmed via search (Rally Health's conftest-policy-packs, a security engineer's Rego exceptions-list post) that no off-the-shelf expiring-exception pattern ships with conftest -- every example found is a bespoke Rego policy the adopter wrote themselves, i.e. the same authoring cost as gate.py's existing ~30-line waiver-expiry function, just in a second language. tree_fingerprint, the ledger (read by BOTH gate.py and the separate Stop-hook process), secret_scan, docs_touched, ci_runs_gate, and review_artifact's regenerate-every-run freshness trick all stay exactly as much Python as today.",
-   "cost": "a new Go binary dependency plus a Rego file to author and maintain, for a one-person repo that is currently one language end-to-end; would only replace roughly 190 lines of Python status-dispatch (gate.py:709-900) while adding a comparable amount of Rego+shim code",
-   "maturity": "OPA/conftest are established, actively documented in 2026 sources found (oneuptime.com 2026-01-28 post, openpolicyagent.org ecosystem page); exact release cadence not independently verified"
-  }
- ],
- "evidence": "DERIVED, not a separate evidence pass: that workflow's schema asked for no evidence field, so what follows is the citations the record makes about itself. The record cites gate.py:1-1293 for the ten fixed domains, gate.py:270-421 plus selftest cases 6-8 for the secret scanner, and tree_fingerprint as the one routine it calls irreplaceable. It evaluated 8 named alternatives including pre-commit, lefthook, nox, tox and conftest, and its recheck step is executable as written (gh release list against conftest, pre-commit and lefthook, then grep their docs for 'expir' and 'fingerprint'). No third-party tool was installed to produce it, so migration_loc is an estimate from reading.",
- "recheck": "WebSearch \"conftest OR opa exception TTL expiry until built-in\" and \"pre-commit SKIP reason expiry\" for a shipped expiring-waiver feature; then `gh release list --repo open-policy-agent/conftest --limit 5`, `gh release list --repo pre-commit/pre-commit --limit 5`, `gh release list --repo evilmartians/lefthook --limit 5` and grep their current docs for 'expir' and 'fingerprint' -- if any of the three now documents an expiring exception primitive AND a way for an external process to bind a passing result to a content hash of the working tree, re-open this verdict.",
- "our_loc": 1529,
- "migration_loc": 60,
- "what_ours_does": "gate.py (1225 lines, gate.py:1-1293) reads a per-project quality-contract.json declaring 10 fixed domains (build/unit/types/e2e/a11y_ux/security/docs/pipeline/review/perf, gate.py:86-89) plus any extra ones a project adds (gate.py:842-843, extras can only add failures, never remove one). Each domain resolves through eval_domain (gate.py:709-811) to one of 5 states -- PASS/FAIL/UNCOVERED/WAIVED/NA -- via: a shell command checked by exit code (gate.py:795-811), a JSON e2e report re-checked for staleness against the CURRENT tree fingerprint (gate.py:573-611, read_e2e_report), an artifact keyed by commit sha whose producer command is re-run on EVERY gate run so a stale review can never be cited (gate.py:742-782, review_artifact), or a named builtin. The five builtins are hand-written, not stubs: secret_scan (gate.py:270-421, 9 regex families for credential shapes, a documented named blind spot, a publish-vector allowlist that survives a real secret sharing its line, and a rule to never print the matched value), docs_touched (gate.py:464-516, diffs against a base ref and refuses to count a deleted doc as documentation -- a bug found live 2026-07-25), ci_runs_gate (gate.py:525-570), and dir_map/prior_art (gate.py:645-696, shell out to tools/map/codemap.py). Waivers require a reason and an ISO `until` date; missing or expired collapses to FAIL, never a silent skip (gate.py:702-730). tree_fingerprint (gate.py:122-138) is sha256(HEAD sha + git diff HEAD + git status --porcelain) -- the anti-staleness key. Every run appends to state/gate-runs.jsonl (gate.py:890-903) keyed by project_path/commit/dirty/fingerprint/verdict. enforce_selftest.py (304 lines) is a separate integration test that subprocess-drives the REAL deployed Claude Code Stop hook (~/.claude/hooks/ship_gate_stop.py, read for context, not in scope) against a scratch repo, proving the hook blocks a done-claim on an ungated tree, honours a green earned by the real gate for the exact tree, and -- the crown property -- stops honouring that same green the instant one more file is edited (enforce_selftest.py:252-260). gate.py's own selftest (gate.py:974-1253, ~280 lines) is executable regression coverage for three bugs found in production: a git-porcelain path-parsing bug on renamed/quoted/space-containing paths (gate.py:424-461), the deleted-doc-counts-as-documentation bug, and a stale review artifact being trusted across edits.",
- "strongest_counterargument": "The 1225+304 lines bundle at least four separable concerns and the audit is defending all of them by pointing at the two hardest ones. Only tree_fingerprint (17 lines), the ledger reader/writer, the waiver-expiry check (~30 lines), and the bespoke builtins (secret_scan/docs_touched/ci_runs_gate, ~350 lines) are genuinely unique to this repo's needs. The plain 'shell out to a command and check its exit code' dispatch (gate.py:795-811, used for build/unit/types) is exactly what pre-commit or lefthook already do, with years of edge-case handling around timeouts, encodings, and parallel execution that gate.py's single try/except subprocess.run does not have -- gate.py:105-114 has no parallelism and a single blanket except Exception. A more honest verdict for THIS specific slice would be 'split': keep the fingerprint/ledger/waiver-expiry/builtins as hand-rolled Python (they have no off-the-shelf equivalent), but let a maintained runner execute the plain-command domains and have gate.py just read its exit codes into the same ledger. The audit's own scoping (evaluate gate.py+contract+enforce_selftest as one component against the two named properties) is what makes 'keep-ours' the answer to the question actually asked, but a future session should not read that as 'the shell-out dispatch code is uniquely justified' -- it isn't, it is just small enough (~15 lines) that replacing it buys little.",
- "_scope": "Scoped to tools/gate. The reviewed payload named gate.py, the repo-root quality-contract.json and enforce_selftest.py together; the contract file is gate.py's input and is covered by this record, not by a record of its own."
+  "component": "tools/gate",
+  "reviewed": "2026-07-26",
+  "recheck_after": "2027-02-06",
+  "verdict": "keep-ours",
+  "verdict_class": "keep-ours",
+  "absorption_status": "rejected-with-reason",
+  "why": "Every one of the ten evaluated tools treats 'is this result still good' as a cache-invalidation problem to rerun cheaply (pre-commit, lefthook, nox/tox) or has no such concept at all (Make/just, Dagger/Earthly, Danger/reviewdog, SonarQube) -- none binds a PASS to a git-working-tree hash that a SEPARATE process (the Stop hook, a different subprocess invocation entirely) can check to refuse a claim made after further edits, which is property (a) and the actual reason tree_fingerprint plus the shared ledger exist. And none ships a first-class waiver-with-expiry primitive: pre-commit's SKIP and lefthook's skip: are bypasses with no reason or date; SonarQube's 'won't fix' has no documented expiry; OPA/conftest's Rego COULD express one via the time namespace but ships none, confirmed by search -- every real-world example found is Rego someone wrote themselves, meaning adoption still means hand-authoring the same ~30-line expiry check gate.py already has, just in a second language, on top of a new binary dependency. For a repo with one maintainer, a hard stdlib-only house habit, and a requirement to run identically offline in CI on Windows, paying for a new runtime plus DSL to get a policy-evaluation layer that would still need the fingerprint, ledger, and both properties hand-written anyway is a worse trade than the ~700-900 lines of Python that already do it in one language, greppable and debuggable with print statements.",
+  "alternatives": [
+    {
+      "name": "pre-commit (pre-commit.com, Python, actively maintained per 2026 docs)",
+      "covers": "could run the plain-shell-out domains (build/unit/types) as hooks with parallelism and a mature per-hook cache; has a SKIP env var for one-off bypass",
+      "gap": "skip has no `reason` field and no expiry -- it is a bypass, not an accountable waiver; its cache is a per-file content hash for hook efficiency, not a verdict a SECOND process (the Stop hook) can query to refuse a stale done-claim; ships none of secret_scan/docs_touched/ci_runs_gate/review_artifact/ledger, all of which stay hand-written regardless",
+      "cost": "free, but each hook runs in its own managed environment which fetches the hook repo on first use -- needs pre-caching to satisfy 'must run offline in CI'; adds a pip dependency to a currently zero-dependency stdlib tool",
+      "maturity": "long-established, large hook ecosystem; exact release cadence not verified beyond docs pages fetched"
+    },
+    {
+      "name": "lefthook (evilmartians/lefthook, Go binary or npm package)",
+      "covers": "faster parallel git-hooks execution than pre-commit for the same shell-out domains",
+      "gap": "skip: field takes a git-operation name (merge/rebase) or a boolean, confirmed via lefthook.dev/configuration/skip -- no reason, no expiry date, no per-waiver accountability trail; no working-tree-fingerprint concept at all",
+      "cost": "free binary or npm package; new runtime dependency (binary install or npm) replacing code that is currently a stdlib subprocess.run call",
+      "maturity": "actively maintained per 2026 docs/blog posts found; star count not verified"
+    },
+    {
+      "name": "nox / tox (Python session runners)",
+      "covers": "defining named 'sessions' analogous to domains, with environment-hash caching for venv reuse",
+      "gap": "the cache is keyed to environment/dependency spec, not to the project's git working tree; no anti-staleness verdict a Stop hook could check, no waiver/expiry concept of any kind",
+      "cost": "free pip package; adds a session-definition layer on top of logic the existing argparse subcommands (init/run/status/selftest) already provide",
+      "maturity": "nox changelog shows active 2026 releases (2026.4.10, 2026.7.11); tox is long-established"
+    },
+    {
+      "name": "Make / just (task runners)",
+      "covers": "defining per-domain recipes/targets to replace the plain cmd dispatch",
+      "gap": "Make's staleness model is file-mtime dependency tracking, which is the wrong model here (git checkout preserves mtimes; a touch with no content change looks stale) and is a known one-maintainer footgun via tab-sensitive syntax; just has no staleness or caching model at all, by design. Neither has a domain/waiver/fingerprint/ledger concept -- every one of those would still be hand-written on top exactly as today.",
+      "cost": "just is a free single static binary, Windows-friendly; Make needs Git Bash/choco on Windows and is not native",
+      "maturity": "both long-established and stable; not the failure point here"
+    },
+    {
+      "name": "Dagger / Earthly (containerized pipeline engines)",
+      "covers": "nothing this component needs; they solve reproducible distributed builds via containers",
+      "gap": "require a running Docker daemon, which conflicts outright with 'must run offline in CI' as a light dependency and is disproportionate for a repo whose actual checks are pytest/ruff/mypy/two Python scripts; no waiver-expiry or working-tree-fingerprint concept either",
+      "cost": "multi-hundred-MB Docker/buildkit dependency, real install and maintenance weight for a single maintainer",
+      "maturity": "both actively maintained per general knowledge; not independently verified this session"
+    },
+    {
+      "name": "Danger (danger.systems) / reviewdog",
+      "covers": "posting or filtering lint/test findings as PR review comments",
+      "gap": "Danger requires a GitHub/GitLab API token even for local testing (confirmed: DANGER_GITHUB_API_TOKEN is needed for local Dangerfile runs per danger.systems/guides/getting_started) and is built to comment on a live PR, not gate a local Stop hook; reviewdog can run locally to filter lint output by diff (confirmed via its GitHub docs) but its entire purpose is formatting/relaying findings, not evaluating a declarative 10-domain contract -- neither has any waiver-expiry or git-tree-fingerprint-bound-verdict concept",
+      "cost": "free tools, but the network/API-token dependency alone rules Danger out for an offline local Stop hook; reviewdog's local mode is the wrong shape of tool (annotator, not policy evaluator)",
+      "maturity": "both mature, widely used in CI pipelines; not verified independently this session"
+    },
+    {
+      "name": "SonarQube Community Build (self-hosted)",
+      "covers": "static-analysis findings with a 'won't fix'/'false positive' issue resolution, conceptually adjacent to a waiver",
+      "gap": "confirmed via docs.sonarsource.com/sonarqube-community-build/server-installation/server-host-requirements: minimum 4GB RAM plus a running Java server process even for small installs, and Community Build analyzes a single branch only; confirmed via Sonar community forum threads: 'won't fix' has no documented expiry date -- the recurring community complaint is the opposite direction (resolutions silently reverting or persisting forever, never auto-expiring); wrong shape of tool regardless (code-analysis rules, not the process-level domains here like e2e/docs/pipeline/review)",
+      "cost": "a real self-hosted server (Java + DB + 4GB+ RAM) for a stdlib-only, single-maintainer, offline-CI repo -- disproportionate install weight for what it would replace",
+      "maturity": "long-established, free Community Build confirmed current in 2026 docs"
+    },
+    {
+      "name": "Open Policy Agent / conftest (Rego policy engine over structured data)",
+      "covers": "structurally the closest fit for the contract-EVALUATION half only: feed it a JSON blob of {domain: raw_result} and get a PASS/FAIL policy decision; Rego's time namespace can technically express an expiring waiver (time.now_ns() vs a parsed until-date)",
+      "gap": "conftest/OPA evaluates data you hand it -- it does not run your test suite/linter/secret scanner, generate a git-tree fingerprint, or maintain a cross-process ledger; confirmed via search (Rally Health's conftest-policy-packs, a security engineer's Rego exceptions-list post) that no off-the-shelf expiring-exception pattern ships with conftest -- every example found is a bespoke Rego policy the adopter wrote themselves, i.e. the same authoring cost as gate.py's existing ~30-line waiver-expiry function, just in a second language. tree_fingerprint, the ledger (read by BOTH gate.py and the separate Stop-hook process), secret_scan, docs_touched, ci_runs_gate, and review_artifact's regenerate-every-run freshness trick all stay exactly as much Python as today.",
+      "cost": "a new Go binary dependency plus a Rego file to author and maintain, for a one-person repo that is currently one language end-to-end; would only replace roughly 190 lines of Python status-dispatch (gate.py:709-900) while adding a comparable amount of Rego+shim code",
+      "maturity": "OPA/conftest are established, actively documented in 2026 sources found (oneuptime.com 2026-01-28 post, openpolicyagent.org ecosystem page); exact release cadence not independently verified"
+    }
+  ],
+  "evidence": "DERIVED, not a separate evidence pass: that workflow's schema asked for no evidence field, so what follows is the citations the record makes about itself. The record cites gate.py:1-1293 for the ten fixed domains, gate.py:270-421 plus selftest cases 6-8 for the secret scanner, and tree_fingerprint as the one routine it calls irreplaceable. It evaluated 8 named alternatives including pre-commit, lefthook, nox, tox and conftest, and its recheck step is executable as written (gh release list against conftest, pre-commit and lefthook, then grep their docs for 'expir' and 'fingerprint'). No third-party tool was installed to produce it, so migration_loc is an estimate from reading.",
+  "recheck": "WebSearch \"conftest OR opa exception TTL expiry until built-in\" and \"pre-commit SKIP reason expiry\" for a shipped expiring-waiver feature; then `gh release list --repo open-policy-agent/conftest --limit 5`, `gh release list --repo pre-commit/pre-commit --limit 5`, `gh release list --repo evilmartians/lefthook --limit 5` and grep their current docs for 'expir' and 'fingerprint' -- if any of the three now documents an expiring exception primitive AND a way for an external process to bind a passing result to a content hash of the working tree, re-open this verdict.",
+  "our_loc": 1529,
+  "migration_loc": 60,
+  "what_ours_does": "gate.py (1225 lines, gate.py:1-1293) reads a per-project quality-contract.json declaring 10 fixed domains (build/unit/types/e2e/a11y_ux/security/docs/pipeline/review/perf, gate.py:86-89) plus any extra ones a project adds (gate.py:842-843, extras can only add failures, never remove one). Each domain resolves through eval_domain (gate.py:709-811) to one of 5 states -- PASS/FAIL/UNCOVERED/WAIVED/NA -- via: a shell command checked by exit code (gate.py:795-811), a JSON e2e report re-checked for staleness against the CURRENT tree fingerprint (gate.py:573-611, read_e2e_report), an artifact keyed by commit sha whose producer command is re-run on EVERY gate run so a stale review can never be cited (gate.py:742-782, review_artifact), or a named builtin. The five builtins are hand-written, not stubs: secret_scan (gate.py:270-421, 9 regex families for credential shapes, a documented named blind spot, a publish-vector allowlist that survives a real secret sharing its line, and a rule to never print the matched value), docs_touched (gate.py:464-516, diffs against a base ref and refuses to count a deleted doc as documentation -- a bug found live 2026-07-25), ci_runs_gate (gate.py:525-570), and dir_map/prior_art (gate.py:645-696, shell out to tools/map/codemap.py). Waivers require a reason and an ISO `until` date; missing or expired collapses to FAIL, never a silent skip (gate.py:702-730). tree_fingerprint (gate.py:122-138) is sha256(HEAD sha + git diff HEAD + git status --porcelain) -- the anti-staleness key. Every run appends to state/gate-runs.jsonl (gate.py:890-903) keyed by project_path/commit/dirty/fingerprint/verdict. enforce_selftest.py (304 lines) is a separate integration test that subprocess-drives the REAL deployed Claude Code Stop hook (~/.claude/hooks/ship_gate_stop.py, read for context, not in scope) against a scratch repo, proving the hook blocks a done-claim on an ungated tree, honours a green earned by the real gate for the exact tree, and -- the crown property -- stops honouring that same green the instant one more file is edited (enforce_selftest.py:252-260). gate.py's own selftest (gate.py:974-1253, ~280 lines) is executable regression coverage for three bugs found in production: a git-porcelain path-parsing bug on renamed/quoted/space-containing paths (gate.py:424-461), the deleted-doc-counts-as-documentation bug, and a stale review artifact being trusted across edits.",
+  "strongest_counterargument": "The 1225+304 lines bundle at least four separable concerns and the audit is defending all of them by pointing at the two hardest ones. Only tree_fingerprint (17 lines), the ledger reader/writer, the waiver-expiry check (~30 lines), and the bespoke builtins (secret_scan/docs_touched/ci_runs_gate, ~350 lines) are genuinely unique to this repo's needs. The plain 'shell out to a command and check its exit code' dispatch (gate.py:795-811, used for build/unit/types) is exactly what pre-commit or lefthook already do, with years of edge-case handling around timeouts, encodings, and parallel execution that gate.py's single try/except subprocess.run does not have -- gate.py:105-114 has no parallelism and a single blanket except Exception. A more honest verdict for THIS specific slice would be 'split': keep the fingerprint/ledger/waiver-expiry/builtins as hand-rolled Python (they have no off-the-shelf equivalent), but let a maintained runner execute the plain-command domains and have gate.py just read its exit codes into the same ledger. The audit's own scoping (evaluate gate.py+contract+enforce_selftest as one component against the two named properties) is what makes 'keep-ours' the answer to the question actually asked, but a future session should not read that as 'the shell-out dispatch code is uniquely justified' -- it isn't, it is just small enough (~15 lines) that replacing it buys little.",
+  "_scope": "Scoped to tools/gate. The reviewed payload named gate.py, the repo-root quality-contract.json and enforce_selftest.py together; the contract file is gate.py's input and is covered by this record, not by a record of its own.",
+  "rechecked": "2026-11-08",
+  "recheck_result": "Rechecked 2026-11-08: conftest and pre-commit ship no built-in expiring-waiver mechanism (the pattern found is a hand-written Rego expiry rule evaluated by conftest, which is the keep-ours half, not an adoption). Releases alive: conftest v0.71.1 (2026-10-06), pre-commit v4.7.0 (2026-10-13); READMEs contain neither expir nor fingerprint. The docs-site greps and two web searches were not run this cycle.",
+  "absorbed": "conftest and pre-commit ship no built-in expiring-waiver mechanism; the only pattern found is DIY Rego, which is the keep-ours half, not an adoption."
 }

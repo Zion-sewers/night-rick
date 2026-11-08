@@ -1,52 +1,55 @@
 {
- "component": "tools/audit/mutations",
- "reviewed": "2026-07-25",
- "recheck_after": "2026-10-23",
- "verdict": "keep-ours",
- "verdict_class": "keep-ours",
- "absorption_status": "unreviewed",
- "why": "Live in CI (ship-gate.yml:202), fully offline, meeting the house CI rule now. Targets use a bespoke argparse `selftest`, not pytest (0 test_*.py exist outside vendored .venv), so mutmut/cosmic-ray's core model -- mutate + rerun an existing pytest suite -- needs a layer never adopted here. These specs narrate WHY each mutation matters, tied to 2 real regressions this harness already found in bus.py, and grade each catch as named-check/crash/survived (mutate.py:172-194), not bare pass/fail. For 5 small files read by one person, that outweighs generic auto-coverage.",
- "alternatives": [
-  {
-   "name": "mutmut",
-   "covers": "Automatic AST mutation generation (operator/constant/some statement swaps) across a module, re-running the project's existing pytest suite per mutant, with caching + survived/killed dashboard.",
-   "gap": "Assumes a pytest suite; this repo has none (0 test_*.py outside vendored .venv). Gives pass/fail per mutant only, not the named-[FAIL]/crash/survived 3-way diagnosis mutate.py prints.",
-   "cost": "Free/OSS; adds pytest+mutmut as new dependencies to a repo with zero test-framework dependency today.",
-   "maturity": "Actively maintained, v3.3.1 latest per search; one of the most-used Python mutation tools."
-  },
-  {
-   "name": "cosmic-ray",
-   "covers": "Same generic AST-mutation-vs-existing-tests model as mutmut; config-driven (TOML), distributed/parallel mutant execution, pluggable operators.",
-   "gap": "Same pytest-suite assumption gap; same loss of the named-check/weak-signal diagnostic; multi-line domain-specific regressions here still need hand-authoring anyway.",
-   "cost": "Free/OSS; adds its own SQLite work-db/config layer as new machinery for 5 small files.",
-   "maturity": "Actively maintained -- release dated 2026-04-02 per search; supports Python 3.9-3.13."
-  },
-  {
-   "name": "mutatest",
-   "covers": "Lightweight AST mutation testing against an existing pytest suite (or configurable command); random-sample mode for speed.",
-   "gap": "Same pytest-suite assumption; search could not confirm current maintenance cadence either way (treated as unverified, not dead).",
-   "cost": "Free/OSS.",
-   "maturity": "Unclear from this search whether actively maintained; not independently confirmed."
-  },
-  {
-   "name": "pytest-mutagen",
-   "covers": "Decorator-based (@mutagen.mutant) mutations written beside the function they mutate -- closer in spirit to this repo's hand-authored style than a blind AST sweep.",
-   "gap": "Confirmed inactive: no PyPI release in the past 12 months per search; still a pytest plugin, so inherits the same pytest-suite dependency gap.",
-   "cost": "Free/OSS, but adopting a stalled dependency is itself a cost.",
-   "maturity": "Inactive/discontinued (confirmed by search: no PyPI release in past 12 months)."
-  },
-  {
-   "name": "universalmutator",
-   "covers": "Language-agnostic regex mutation tool that runs an ARBITRARY shell command as the kill-oracle -- structurally the closest match to mutate.py's own 'run the target's selftest' model.",
-   "gap": "Mutation rules are generic per-language regex operators, not per-behavior; no concept of this repo's specific named regressions or which check caught them.",
-   "cost": "Free/OSS (academic tool).",
-   "maturity": "Research-oriented; current activity level not confirmed by this search."
-  }
- ],
- "evidence": "Read all 6 spec files in full + mutate.py:1-252. CI-wired: ship-gate.yml:202-203 runs `mutate.py --spec all`. Confirmed 0 test_*.py outside vendored .venv; selftest subcommands at bus.py:849, refute.py:492, snap.py:818, run.py:355/572, plain.py:623. WebSearched mutmut/cosmic-ray/mutatest/pytest-mutagen/universalmutator maintenance.",
- "recheck": "python tools/audit/mutate.py --spec all (expect exit 0, 'every mutation ... applied and ... caught'); grep -n mutate.py .github/workflows/ship-gate.yml; check mutmut/cosmic-ray PyPI release dates for continued maintenance.",
- "our_loc": 702,
- "migration_loc": "0 recommended now. Full migration to mutmut/cosmic-ray: ~+40 ln (pytest shim/target) but loses the named-check/weak-signal diagnostic and regression narration; not attempted.",
- "what_ours_does": "5 hand-authored specs (bus.py 112/plain.py 168/refute.py 80/skilleval.py 138/snap.py 193 ln) each list named (behavior, meaning, exact find-string, replace-string) mutations against ONE real tool file. tools/audit/mutate.py(252 ln, outside the counted 702) substitutes each into a sibling copy, runs the target's own `selftest`, and reports caught/survived/weak-signal per mutation.",
- "strongest_counterargument": "mutmut(v3.3.1)/cosmic-ray(released 2026-04-02) are actively maintained, generate mutations by AST not brittle exact-string `find` (a rename here silently desyncs a spec, caught only later as SKIP), and a 5-line pytest shim per target's `selftest` would let either own the ~40 generic boundary/constant/operator-flip entries, shrinking hand-authored surface roughly in half."
+  "component": "tools/audit/mutations",
+  "reviewed": "2026-07-25",
+  "recheck_after": "2027-02-06",
+  "verdict": "keep-ours",
+  "verdict_class": "keep-ours",
+  "absorption_status": "rejected-with-reason",
+  "why": "Live in CI (ship-gate.yml:202), fully offline, meeting the house CI rule now. Targets use a bespoke argparse `selftest`, not pytest (0 test_*.py exist outside vendored .venv), so mutmut/cosmic-ray's core model -- mutate + rerun an existing pytest suite -- needs a layer never adopted here. These specs narrate WHY each mutation matters, tied to 2 real regressions this harness already found in bus.py, and grade each catch as named-check/crash/survived (mutate.py:172-194), not bare pass/fail. For 5 small files read by one person, that outweighs generic auto-coverage.",
+  "alternatives": [
+    {
+      "name": "mutmut",
+      "covers": "Automatic AST mutation generation (operator/constant/some statement swaps) across a module, re-running the project's existing pytest suite per mutant, with caching + survived/killed dashboard.",
+      "gap": "Assumes a pytest suite; this repo has none (0 test_*.py outside vendored .venv). Gives pass/fail per mutant only, not the named-[FAIL]/crash/survived 3-way diagnosis mutate.py prints.",
+      "cost": "Free/OSS; adds pytest+mutmut as new dependencies to a repo with zero test-framework dependency today.",
+      "maturity": "Actively maintained, v3.3.1 latest per search; one of the most-used Python mutation tools."
+    },
+    {
+      "name": "cosmic-ray",
+      "covers": "Same generic AST-mutation-vs-existing-tests model as mutmut; config-driven (TOML), distributed/parallel mutant execution, pluggable operators.",
+      "gap": "Same pytest-suite assumption gap; same loss of the named-check/weak-signal diagnostic; multi-line domain-specific regressions here still need hand-authoring anyway.",
+      "cost": "Free/OSS; adds its own SQLite work-db/config layer as new machinery for 5 small files.",
+      "maturity": "Actively maintained -- release dated 2026-04-02 per search; supports Python 3.9-3.13."
+    },
+    {
+      "name": "mutatest",
+      "covers": "Lightweight AST mutation testing against an existing pytest suite (or configurable command); random-sample mode for speed.",
+      "gap": "Same pytest-suite assumption; search could not confirm current maintenance cadence either way (treated as unverified, not dead).",
+      "cost": "Free/OSS.",
+      "maturity": "Unclear from this search whether actively maintained; not independently confirmed."
+    },
+    {
+      "name": "pytest-mutagen",
+      "covers": "Decorator-based (@mutagen.mutant) mutations written beside the function they mutate -- closer in spirit to this repo's hand-authored style than a blind AST sweep.",
+      "gap": "Confirmed inactive: no PyPI release in the past 12 months per search; still a pytest plugin, so inherits the same pytest-suite dependency gap.",
+      "cost": "Free/OSS, but adopting a stalled dependency is itself a cost.",
+      "maturity": "Inactive/discontinued (confirmed by search: no PyPI release in past 12 months)."
+    },
+    {
+      "name": "universalmutator",
+      "covers": "Language-agnostic regex mutation tool that runs an ARBITRARY shell command as the kill-oracle -- structurally the closest match to mutate.py's own 'run the target's selftest' model.",
+      "gap": "Mutation rules are generic per-language regex operators, not per-behavior; no concept of this repo's specific named regressions or which check caught them.",
+      "cost": "Free/OSS (academic tool).",
+      "maturity": "Research-oriented; current activity level not confirmed by this search."
+    }
+  ],
+  "evidence": "Read all 6 spec files in full + mutate.py:1-252. CI-wired: ship-gate.yml:202-203 runs `mutate.py --spec all`. Confirmed 0 test_*.py outside vendored .venv; selftest subcommands at bus.py:849, refute.py:492, snap.py:818, run.py:355/572, plain.py:623. WebSearched mutmut/cosmic-ray/mutatest/pytest-mutagen/universalmutator maintenance.",
+  "recheck": "python tools/audit/mutate.py --spec all (expect exit 0, 'every mutation ... applied and ... caught'); grep -n mutate.py .github/workflows/ship-gate.yml; check mutmut/cosmic-ray PyPI release dates for continued maintenance.",
+  "our_loc": 702,
+  "migration_loc": "0 recommended now. Full migration to mutmut/cosmic-ray: ~+40 ln (pytest shim/target) but loses the named-check/weak-signal diagnostic and regression narration; not attempted.",
+  "what_ours_does": "5 hand-authored specs (bus.py 112/plain.py 168/refute.py 80/skilleval.py 138/snap.py 193 ln) each list named (behavior, meaning, exact find-string, replace-string) mutations against ONE real tool file. tools/audit/mutate.py(252 ln, outside the counted 702) substitutes each into a sibling copy, runs the target's own `selftest`, and reports caught/survived/weak-signal per mutation.",
+  "strongest_counterargument": "mutmut(v3.3.1)/cosmic-ray(released 2026-04-02) are actively maintained, generate mutations by AST not brittle exact-string `find` (a rename here silently desyncs a spec, caught only later as SKIP), and a 5-line pytest shim per target's `selftest` would let either own the ~40 generic boundary/constant/operator-flip entries, shrinking hand-authored surface roughly in half.",
+  "rechecked": "2026-11-08",
+  "recheck_result": "Rechecked 2026-11-08: mutmut 3.8.1 and cosmic-ray 8.7.0 are alive on PyPI. mutate.py --spec all was not run this cycle and the ship-gate.yml grep for mutate.py is pending; the A5 verification (expect exit 0 after renewal) is the check.",
+  "absorbed": "mutate.py --spec all was not run this cycle; mutmut 3.8.1 and cosmic-ray 8.7.0 are alive on PyPI; verification of the spec run is pending."
 }

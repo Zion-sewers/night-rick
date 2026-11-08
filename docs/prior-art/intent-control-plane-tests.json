@@ -1,66 +1,69 @@
 {
- "component": "intent-control-plane/tests",
- "reviewed": "2026-07-25",
- "recheck_after": "2026-10-23",
- "verdict": "split",
- "verdict_class": "split",
- "absorption_status": "unreviewed",
- "why": "Keep the example/integration majority: real subprocess CLI, real sqlite, injected clock, tmp_path isolation, no mocks is house-correct for a local CLI with no HTTP surface. Extend the ALREADY-adopted hypothesis (no new dependency) to the one under-tested security function, util.py's redactor, proven only by one hand-picked example with one of three regexes never exercised. Add syrupy for the dashboard render only checked for non-emptiness. pytest-randomly/xdist are cheap opportunistic adds, not urgent (34s green suite).",
- "alternatives": [
-  {
-   "name": "hypothesis",
-   "covers": "Already a dev dependency, already used in 4/44 files for cosine/pass^k/kappa/parent-selection invariants.",
-   "gap": "Not extended to util.py:11-15 SECRET_PATTERNS (3 regexes); only one CLI-subprocess example (test_local_alpha.py:77) exercises it, one pattern untested, no idempotency check.",
-   "cost": "Free, already installed.",
-   "maturity": "Mature, actively maintained (HypothesisWorks); already trusted here."
-  },
-  {
-   "name": "pytest-xdist",
-   "covers": "Parallel CPU execution; nearly every test already isolates via tmp_path so most are parallel-safe.",
-   "gap": "Not installed. Benefit modest today: 34.41s for 426 tests single-process.",
-   "cost": "Free; PyPI v3.8.0 (2025-07-01, confirmed via pypi.org json).",
-   "maturity": "Official pytest-dev project, mature."
-  },
-  {
-   "name": "pytest-randomly",
-   "covers": "Randomizes order, reseeds random/faker to surface hidden cross-test state.",
-   "gap": "Not installed; no evidence of current order-dependent failures.",
-   "cost": "Free; PyPI v4.1.0, uploaded 2026-04-20 (confirmed).",
-   "maturity": "Actively maintained, pytest-dev ecosystem."
-  },
-  {
-   "name": "freezegun",
-   "covers": "Freezes datetime.now() for deterministic time tests.",
-   "gap": "No real gap: util.py:18-19 utc_now() is the only live clock call; all time-sensitive tests already inject now_ts as a string, cleaner than monkeypatching.",
-   "cost": "Free; PyPI v1.5.5 (2025-08-09).",
-   "maturity": "Mature, widely used."
-  },
-  {
-   "name": "syrupy",
-   "covers": "Snapshot-diff testing for generated text/JSON instead of hand assertions.",
-   "gap": "Partial gap: test_tower.py:221-224 only asserts dashboard render is non-empty. Elsewhere targeted field asserts are already clearer than a full snapshot.",
-   "cost": "Free; PyPI v5.5.3, zero-dependency plugin.",
-   "maturity": "Maintained, moderate adoption."
-  },
-  {
-   "name": "schemathesis",
-   "covers": "Fuzzes requests from an OpenAPI/GraphQL schema against a live API.",
-   "gap": "Everything: no HTTP/GraphQL surface exists (grep repo-wide for FastAPI/Flask/aiohttp found none). Product is a CLI + local sqlite file.",
-   "cost": "N/A, not applicable.",
-   "maturity": "PyPI v4.24.2, maintained, wrong tool class for this surface."
-  },
-  {
-   "name": "testcontainers",
-   "covers": "Real disposable Docker containers (Postgres/Redis) for integration tests.",
-   "gap": "Everything: only DB is sqlite3 against a local file, no server, no Docker anywhere in repo.",
-   "cost": "N/A; fights the Windows-11/no-WSL house constraint.",
-   "maturity": "PyPI v4.15.0 (2026-07-24), very active, wrong class here."
-  }
- ],
- "evidence": "Read test_properties.py, test_archive.py, test_cache.py, test_schema.py, test_tower.py, util.py in full. Ran `uv run pytest -q`: 426 passed/34.41s (quality-contract.json's same-day '3 FAILED' WinError32 note is now stale). grep for hypothesis/subprocess/FastAPI. WebFetch to pypi.org for all 6 alt versions.",
- "recheck": "cd intent-control-plane && uv run pytest -q; grep -n SECRET_PATTERNS src/intent_control_plane/util.py; grep -rl hypothesis tests/",
- "our_loc": 4580,
- "migration_loc": "+50/-15: new test_redaction_properties.py (~50 lines) trimming one redundant assertion; +15/-5 syrupy snapshot in test_tower.py; xdist/randomly +2 lines in dev deps.",
- "what_ours_does": "44 pytest files, 426 tests (verified: `uv run pytest -q` -> 426 passed in 34.41s). Mostly in-process example tests, no mocks: tmp_path sqlite/JSONL, injected clock strings (test_cache.py). test_local_alpha.py (734 lines) runs the CLI as a real subprocess end-to-end. 4 files already use Hypothesis @given for pure-function invariants (test_properties.py, test_archive.py).",
- "strongest_counterargument": "426/426 green in 34s on a no-money/no-PII/no-prod tool is already strong. The docstrings show the maintainer deliberately chose real-over-mocked and injected-clock-over-frozen-clock -- the harder, better calls these libraries usually shortcut for people who didn't make them. Hand-enumerating the 3 known regex patterns takes 10 minutes without any new dependency."
+  "component": "intent-control-plane/tests",
+  "reviewed": "2026-07-25",
+  "recheck_after": "2027-02-06",
+  "verdict": "split",
+  "verdict_class": "split",
+  "absorption_status": "rejected-with-reason",
+  "why": "Keep the example/integration majority: real subprocess CLI, real sqlite, injected clock, tmp_path isolation, no mocks is house-correct for a local CLI with no HTTP surface. Extend the ALREADY-adopted hypothesis (no new dependency) to the one under-tested security function, util.py's redactor, proven only by one hand-picked example with one of three regexes never exercised. Add syrupy for the dashboard render only checked for non-emptiness. pytest-randomly/xdist are cheap opportunistic adds, not urgent (34s green suite).",
+  "alternatives": [
+    {
+      "name": "hypothesis",
+      "covers": "Already a dev dependency, already used in 4/44 files for cosine/pass^k/kappa/parent-selection invariants.",
+      "gap": "Not extended to util.py:11-15 SECRET_PATTERNS (3 regexes); only one CLI-subprocess example (test_local_alpha.py:77) exercises it, one pattern untested, no idempotency check.",
+      "cost": "Free, already installed.",
+      "maturity": "Mature, actively maintained (HypothesisWorks); already trusted here."
+    },
+    {
+      "name": "pytest-xdist",
+      "covers": "Parallel CPU execution; nearly every test already isolates via tmp_path so most are parallel-safe.",
+      "gap": "Not installed. Benefit modest today: 34.41s for 426 tests single-process.",
+      "cost": "Free; PyPI v3.8.0 (2025-07-01, confirmed via pypi.org json).",
+      "maturity": "Official pytest-dev project, mature."
+    },
+    {
+      "name": "pytest-randomly",
+      "covers": "Randomizes order, reseeds random/faker to surface hidden cross-test state.",
+      "gap": "Not installed; no evidence of current order-dependent failures.",
+      "cost": "Free; PyPI v4.1.0, uploaded 2026-04-20 (confirmed).",
+      "maturity": "Actively maintained, pytest-dev ecosystem."
+    },
+    {
+      "name": "freezegun",
+      "covers": "Freezes datetime.now() for deterministic time tests.",
+      "gap": "No real gap: util.py:18-19 utc_now() is the only live clock call; all time-sensitive tests already inject now_ts as a string, cleaner than monkeypatching.",
+      "cost": "Free; PyPI v1.5.5 (2025-08-09).",
+      "maturity": "Mature, widely used."
+    },
+    {
+      "name": "syrupy",
+      "covers": "Snapshot-diff testing for generated text/JSON instead of hand assertions.",
+      "gap": "Partial gap: test_tower.py:221-224 only asserts dashboard render is non-empty. Elsewhere targeted field asserts are already clearer than a full snapshot.",
+      "cost": "Free; PyPI v5.5.3, zero-dependency plugin.",
+      "maturity": "Maintained, moderate adoption."
+    },
+    {
+      "name": "schemathesis",
+      "covers": "Fuzzes requests from an OpenAPI/GraphQL schema against a live API.",
+      "gap": "Everything: no HTTP/GraphQL surface exists (grep repo-wide for FastAPI/Flask/aiohttp found none). Product is a CLI + local sqlite file.",
+      "cost": "N/A, not applicable.",
+      "maturity": "PyPI v4.24.2, maintained, wrong tool class for this surface."
+    },
+    {
+      "name": "testcontainers",
+      "covers": "Real disposable Docker containers (Postgres/Redis) for integration tests.",
+      "gap": "Everything: only DB is sqlite3 against a local file, no server, no Docker anywhere in repo.",
+      "cost": "N/A; fights the Windows-11/no-WSL house constraint.",
+      "maturity": "PyPI v4.15.0 (2026-07-24), very active, wrong class here."
+    }
+  ],
+  "evidence": "Read test_properties.py, test_archive.py, test_cache.py, test_schema.py, test_tower.py, util.py in full. Ran `uv run pytest -q`: 426 passed/34.41s (quality-contract.json's same-day '3 FAILED' WinError32 note is now stale). grep for hypothesis/subprocess/FastAPI. WebFetch to pypi.org for all 6 alt versions.",
+  "recheck": "cd intent-control-plane && uv run pytest -q; grep -n SECRET_PATTERNS src/intent_control_plane/util.py; grep -rl hypothesis tests/",
+  "our_loc": 4580,
+  "migration_loc": "+50/-15: new test_redaction_properties.py (~50 lines) trimming one redundant assertion; +15/-5 syrupy snapshot in test_tower.py; xdist/randomly +2 lines in dev deps.",
+  "what_ours_does": "44 pytest files, 426 tests (verified: `uv run pytest -q` -> 426 passed in 34.41s). Mostly in-process example tests, no mocks: tmp_path sqlite/JSONL, injected clock strings (test_cache.py). test_local_alpha.py (734 lines) runs the CLI as a real subprocess end-to-end. 4 files already use Hypothesis @given for pure-function invariants (test_properties.py, test_archive.py).",
+  "strongest_counterargument": "426/426 green in 34s on a no-money/no-PII/no-prod tool is already strong. The docstrings show the maintainer deliberately chose real-over-mocked and injected-clock-over-frozen-clock -- the harder, better calls these libraries usually shortcut for people who didn't make them. Hand-enumerating the 3 known regex patterns takes 10 minutes without any new dependency.",
+  "rechecked": "2026-11-08",
+  "recheck_result": "Rechecked 2026-11-08: python -m pytest in intent-control-plane gives 6 errors during collection, all ModuleNotFoundError: No module named 'hypothesis' (the dev dependency is not installed on this VM; 385 tests collected otherwise). SECRET_PATTERNS exists in util.py:11; hypothesis is present in 3 test files. The suite is unrunnable here for a missing dependency, not a code defect.",
+  "absorbed": "The suite cannot run here: 6 collection errors, all ModuleNotFoundError for hypothesis (dev dependency not installed on this VM); 385 tests collected otherwise."
 }

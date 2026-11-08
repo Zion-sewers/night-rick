@@ -9,10 +9,10 @@ from an inventory. This file measures how much of the estate that order reaches.
 
 ## Coverage
 
-- documents: **1312**
-- reachable from `docs/INDEX.md`: **270** (20%)
+- documents: **1313**
+- reachable from `docs/INDEX.md`: **271** (20%)
 - status UNDECLARED: **0**
-- prior-art records EXPIRED: **0**
+- prior-art records EXPIRED: **41**
 - written under the pre-2026-07-30 lane scheme: **25**
 
 ### Lane scheme, and why the column exists
@@ -169,7 +169,7 @@ correct for its date**. Scheme `1` means read its lane letters through
 | `docs/analysis/2026-08-23-whatsapp-repo-reminder-list.md` | 2026-08-23 | dated-snapshot | class | n/a | - | - | - |
 | `docs/analysis/2026-09-02-interaction-viz-and-agent-harness-research.md` | 2026-09-02 | dated-snapshot | class | 2 | - | - | - |
 
-## archived (9)
+## archived (15)
 
 | document | date | status | from | lane scheme | in INDEX | supersedes | superseded by |
 |---|---|---|---|---|---|---|---|
@@ -178,10 +178,16 @@ correct for its date**. Scheme `1` means read its lane letters through
 | `docs/archive/gemini-code-1785457549011.md` | - | operator-input | registry | n/a | - | - | - |
 | `docs/archive/gemini-code-1785458291930.md` | - | operator-input | registry | n/a | - | - | - |
 | `docs/archive/prompt-research-effiefecnt-.md-files-gemini-code-1785450497712.md` | - | operator-input | registry | n/a | - | - | - |
+| `docs/archive/root-pile-2026-11-07/DUPLICATE-RETIREMENT.md` | - | historical-record | class | n/a | - | - | - |
+| `docs/archive/root-pile-2026-11-07/gem-27sep.md` | - | historical-record | class | n/a | - | - | - |
+| `docs/archive/root-pile-2026-11-07/geminiresearch24sep.md` | - | historical-record | class | n/a | - | - | - |
+| `docs/archive/root-pile-2026-11-07/installs-rec.md` | - | historical-record | class | n/a | - | - | - |
 | `docs/archive/sagemaker-hyperpod.md` | - | reference \| fetched AWS doc page, dropped 2026-08-12 17:34 by a parallel session; belongs under docs/analysis or a corpus dir if kept | registry | n/a | - | - | - |
 | `docs/archive/2026-07-29-external-absorption-brief.md` | 2026-07-29 | dated-snapshot | registry | 1 | - | - | - |
 | `docs/archive/2026-08-24-todo-done-archive.md` | 2026-08-24 | dated-snapshot | registry | n/a | - | - | operator |
 | `docs/archive/MIGRATION-NOTES.md` | 2026-08-24 | living | registry | n/a | - | - | - |
+| `docs/archive/root-pile-2026-11-07/EXECUTION_TRACKER.md` | 2026-08-29 | historical-record | class | 2 | - | - | - |
+| `docs/archive/root-pile-2026-11-07/README.md` | 2026-11-07 | historical-record | class | 2 | yes | - | - |
 
 ## automation-output (126)
 
@@ -557,47 +563,47 @@ correct for its date**. Scheme `1` means read its lane letters through
 | document | date | status | from | lane scheme | in INDEX | supersedes | superseded by |
 |---|---|---|---|---|---|---|---|
 | `docs/prior-art/living-codex-salvage/.openai_hosting.json` | - | salvage | registry | n/a | - | - | - |
-| `docs/prior-art/dot-claude-skills-explain-simply.json` | 2026-07-25 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/dot-claude-skills-learn-on-demand-scripts.json` | 2026-07-25 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/intent-control-plane-src-intent-control-plane-harness.json` | 2026-07-25 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/intent-control-plane-src-intent-control-plane.json` | 2026-07-25 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/intent-control-plane-tests.json` | 2026-07-25 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tests.json` | 2026-07-25 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-audit-mutations.json` | 2026-07-25 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-browser.json` | 2026-07-25 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-e2e.json` | 2026-07-25 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-lib.json` | 2026-07-25 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-refute-checks.json` | 2026-07-25 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-refute.json` | 2026-07-25 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools.json` | 2026-07-25 | current | arithmetic | n/a | - | - | ConPTY |
-| `docs/prior-art/dot-claude-skills-prove-implementation-scripts.json` | 2026-07-26 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-gate.json` | 2026-07-26 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-review.json` | 2026-07-26 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/dot-claude-bin.json` | 2026-07-29 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/dot-claude-hooks.json` | 2026-07-29 | current | arithmetic | n/a | - | tdd-guard | - |
-| `docs/prior-art/tools-audit.json` | 2026-07-29 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-bus.json` | 2026-07-29 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-map.json` | 2026-07-29 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-nvidia.json` | 2026-07-29 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-openrouter.json` | 2026-07-29 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-skilleval.json` | 2026-07-29 | current | arithmetic | n/a | - | the structural half of grade | - |
-| `docs/prior-art/tools-snapshot.json` | 2026-07-29 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-workspace.json` | 2026-07-29 | current | arithmetic | 1 | - | - | another |
-| `docs/prior-art/tools-docmap.json` | 2026-07-30 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-hookgate.json` | 2026-07-30 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-reclaim.json` | 2026-07-30 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-supply.json` | 2026-07-30 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-timetravel.json` | 2026-07-30 | current | arithmetic | 2 | - | - | - |
-| `docs/prior-art/tools-trycmd.json` | 2026-07-30 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/dot-claude-skills-syndication-engine.json` | 2026-07-31 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/dot-claude-skills-voice-metrics.json` | 2026-07-31 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-ghpub.json` | 2026-07-31 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-intent.json` | 2026-07-31 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-wsl.json` | 2026-08-03 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-antigravity.json` | 2026-08-04 | current | arithmetic | n/a | - | this file for in-session use and the CLI | - |
-| `docs/prior-art/tools-telemetry.json` | 2026-08-05 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/tools-corpus.json` | 2026-08-06 | current | arithmetic | n/a | - | - | - |
-| `docs/prior-art/dot-claude-skills-whatsapp-query.json` | 2026-08-07 | current | arithmetic | n/a | - | - | - |
+| `docs/prior-art/dot-claude-skills-explain-simply.json` | 2026-07-25 | EXPIRED 2026-10-23 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/dot-claude-skills-learn-on-demand-scripts.json` | 2026-07-25 | EXPIRED 2026-10-23 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/intent-control-plane-src-intent-control-plane-harness.json` | 2026-07-25 | EXPIRED 2026-10-23 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/intent-control-plane-src-intent-control-plane.json` | 2026-07-25 | EXPIRED 2026-10-23 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/intent-control-plane-tests.json` | 2026-07-25 | EXPIRED 2026-10-23 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tests.json` | 2026-07-25 | EXPIRED 2026-10-23 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-audit-mutations.json` | 2026-07-25 | EXPIRED 2026-10-23 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-browser.json` | 2026-07-25 | EXPIRED 2026-10-23 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-e2e.json` | 2026-07-25 | EXPIRED 2026-10-23 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-lib.json` | 2026-07-25 | EXPIRED 2026-10-23 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-refute-checks.json` | 2026-07-25 | EXPIRED 2026-10-23 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-refute.json` | 2026-07-25 | EXPIRED 2026-10-23 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools.json` | 2026-07-25 | EXPIRED 2026-10-23 | arithmetic | n/a | - | - | ConPTY |
+| `docs/prior-art/dot-claude-skills-prove-implementation-scripts.json` | 2026-07-26 | EXPIRED 2026-10-24 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-gate.json` | 2026-07-26 | EXPIRED 2026-10-24 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-review.json` | 2026-07-26 | EXPIRED 2026-10-24 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/dot-claude-bin.json` | 2026-07-29 | EXPIRED 2026-10-27 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/dot-claude-hooks.json` | 2026-07-29 | EXPIRED 2026-10-27 | arithmetic | n/a | - | tdd-guard | - |
+| `docs/prior-art/tools-audit.json` | 2026-07-29 | EXPIRED 2026-10-27 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-bus.json` | 2026-07-29 | EXPIRED 2026-10-27 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-map.json` | 2026-07-29 | EXPIRED 2026-10-27 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-nvidia.json` | 2026-07-29 | EXPIRED 2026-10-27 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-openrouter.json` | 2026-07-29 | EXPIRED 2026-10-27 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-skilleval.json` | 2026-07-29 | EXPIRED 2026-10-27 | arithmetic | n/a | - | the structural half of grade | - |
+| `docs/prior-art/tools-snapshot.json` | 2026-07-29 | EXPIRED 2026-10-27 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-workspace.json` | 2026-07-29 | EXPIRED 2026-10-27 | arithmetic | 1 | - | - | another |
+| `docs/prior-art/tools-docmap.json` | 2026-07-30 | EXPIRED 2026-10-28 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-hookgate.json` | 2026-07-30 | EXPIRED 2026-10-28 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-reclaim.json` | 2026-07-30 | EXPIRED 2026-10-28 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-supply.json` | 2026-07-30 | EXPIRED 2026-10-28 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-timetravel.json` | 2026-07-30 | EXPIRED 2026-10-28 | arithmetic | 2 | - | - | - |
+| `docs/prior-art/tools-trycmd.json` | 2026-07-30 | EXPIRED 2026-10-28 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/dot-claude-skills-syndication-engine.json` | 2026-07-31 | EXPIRED 2026-10-29 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/dot-claude-skills-voice-metrics.json` | 2026-07-31 | EXPIRED 2026-10-29 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-ghpub.json` | 2026-07-31 | EXPIRED 2026-10-29 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-intent.json` | 2026-07-31 | EXPIRED 2026-10-29 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-wsl.json` | 2026-08-03 | EXPIRED 2026-11-01 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-antigravity.json` | 2026-08-04 | EXPIRED 2026-11-02 | arithmetic | n/a | - | this file for in-session use and the CLI | - |
+| `docs/prior-art/tools-telemetry.json` | 2026-08-05 | EXPIRED 2026-11-02 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/tools-corpus.json` | 2026-08-06 | EXPIRED 2026-11-04 | arithmetic | n/a | - | - | - |
+| `docs/prior-art/dot-claude-skills-whatsapp-query.json` | 2026-08-07 | EXPIRED 2026-11-05 | arithmetic | n/a | - | - | - |
 | `docs/prior-art/tools-harness.json` | 2026-08-10 | current | arithmetic | n/a | - | - | - |
 | `docs/prior-art/tools-coffee.json` | 2026-08-12 | current | arithmetic | n/a | - | - | - |
 | `docs/prior-art/tools-reanimation.json` | 2026-08-13 | current | arithmetic | n/a | - | - | - |
@@ -615,22 +621,17 @@ correct for its date**. Scheme `1` means read its lane letters through
 | `docs/reflections/2026-07-30-what-i-saw.md` | 2026-07-30 | dated-snapshot | class | 2 | yes | - | - |
 | `docs/reflections/2026-07-31-session-close-what-the-instruments-caught.md` | 2026-07-31 | dated-snapshot | class | 2 | yes | - | - |
 
-## root (12)
+## root (7)
 
 | document | date | status | from | lane scheme | in INDEX | supersedes | superseded by |
 |---|---|---|---|---|---|---|---|
 | `CLAUDE.md` | - | living | registry | n/a | - | - | - |
-| `DUPLICATE-RETIREMENT.md` | - | operator-input | header | n/a | - | - | - |
 | `README.md` | - | living | registry | n/a | - | - | - |
 | `REVIEW.md` | - | living | registry | n/a | - | - | - |
-| `gem-27sep.md` | - | dated-snapshot | registry | n/a | - | - | - |
-| `geminiresearch24sep.md` | - | dated-snapshot | registry | n/a | - | - | - |
-| `installs-rec.md` | - | operator-input | registry | n/a | - | - | - |
 | `CONTRIBUTING.md` | 2026-07-07 | living | registry | n/a | - | - | - |
 | `AGENTS.md` | 2026-07-30 | living | registry | 2 | - | - | - |
 | `CLAUDE-OS.md` | 2026-08-24 | active (living document, the spine). date: 2026-08-24 | header | n/a | yes | every prior setup plan. Predecessors rem | - |
 | `TODO.md` | 2026-08-24 | living | registry | 2 | yes | - | - |
-| `EXECUTION_TRACKER.md` | 2026-08-29 | verified | header | 2 | - | - | - |
 
 ## rule (45)
 

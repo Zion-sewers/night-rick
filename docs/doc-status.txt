@@ -122,7 +122,4 @@ docs/archive/sagemaker-hyperpod.md | reference | fetched AWS doc page, dropped 2
 anatomy/E-ROWS.md | living
 anatomy/README.md | living
 anatomy/e-rows/README.md | living
-gem-27sep.md | dated-snapshot
-geminiresearch24sep.md | dated-snapshot
-installs-rec.md | operator-input
 tools/fleetview/README.md | living

@@ -198,7 +198,8 @@ it.
 
 Cross-module extraction requires regression tests first. When the diff
 removes a repeated 6-line block AND the same block appears as added lines
-in a different file (the code moved to a shared home), `check` fails unless
+in a different file, or survives in the base tree in a file the diff
+rewires its call sites to (the code moved to a shared home), `check` fails unless
 an added test line inside an asserting `test_*` function calls one of the
 destination's defined symbols: a top-level function, class, or constant of
 the destination file, called directly (`dedup(...)`) or module-qualified
@@ -258,7 +259,19 @@ That count covers production code files only: a copy surviving only in a
 test file does not count, because the test itself characterizes it, the
 same reason test files are excluded from the ratchet FAIL. A
 unique block that merely moves (one base-tree occurrence) is not an
-extraction. The destination may itself be one of the files the block was
+extraction. The third shape is the shared home that already exists on
+main. A two-PR split defeats the two shapes above: the first PR adds the
+helper with no removal, the second rewires the call sites to it with no
+added copy of the block, so the added-lines leg sees no destination. The
+gate closes that split: a removed window that survives in the base tree
+in a file other than the removal sources is a destination when the diff's
+added lines in the removal sources call that file's symbols (the
+rewiring). The destination's line numbers are base-tree lines, because
+the file is unchanged by the diff. A pure deletion adds no call, so it
+does not fire, and a surviving copy in a file the diff never calls is not
+a home. The same exemption applies: an added test in an asserting test
+function calling the destination's symbols exempts.
+The destination may itself be one of the files the block was
 removed from (consolidation into an existing holder file); it is skipped
 only when it is the SOLE file the block was removed from.
 
@@ -315,9 +328,9 @@ extraction gate, and whether the runner has a pinned-binary install path.
 
 ## Verification
 
-- `python tools/audit/dup_ratchet.py selftest` (51 planted checks)
-- `python -m pytest tests/test_dup_ratchet.py -q` (83 tests)
-- `python tools/audit/mutate.py --spec dup_ratchet` (28 mutations)
+- `python tools/audit/dup_ratchet.py selftest` (56 planted checks)
+- `python -m pytest tests/test_dup_ratchet.py -q` (89 tests)
+- `python tools/audit/mutate.py --spec dup_ratchet` (29 mutations)
 - ruff check on tools/audit/dup_ratchet.py and tests/test_dup_ratchet.py;
   mypy --strict on tools/audit/dup_ratchet.py
 - The new domain runs in CI through `gate.py run`; no ship-gate.yml change.
@@ -338,8 +351,8 @@ a line added in the committed diff and then edited in the working tree
 is counted twice in the "added code lines" figure (the verdict rests on
 `duplicated_lines`, not that figure, and no phantom duplicate was
 observed); the base-tree read (`git archive`, ~66 MB / ~3 s on this
-repo, held whole in memory) runs only when a removed window is also an
-added window; a base-tree code file that cannot be decoded as UTF-8
+repo, held whole in memory) runs whenever any window is removed (the
+base-home leg needs the surviving locations even when nothing is re-added); a base-tree code file that cannot be decoded as UTF-8
 fails the check closed with "cannot measure" instead of silently
 skipping the file.
 

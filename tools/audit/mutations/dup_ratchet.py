@@ -43,7 +43,8 @@ MUTATIONS = [
         "find_extractions is replaced with an empty list, so a cross-module "
         "extraction with no regression tests in the diff passes.",
         "    extraction = find_extractions(\n"
-        "        prod_added, prod_removed, test_lines, base_windows, dest_symbols)",
+        "        prod_added, prod_removed, test_lines, base_windows, dest_symbols,\n"
+        "        base_locations)",
         "    extraction = []",
     ),
     (
@@ -242,9 +243,11 @@ MUTATIONS = [
         "flipped selftest case (moving a fixture block between test "
         "files is not an extraction) must catch this.",
         "    extraction = find_extractions(\n"
-        "        prod_added, prod_removed, test_lines, base_windows, dest_symbols)",
+        "        prod_added, prod_removed, test_lines, base_windows, dest_symbols,\n"
+        "        base_locations)",
         "    extraction = find_extractions(\n"
-        "        added, removed, test_lines, base_windows, dest_symbols)",
+        "        added, removed, test_lines, base_windows, dest_symbols,\n"
+        "        base_locations)",
     ),
     (
         "non-UTF8 base file silently skipped again",
@@ -313,5 +316,16 @@ MUTATIONS = [
         "                places[window].append((path, s))",
         "            for s in idxs:  # run collapse dropped\n"
         "                places[window].append((path, s))",
+    ),
+    (
+        "base-home leg dropped, a two-PR split passes",
+        "find_extractions never walks the base-tree locations, so a PR "
+        "that rewires call sites to a helper already on main passes "
+        "with no regression test: the gate only fires when the removed "
+        "block also appears as added lines in the same diff. The "
+        "flipped selftest case (rewiring to a shared home already on "
+        "main fails without a test) must catch this.",
+        "        for bloc in base_locs.get(window, []):",
+        "        for bloc in []:  # base-home leg dropped",
     ),
 ]

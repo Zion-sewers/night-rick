@@ -70,7 +70,8 @@ THE EXTRACTION GATE
 
 Cross-module extraction requires regression tests first. When the diff
 removes a repeated 6-line block AND the same block appears as added lines
-in a different file (the code moved to a shared home), the extraction is
+in a different file, or survives in the base tree in a file the diff
+rewires its call sites to (the code moved to a shared home), the extraction is
 exempt only when an added test line inside an asserting `test_*` function
 CALLS one of the destination's defined symbols (a top-level function,
 class, or constant of the destination file), directly or module-qualified
@@ -100,7 +101,19 @@ more there. That count covers production code files only: a copy
 surviving only in a test file does not count, because the test itself
 characterizes it, the same reason test files are excluded from the
 ratchet FAIL. A unique block that merely moves (one base-tree occurrence)
-is not an extraction and is not gated. The destination may itself be one
+is not an extraction and is not gated. The third shape is the shared
+home that already exists on main. A two-PR split defeats the two shapes
+above: the first PR adds the helper with no removal, the second rewires
+the call sites to it with no added copy of the block, so the added-lines
+leg sees no destination. The gate closes that split: a removed window
+that survives in the base tree in a file other than the removal sources
+is a destination when the diff's added lines in the removal sources call
+that file's symbols (the rewiring). The destination's line numbers are
+base-tree lines, because the file is unchanged by the diff. A pure
+deletion adds no call, so it does not fire, and a surviving copy in a
+file the diff never calls is not a home. The same exemption applies:
+an added test in an asserting test function calling the destination's
+symbols exempts. The destination may itself be one
 of the files the block was removed from (consolidation into an existing
 holder file); it is skipped only when it is the SOLE file the block was
 removed from, which is an in-place edit, not a move. The clean-room
@@ -683,19 +696,17 @@ def _qualifying_call_lines(source: str) -> set[int]:
     return qualifying
 
 
-def _dest_symbols_on_disk(project: Path, path: str) -> set[str] | None:
-    """Top-level defined names of the destination file, or None.
+def _symbols_in_source(source: str) -> set[str] | None:
+    """Top-level defined names of a Python source text, or None.
 
-    None means the destination is not Python or cannot be parsed: the
-    caller falls back to the stem rule. A Python file with no top-level
-    defs, classes, or constants also yields None, so a destination
-    that only holds data is still gated on its stem.
+    None means the source is not parseable, or it defines no top-level
+    functions, classes, or UPPER constants: the caller falls back to
+    the stem rule. Shared by the on-disk and at-ref readers so the two
+    agree on what a defined name is.
     """
-    if Path(path).suffix.lower() != ".py":
-        return None
     try:
-        tree = ast.parse((project / path).read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, SyntaxError):
+        tree = ast.parse(source)
+    except SyntaxError:
         return None
     names: set[str] = set()
     for node in tree.body:
@@ -711,6 +722,40 @@ def _dest_symbols_on_disk(project: Path, path: str) -> set[str] | None:
                 and node.target.id.isupper():
             names.add(node.target.id)
     return names or None
+
+
+def _dest_symbols_on_disk(project: Path, path: str) -> set[str] | None:
+    """Top-level defined names of the destination file, or None.
+
+    None means the destination is not Python or cannot be parsed: the
+    caller falls back to the stem rule. A Python file with no top-level
+    defs, classes, or constants also yields None, so a destination
+    that only holds data is still gated on its stem.
+    """
+    if Path(path).suffix.lower() != ".py":
+        return None
+    try:
+        return _symbols_in_source((project / path).read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+def _dest_symbols_at_ref(project: Path, base: str, path: str) -> set[str] | None:
+    """Top-level defined names of the file at the base ref, or None.
+
+    The base-home leg needs the destination's symbols as they stood
+    before the diff: the file is unchanged by the diff (or changed
+    only elsewhere), so the disk copy is not the base copy, and a
+    symbol the diff renamed must not decide the exemption. None means
+    the same as on disk: not Python, not at the ref, or unparseable,
+    and the caller falls back to the stem rule.
+    """
+    if Path(path).suffix.lower() != ".py":
+        return None
+    out = git(project, f"show {base}:{path}")
+    if not out:
+        return None
+    return _symbols_in_source(out)
 
 
 def _head_source(project: Path, path: str) -> str | None:
@@ -852,7 +897,7 @@ def _distinct_starts(starts: list[int], lines: list[str]) -> list[int]:
 
 def _base_tree_window_counts(
     project: Path, base: str, candidates: set[tuple[str, ...]]
-) -> dict[tuple[str, ...], int]:
+) -> tuple[dict[tuple[str, ...], int], dict[tuple[str, ...], list[Location]]]:
     """Distinct base-tree occurrences of each candidate window.
 
     Reads the base tree once via `git archive` and counts, per window,
@@ -867,6 +912,12 @@ def _base_tree_window_counts(
     covers a git-level failure and a code file that cannot be decoded
     as UTF-8: either is a tree that cannot be read, so the check fails
     closed instead of silently skipping the file.
+
+    Returns (counts, locations): the counts feed the partial-migration
+    repeated test, and the locations feed the base-home leg of
+    find_extractions, which needs the file and the real file line
+    numbers of each surviving occurrence. The counts are derived from
+    the same collapsed starts as the locations, so the two agree.
     """
     import io
     import tarfile
@@ -881,6 +932,7 @@ def _base_tree_window_counts(
             f"cannot read the base tree at {base}: "
             f"{r.stderr.decode('utf-8', 'replace').strip()[:200]}")
     counts: Counter[tuple[str, ...]] = Counter()
+    locations: dict[tuple[str, ...], list[Location]] = defaultdict(list)
     with tarfile.open(fileobj=io.BytesIO(r.stdout)) as tf:
         for member in tf.getmembers():
             if not member.isfile() or not is_code(member.name) \
@@ -905,8 +957,15 @@ def _base_tree_window_counts(
                 if window in candidates:
                     positions[window].append(i)
             for window, starts in positions.items():
-                counts[window] += len(_distinct_starts(starts, [t for t, _ in lines]))
-    return dict(counts)
+                taken = _distinct_starts(starts, [t for t, _ in lines])
+                counts[window] += len(taken)
+                for s in taken:
+                    locations[window].append({
+                        "path": member.name,
+                        "start_line": lines[s][1],
+                        "end_line": lines[s + WINDOW - 1][1],
+                    })
+    return dict(counts), dict(locations)
 
 
 def find_extractions(
@@ -915,6 +974,7 @@ def find_extractions(
     test_lines: list[str],
     base_windows: dict[tuple[str, ...], int] | None = None,
     dest_symbols: dict[str, set[str]] | None = None,
+    base_locations: dict[tuple[str, ...], list[Location]] | None = None,
 ) -> list[ExtractionHit]:
     """Removed repeated block reappearing as added lines in another file.
 
@@ -943,6 +1003,23 @@ def find_extractions(
     extraction. A hit's destination range covers one run of
     consecutive windows only, never the gap between two separate
     occurrences of the same block in the destination.
+
+    The third shape is the shared home that already exists on main.
+    A two-PR split defeats the two shapes above: the first PR adds the
+    helper with no removal, the second rewires the call sites to it
+    with no added copy of the block, so the added-lines leg sees no
+    destination. `base_locations` (base-tree occurrences of each
+    removed window, from `_base_tree_window_counts`) closes that
+    split: a removed window that survives in the base tree in a file
+    other than the removal sources is a destination when the diff's
+    added lines in the removal sources CALL that file's symbols (the
+    rewiring). A pure deletion adds no call, so it does not fire, and
+    a surviving copy in a file the diff never calls is not a home.
+    The destination's line numbers are base-tree lines, because the
+    file is unchanged by the diff. The same exemption applies: an
+    added test calling the destination's symbols exempts. A base-home
+    hit is deduped against an added-leg hit for the same (removal
+    set, destination) key.
     """
     removed_positions = _window_places(removed)
     removed_windows: dict[tuple[str, ...], set[str]] = {
@@ -954,9 +1031,23 @@ def find_extractions(
         for i, window in _contiguous_windows(lines):
             added_windows[window].append((path, i))
     base_counts = base_windows or {}
+    base_locs = base_locations or {}
     merged: list[ExtractionHit] = []
     active: dict[tuple[tuple[str, ...], str], int] = {}
     last_aidx: dict[tuple[tuple[str, ...], str], int] = {}
+    base_active: dict[tuple[tuple[str, ...], str], int] = {}
+    base_last_start: dict[tuple[tuple[str, ...], str], int] = {}
+
+    def sources_for(window: tuple[str, ...]) -> list[Location]:
+        return [
+            {
+                "path": rpath,
+                "start_line": removed[rpath][i][1],
+                "end_line": removed[rpath][i + WINDOW - 1][1],
+            }
+            for rpath, i in sorted(removed_positions[window])
+        ]
+
     for window, rpaths in removed_windows.items():
         # A removed block counts as repeated when it occurs 2+ distinct
         # times among removed lines, or occurred 2+ times in the base
@@ -981,14 +1072,6 @@ def find_extractions(
             syms = (dest_symbols or {}).get(apath)
             if _references_dest(test_lines, apath, syms):
                 continue
-            sources: list[Location] = [
-                {
-                    "path": rpath,
-                    "start_line": removed[rpath][i][1],
-                    "end_line": removed[rpath][i + WINDOW - 1][1],
-                }
-                for rpath, i in sorted(removed_positions[window])
-            ]
             alines = added[apath]
             dest: Location = {
                 "path": apath,
@@ -1005,10 +1088,50 @@ def find_extractions(
                 active[key] = len(merged)
                 last_aidx[key] = aidx
                 merged.append({
-                    "sources": sources,
+                    "sources": sources_for(window),
                     "dest": dest,
                     "sample": window[0][:100],
                 })
+        # Base-home leg: the block survives in the base tree in a file
+        # other than the removal sources. That file is a shared home
+        # only when the diff rewires to it: an added line in a removal
+        # source must call the file's symbols. A pure deletion adds no
+        # call, and a surviving copy the diff never calls is not a home.
+        rewire_lines = [
+            t for p in rpaths for t, _ in added.get(p, [])
+        ]
+        for bloc in base_locs.get(window, []):
+            bpath = bloc["path"]
+            if bpath in rpaths:
+                continue
+            key = (tuple(sorted(rpaths)), bpath)
+            if key in active:
+                continue
+            bsyms = (dest_symbols or {}).get(bpath)
+            if not _references_dest(rewire_lines, bpath, bsyms):
+                continue
+            if _references_dest(test_lines, bpath, bsyms):
+                continue
+            dest = {
+                "path": bpath,
+                "start_line": bloc["start_line"],
+                "end_line": bloc["end_line"],
+            }
+            if key in base_active \
+                    and bloc["start_line"] == base_last_start[key] + 1:
+                # Consecutive window of the same run (a 7-line block is
+                # two windows): extend the range, as the added leg does.
+                hit = merged[base_active[key]]
+                hit["dest"]["end_line"] = max(
+                    hit["dest"]["end_line"], dest["end_line"])
+            else:
+                base_active[key] = len(merged)
+                merged.append({
+                    "sources": sources_for(window),
+                    "dest": dest,
+                    "sample": window[0][:100],
+                })
+            base_last_start[key] = bloc["start_line"]
     return sorted(merged,
                   key=lambda h: (h["dest"]["path"], h["dest"]["start_line"]))
 
@@ -1148,30 +1271,40 @@ def evaluate(project: Path) -> CheckResult:
     )
     # Partial migration needs the base tree: a removed window re-added
     # elsewhere with only one distinct removal is an extraction only
-    # when the block was already duplicated before the diff. Read the
-    # base tree only when such a candidate exists.
+    # when the block was already duplicated before the diff. The
+    # base-home leg needs it too: a removed window that survives in a
+    # file other than the removal sources is a shared home the diff may
+    # have rewired to, even when the block never appears as added lines.
+    # Read the base tree whenever any window was removed, not only when
+    # a removed window is also an added window.
     base_windows: dict[tuple[str, ...], int] = {}
+    base_locations: dict[tuple[str, ...], list[Location]] = {}
     removed_set = {
         window for lines in removed.values()
         for _, window in _contiguous_windows(lines)
     }
-    added_set = {
-        window for lines in added.values()
-        for _, window in _contiguous_windows(lines)
-    }
-    if removed_set & added_set:
-        base_windows = _base_tree_window_counts(
-            project, base, removed_set & added_set)
+    if removed_set:
+        base_windows, base_locations = _base_tree_window_counts(
+            project, base, removed_set)
     dest_symbols = {
         path: syms
         for path in added
         if (syms := _dest_symbols_on_disk(project, path)) is not None
     }
+    # Base-home destinations are read at the base ref: a file the diff
+    # never touches still holds its base symbols on disk, but a file
+    # the diff edits may not, so the base tree is the source of truth.
+    for path in {loc["path"] for locs in base_locations.values()
+                 for loc in locs}:
+        if path not in dest_symbols:
+            if (syms := _dest_symbols_at_ref(project, base, path)) is not None:
+                dest_symbols[path] = syms
     # The extraction gate sees production code only: a move inside
     # test files is fixture deduplication, not an extraction, the same
     # reason test files are excluded from the ratchet FAIL.
     extraction = find_extractions(
-        prod_added, prod_removed, test_lines, base_windows, dest_symbols)
+        prod_added, prod_removed, test_lines, base_windows, dest_symbols,
+        base_locations)
     today = date.today()
     errors: list[str] = []
     lapsed = ""
@@ -1593,6 +1726,58 @@ def cmd_selftest(_a: argparse.Namespace) -> int:
     code, res = run_check(repo)
     check("extraction with a test calling an unrelated symbol still fails",
           code == 1 and len(res["extraction"]) > 0, json.dumps(res))
+
+    # 5h. the two-PR split: the shared home already exists on main, so
+    #     the rewiring PR adds no copy of the block, only calls to it.
+    #     Without a regression test the gate must still fire.
+    split_base = {
+        "tools/a/one.py": "def f():\n" + extract_body,
+        "tools/a/two.py": "def g():\n" + extract_body,
+        "tools/a/shared.py": "def shared():\n" + extract_body,
+    }
+    split_pr = {
+        "tools/a/one.py": "def f():\n    return shared()\n",
+        "tools/a/two.py": "def g():\n    return shared()\n",
+    }
+    repo = make_repo(split_base)
+    commit(repo, split_pr)
+    code, res = run_check(repo)
+    check("rewiring to a shared home already on main fails without a test",
+          code == 1 and len(res["extraction"]) == 1
+          and res["extraction"][0]["dest"]["path"] == "tools/a/shared.py",
+          json.dumps(res))
+    repo = make_repo(split_base)
+    commit(repo, {**split_pr,
+                  "tests/test_shared.py":
+                      "from tools.a.shared import shared\n\n\n"
+                      "def test_shared():\n    assert shared() == 15\n"})
+    code, res = run_check(repo)
+    check("rewiring to a shared home with a referencing test passes",
+          code == 0 and res["extraction"] == [], json.dumps(res))
+    # 5i. one call site rewired: the block still survives in the other
+    #     file on main, so the partial-migration shape fires.
+    repo = make_repo(split_base)
+    commit(repo, {"tools/a/one.py": "def f():\n    return shared()\n"})
+    code, res = run_check(repo)
+    check("rewiring one call site to an existing home still fails",
+          code == 1 and len(res["extraction"]) == 1
+          and res["extraction"][0]["dest"]["path"] == "tools/a/shared.py",
+          json.dumps(res))
+    # 5j. deleting the duplicated block without rewiring to the home is
+    #     not an extraction: no call is added, so nothing was consolidated.
+    repo = make_repo(split_base)
+    commit(repo, {"tools/a/one.py": "def f():\n    return 0\n"})
+    code, res = run_check(repo)
+    check("deleting a duplicated block without rewiring passes",
+          code == 0 and res["extraction"] == [], json.dumps(res))
+    # 5k. adding the helper alone (the first PR of the split) passes:
+    #     nothing is removed yet, so there is no extraction to gate; the
+    #     rewiring PR is the gated step.
+    repo = make_repo(extract_base)
+    commit(repo, {"tools/a/shared.py": "def shared():\n" + extract_body})
+    code, res = run_check(repo)
+    check("adding an untested helper with no removal passes",
+          code == 0 and res["extraction"] == [], json.dumps(res))
 
     # 6. empty diff passes
     repo = make_repo(base_files)

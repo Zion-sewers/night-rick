@@ -555,6 +555,106 @@ class TestExtraction(unittest.TestCase):
             [])
         self.assertEqual(hits, [])
 
+    def _rewire_setup(self):
+        # The two-PR split (night-rick#376, arch-6 finding 1): the shared
+        # home already exists on main, so the rewiring PR adds no copy of
+        # the block, only calls to the home. `added` holds the rewiring
+        # lines, `removed` the block from both call sites, and the base
+        # tree holds the block in both call sites plus the home.
+        added = D.parse_added(_diff_for({
+            "tools/a/one.py": ["    return shared()"],
+            "tools/a/two.py": ["    return shared()"],
+        }))
+        norm = [D.normalize(line, "tools/a/one.py") for line in BLOCK]
+        removed = {
+            path: [(t, i + 1) for i, t in enumerate(norm)]
+            for path in ("tools/a/one.py", "tools/a/two.py")
+        }
+        window = tuple(norm)
+        base_locations = {window: [
+            {"path": "tools/a/one.py", "start_line": 2, "end_line": 7},
+            {"path": "tools/a/two.py", "start_line": 2, "end_line": 7},
+            {"path": "tools/a/shared.py", "start_line": 2, "end_line": 7},
+        ]}
+        return added, removed, window, base_locations
+
+    def test_rewiring_to_existing_home_is_a_hit(self):
+        added, removed, window, base_locations = self._rewire_setup()
+        hits = D.find_extractions(
+            added, removed, [], {window: 3},
+            {"tools/a/shared.py": {"shared"}}, base_locations)
+        self.assertEqual(len(hits), 1)
+        self.assertEqual(hits[0]["dest"]["path"], "tools/a/shared.py")
+        self.assertEqual(len(hits[0]["sources"]), 2)
+
+    def test_rewiring_with_referencing_test_is_not_a_hit(self):
+        added, removed, window, base_locations = self._rewire_setup()
+        hits = D.find_extractions(
+            added, removed,
+            ["from tools.a.shared import shared", "assert shared() == 15"],
+            {window: 3}, {"tools/a/shared.py": {"shared"}}, base_locations)
+        self.assertEqual(hits, [])
+
+    def test_pure_deletion_without_rewiring_is_not_a_hit(self):
+        # The block is deleted from one call site and replaced with a
+        # plain return: no added line calls the home, so nothing was
+        # consolidated into it and the gate stays silent.
+        added = D.parse_added(_diff_for({
+            "tools/a/one.py": ["    return 0"],
+        }))
+        norm = [D.normalize(line, "tools/a/one.py") for line in BLOCK]
+        removed = {"tools/a/one.py": [(t, i + 1) for i, t in enumerate(norm)]}
+        window = tuple(norm)
+        base_locations = {window: [
+            {"path": "tools/a/one.py", "start_line": 2, "end_line": 7},
+            {"path": "tools/a/two.py", "start_line": 2, "end_line": 7},
+            {"path": "tools/a/shared.py", "start_line": 2, "end_line": 7},
+        ]}
+        hits = D.find_extractions(
+            added, removed, [], {window: 3},
+            {"tools/a/shared.py": {"shared"}}, base_locations)
+        self.assertEqual(hits, [])
+
+    def test_surviving_copy_is_not_a_destination(self):
+        # One call site rewired, the other copy still on main: the
+        # surviving copy is not a shared home, only the file the diff
+        # actually calls is.
+        added = D.parse_added(_diff_for({
+            "tools/a/one.py": ["    return shared()"],
+        }))
+        norm = [D.normalize(line, "tools/a/one.py") for line in BLOCK]
+        removed = {"tools/a/one.py": [(t, i + 1) for i, t in enumerate(norm)]}
+        window = tuple(norm)
+        base_locations = {window: [
+            {"path": "tools/a/one.py", "start_line": 2, "end_line": 7},
+            {"path": "tools/a/two.py", "start_line": 2, "end_line": 7},
+            {"path": "tools/a/shared.py", "start_line": 2, "end_line": 7},
+        ]}
+        hits = D.find_extractions(
+            added, removed, [], {window: 3},
+            {"tools/a/shared.py": {"shared"}, "tools/a/two.py": {"g"}},
+            base_locations)
+        self.assertEqual(len(hits), 1)
+        self.assertEqual(hits[0]["dest"]["path"], "tools/a/shared.py")
+
+    def test_rewiring_of_unique_block_is_not_a_hit(self):
+        # The block occurred once in the base tree, in the file it was
+        # removed from: a unique block that merely moves is not an
+        # extraction, even though the diff rewires to a call.
+        added = D.parse_added(_diff_for({
+            "tools/a/one.py": ["    return shared()"],
+        }))
+        norm = [D.normalize(line, "tools/a/one.py") for line in BLOCK]
+        removed = {"tools/a/one.py": [(t, i + 1) for i, t in enumerate(norm)]}
+        window = tuple(norm)
+        base_locations = {window: [
+            {"path": "tools/a/one.py", "start_line": 2, "end_line": 7},
+        ]}
+        hits = D.find_extractions(
+            added, removed, [], {window: 1},
+            {"tools/a/shared.py": {"shared"}}, base_locations)
+        self.assertEqual(hits, [])
+
     def test_consolidation_without_reduction_is_not_an_extraction(self):
         # Removed from two files, re-added twice in the destination:
         # the destination holds as many copies as were removed, so
@@ -799,6 +899,31 @@ class TestEvaluateEndToEnd(unittest.TestCase):
         self.assertEqual(D.cmd_check(argparse.Namespace(
             project=str(project))), 0)
         self.assertEqual(D.evaluate(project)["extraction"], [])
+
+    def test_rewiring_to_existing_home_fails(self):
+        # The two-PR split end to end (arch-6 finding 1): the shared
+        # home already exists on main, so the rewiring PR adds no copy
+        # of the block, only calls to it. The gate must still fire.
+        extract_body = (
+            "    total = 0\n    total += 1\n    total += 2\n    total += 3\n"
+            "    total += 4\n    total += 5\n    return total\n"
+        )
+        base = {
+            "tools/a/one.py": "def f():\n" + extract_body,
+            "tools/a/two.py": "def g():\n" + extract_body,
+            "tools/a/shared.py": "def shared():\n" + extract_body,
+        }
+        pr = {
+            "tools/a/one.py": "def f():\n    return shared()\n",
+            "tools/a/two.py": "def g():\n    return shared()\n",
+        }
+        project = self._repo(base, pr)
+        self.assertEqual(D.cmd_check(argparse.Namespace(
+            project=str(project))), 1)
+        res = D.evaluate(project)
+        self.assertEqual(len(res["extraction"]), 1)
+        self.assertEqual(
+            res["extraction"][0]["dest"]["path"], "tools/a/shared.py")
 
     def test_extraction_bare_call_without_assert_fails(self):
         project = self._extract_repo(

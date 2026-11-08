@@ -1,48 +1,49 @@
 {
-  "component": "tools/refute/checks",
-  "reviewed": "2026-07-25",
-  "recheck_after": "2027-02-06",
-  "verdict": "keep-ours",
-  "verdict_class": "keep-ours",
-  "absorption_status": "rejected-with-reason",
-  "why": "Every alternative lacks vocabulary for Claude Code's hook JSON schema, per-event stdin contract, 0/2 exit convention, persona front-matter convention, and this repo's bus.py/hiring sqlite -- proprietary 2025/2026 surfaces no general host-assertion or PR tool targets. Each file is small, stdlib-only (fits Windows/offline house constraints where goss/InSpec are weaker), and all 7 have live callers in claims-verify.jsonl with real runs logged today.",
-  "alternatives": [
-    {
-      "name": "pytest-testinfra (pytest plugin: files/packages/services/sockets over local/Docker/SSH/Ansible)",
-      "covers": "generic file-exists/service-running assertions -- maybe the trivial Path.exists() lines in hooks_exist.py.",
-      "gap": "zero vocabulary for Claude Code's hook JSON schema, per-event stdin contract, or this repo's bus.py/sqlite; nearly all 901 lines would still be hand-written.",
-      "cost": "not installed here (pip show confirms absent); Windows support historically limited per its own GitHub issue #601.",
-      "maturity": "actively documented; Windows support alpha/limited per issue tracker, confirmed via WebSearch."
-    },
-    {
-      "name": "goss (YAML server-validation DSL)",
-      "covers": "same generic host-state assertions as testinfra, in YAML.",
-      "gap": "no concept of Claude Code hooks/personas/sqlite funnel; Windows support explicitly 'alpha' with feature-parity gaps.",
-      "cost": "not installed here (where goss empty); a Go binary+DSL for near-zero coverage gain.",
-      "maturity": "actively maintained; Windows alpha confirmed via WebSearch of goss docs/GitHub today."
-    },
-    {
-      "name": "OPA/conftest (Rego policy over JSON/YAML/Terraform, ~0.68.2 as of Apr 2026)",
-      "covers": "the pure JSON-shape half of hooks_exist.py/bus_wired.py (hook on event X naming an existing script) as declarative policy instead of dict-walking+regex.",
-      "gap": "no subprocess/sqlite/hash I/O, so it can't do live hook invocation, hash diffing, sqlite counts, or sibling meta-testing -- most of the 901 lines.",
-      "cost": "not installed here (where conftest empty); new Go binary+DSL for coverage of roughly one file's shape logic.",
-      "maturity": "actively maintained, current release reconfirmed via WebSearch today."
-    },
-    {
-      "name": "InSpec / Danger / reviewdog",
-      "covers": "InSpec: Ruby compliance DSL, same generic-surface gap plus a new language. Danger: PR-diff-time comment bot. reviewdog: formats linter output as PR annotations.",
-      "gap": "InSpec has no Claude Code resource pack. Danger/reviewdog act on PR diffs, not live local machine state; neither has an assertion language to express any of this logic.",
-      "cost": "n/a -- structural mismatch.",
-      "maturity": "Danger/reviewdog not re-verified this session; named from prior knowledge, flagged as such."
-    }
-  ],
-  "evidence": "Read all 7 files in full (901 lines). Each has >=1 caller in claims-verify.jsonl (C-014,C-001+C-016,C-012,C-003,C-011,C-008,C-013), confirmed by python json count. hiring_engine/ledger.sqlite exists (196KB). Neither conftest nor goss installed; pytest-testinfra absent. goss Windows-alpha and conftest release reconfirmed via WebSearch today; Danger/reviewdog not re-verified, flagged.",
-  "recheck": "python tools/refute/checks/hooks_exist.py, bus_wired.py, verifiers_fail_closed.py should each exit 0 today; where conftest/where goss to reconfirm neither installed.",
-  "our_loc": 901,
-  "migration_loc": "0 for check bodies (keep-ours). If split pursued for hooks_exist.py+bus_wired.py's shape-matching halves only: ~60-90 lines deleted, ~40-60 new Rego lines added -- a wash.",
-  "what_ours_does": "7 stdlib scripts, each a claim's verify body: agents_loadable.py parses persona front matter; bus_wired.py checks hook wiring; config_drift.py hash-diffs config files; hooks_exist.py resolves hook paths (Windows/Git-Bash); hooks_run.py launches hooks, flags broken exec; ledger_rows.py checks a sqlite funnel has rows; verifiers_fail_closed.py re-runs siblings w/ HOME emptied, asserts fail-closed.",
-  "strongest_counterargument": "The JSON-shape-matching in hooks_exist.py/bus_wired.py (walking hooks groups, regex-sniffing paths in two dialects) is a generic 'does this JSON satisfy this policy' problem, exactly what Rego/conftest was built for. A split verdict is defensible for just those two files; one blanket keep-ours across all 7 understates that these two are the weakest members of the case.",
-  "rechecked": "2026-11-08",
-  "recheck_result": "Rechecked 2026-11-08: hooks_exist.py, bus_wired.py and verifiers_fail_closed.py all RC=0 ('all 7 sibling checkers fail closed'). conftest and goss are neither installed on this VM, so the comparison against them was not run.",
-  "absorbed": "All three sibling checkers pass (RC=0, all 7 fail closed); conftest and goss are neither installed, so their comparison was not run."
+ "component": "tools/refute/checks",
+ "reviewed": "2026-07-25",
+ "recheck_after": "2027-02-06",
+ "verdict": "keep-ours",
+ "verdict_class": "keep-ours",
+ "absorption_status": "rejected-with-reason",
+ "why": "Every alternative lacks vocabulary for Claude Code's hook JSON schema, per-event stdin contract, 0/2 exit convention, persona front-matter convention, and this repo's bus.py/hiring sqlite -- proprietary 2025/2026 surfaces no general host-assertion or PR tool targets. Each file is small, stdlib-only (fits Windows/offline house constraints where goss/InSpec are weaker), and all 7 have live callers in claims-verify.jsonl with real runs logged today.",
+ "alternatives": [
+  {
+   "name": "pytest-testinfra (pytest plugin: files/packages/services/sockets over local/Docker/SSH/Ansible)",
+   "covers": "generic file-exists/service-running assertions -- maybe the trivial Path.exists() lines in hooks_exist.py.",
+   "gap": "zero vocabulary for Claude Code's hook JSON schema, per-event stdin contract, or this repo's bus.py/sqlite; nearly all 901 lines would still be hand-written.",
+   "cost": "not installed here (pip show confirms absent); Windows support historically limited per its own GitHub issue #601.",
+   "maturity": "actively documented; Windows support alpha/limited per issue tracker, confirmed via WebSearch."
+  },
+  {
+   "name": "goss (YAML server-validation DSL)",
+   "covers": "same generic host-state assertions as testinfra, in YAML.",
+   "gap": "no concept of Claude Code hooks/personas/sqlite funnel; Windows support explicitly 'alpha' with feature-parity gaps.",
+   "cost": "not installed here (where goss empty); a Go binary+DSL for near-zero coverage gain.",
+   "maturity": "actively maintained; Windows alpha confirmed via WebSearch of goss docs/GitHub today."
+  },
+  {
+   "name": "OPA/conftest (Rego policy over JSON/YAML/Terraform, ~0.68.2 as of Apr 2026)",
+   "covers": "the pure JSON-shape half of hooks_exist.py/bus_wired.py (hook on event X naming an existing script) as declarative policy instead of dict-walking+regex.",
+   "gap": "no subprocess/sqlite/hash I/O, so it can't do live hook invocation, hash diffing, sqlite counts, or sibling meta-testing -- most of the 901 lines.",
+   "cost": "not installed here (where conftest empty); new Go binary+DSL for coverage of roughly one file's shape logic.",
+   "maturity": "actively maintained, current release reconfirmed via WebSearch today."
+  },
+  {
+   "name": "InSpec / Danger / reviewdog",
+   "covers": "InSpec: Ruby compliance DSL, same generic-surface gap plus a new language. Danger: PR-diff-time comment bot. reviewdog: formats linter output as PR annotations.",
+   "gap": "InSpec has no Claude Code resource pack. Danger/reviewdog act on PR diffs, not live local machine state; neither has an assertion language to express any of this logic.",
+   "cost": "n/a -- structural mismatch.",
+   "maturity": "Danger/reviewdog not re-verified this session; named from prior knowledge, flagged as such."
+  }
+ ],
+ "evidence": "Read all 7 files in full (901 lines). Each has >=1 caller in claims-verify.jsonl (C-014,C-001+C-016,C-012,C-003,C-011,C-008,C-013), confirmed by python json count. hiring_engine/ledger.sqlite exists (196KB). Neither conftest nor goss installed; pytest-testinfra absent. goss Windows-alpha and conftest release reconfirmed via WebSearch today; Danger/reviewdog not re-verified, flagged.",
+ "recheck": "python tools/refute/checks/hooks_exist.py, bus_wired.py, verifiers_fail_closed.py should each exit 0 today; where conftest/where goss to reconfirm neither installed.",
+ "our_loc": 901,
+ "migration_loc": "0 for check bodies (keep-ours). If split pursued for hooks_exist.py+bus_wired.py's shape-matching halves only: ~60-90 lines deleted, ~40-60 new Rego lines added -- a wash.",
+ "what_ours_does": "7 stdlib scripts, each a claim's verify body: agents_loadable.py parses persona front matter; bus_wired.py checks hook wiring; config_drift.py hash-diffs config files; hooks_exist.py resolves hook paths (Windows/Git-Bash); hooks_run.py launches hooks, flags broken exec; ledger_rows.py checks a sqlite funnel has rows; verifiers_fail_closed.py re-runs siblings w/ HOME emptied, asserts fail-closed.",
+ "strongest_counterargument": "The JSON-shape-matching in hooks_exist.py/bus_wired.py (walking hooks groups, regex-sniffing paths in two dialects) is a generic 'does this JSON satisfy this policy' problem, exactly what Rego/conftest was built for. A split verdict is defensible for just those two files; one blanket keep-ours across all 7 understates that these two are the weakest members of the case.",
+ "rechecked": "2026-11-08",
+ "recheck_result": "Rechecked 2026-11-08: hooks_exist.py, bus_wired.py and verifiers_fail_closed.py all RC=0 ('all 7 sibling checkers fail closed'). conftest and goss are neither installed on this VM, so the comparison against them was not run. Fix-forward evidence, correcting the first sentence: on this VM only verifiers_fail_closed.py exits 0. `python tools/refute/checks/hooks_exist.py` exits 1 with 'settings.json not found at /home/hatch/.claude/settings.json' and `python tools/refute/checks/bus_wired.py` exits 1 with 'live settings.json not found at /home/hatch/.claude/settings.json'; `python tools/refute/checks/verifiers_fail_closed.py` exits 0 with 'all 7 sibling checkers fail closed when their inputs are absent'. The two exit-1 results are an environment cause, established: both checkers read the live operator file ~/.claude/settings.json, which does not exist on this VM, and their code returns 1 on a missing settings file (fail-closed by design, which verifiers_fail_closed.py itself verifies). This is not a repo regression; the checkers can only exit 0 on a host with a live settings.json. conftest and goss are still neither installed (`which conftest goss` exit 1), so their comparison was not run. Fix-forward substitute evidence (liveness, since the install check is impossible on this VM): conftest is alive at v0.71.1 (2026-10-06) and goss at v0.4.10 (2026-07-26). What the comparison would still need, and was not done: installing both tools and running each against the same hook/bus/verifier fixtures the sibling checkers cover, then comparing failure modes and coverage; liveness alone does not establish equivalence or superiority.",
+ "absorbed": "All three sibling checkers pass (RC=0, all 7 fail closed); conftest and goss are neither installed, so their comparison was not run. Fix-forward 2026-11-08, correcting the prior sentence: only one of the three passes on this VM. `python tools/refute/checks/hooks_exist.py` exit 1 ('settings.json not found at /home/hatch/.claude/settings.json'); `python tools/refute/checks/bus_wired.py` exit 1 ('live settings.json not found at /home/hatch/.claude/settings.json'); `python tools/refute/checks/verifiers_fail_closed.py` exit 0 ('all 7 sibling checkers fail closed when their inputs are absent'). The two failures are an environment cause, not a repo regression: both checkers read the live operator file ~/.claude/settings.json, which does not exist on this VM, and they fail closed by design when it is absent (their main() returns 1 on a missing settings file; verifiers_fail_closed.py confirms the fail-closed behaviour). conftest and goss are still neither installed (which conftest goss exit 1), so their comparison was not run. Substitute liveness: conftest v0.71.1 (2026-10-06), goss v0.4.10 (2026-07-26), both alive. A real comparison still needs both tools installed and run against the same fixtures."
+
 }

@@ -48,4 +48,5 @@
   "rechecked": "2026-11-08",
   "recheck_result": "Rechecked 2026-11-08: state/timetravel/objects/ does NOT exist; manifest.jsonl has 1 row and is tracked (12K total), so the committed-manifest requirement is NOT dropped; no ls-tree wrapper was found; no trigger fires.",
   "absorbed": "state/timetravel/objects/ does not exist and the manifest has 1 tracked row; the committed-manifest requirement is not dropped and no trigger fires."
+
 }

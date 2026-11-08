@@ -1,41 +1,42 @@
 {
-  "component": "tools/refute",
-  "reviewed": "2026-07-25",
-  "recheck_after": "2027-02-06",
-  "verdict": "wrap",
-  "verdict_class": "wrap",
-  "absorption_status": "rejected-with-reason",
-  "why": "The JSONL ledger earns its keep as shared data (written by `add`, mutated by mutate.py --spec refute, tagged by lane for a multi-session setup) -- pytest can't do that. But most of the 500 lines duplicate, imperfectly, distinctions pytest's 5-way exit code already makes for free: both bugs motivating this file are exactly the class pytest's design avoids. Per house rule ('a dependency that deletes hundreds of lines wins') and pytest costing nothing new here: keep the ledger schema, replace dispatch/reporting/selftest with a thin conftest.py.",
-  "alternatives": [
-    {
-      "name": "pytest (already installed v8.4.2, uv-managed, already used in this repo's intent-control-plane/pyproject.toml)",
-      "covers": "Claim-as-test via parametrize; subprocess checks in test bodies; three-way pass/fail/error; five-way exit code (0/1/3/5) already drawing the lines this file hand-built and got wrong; -k filtering replaces --only.",
-      "gap": "no native concept of a claims ledger as external JSONL data other non-Python processes (bus.py, other Claude sessions, ad hoc `refute.py add`) append to at runtime; pytest tests live in .py source.",
-      "cost": "zero net-new install: confirmed already present and already a dependency elsewhere in this repo.",
-      "maturity": "de facto standard runner; exit-code table reconfirmed via docs.pytest.org today."
-    },
-    {
-      "name": "PowerShell Pester",
-      "covers": "Same runner/reporter role, native to the PowerShell half of this dual-shell setup.",
-      "gap": "same missing shared cross-process ledger concept; adds a second parallel test framework alongside the Python one already used.",
-      "cost": "one more framework for a one-maintainer repo to hold in mind.",
-      "maturity": "mature, not independently re-verified this session (prior knowledge)."
-    },
-    {
-      "name": "mutmut/cosmic-ray (Python mutation testers)",
-      "covers": "Repo already reinvents a slice: tools/audit/mutate.py --spec refute hand-plants one known mutant of refute.py's exit-code line.",
-      "gap": "out of scope of the two audited dirs; noted only as adjacent evidence of a hand-rolling pattern.",
-      "cost": "n/a, not evaluated.",
-      "maturity": "not re-verified; named from prior knowledge."
-    }
-  ],
-  "evidence": "Read refute.py in full (501 lines). Callers confirmed: claims C-021/C-022, ship-gate.yml 'refute.py selftest' step. refutations.jsonl has 287 rows, latest 2026-07-25T20:04:37+03:00 (parsed via python) -- actively run today. pytest 8.4.2 confirmed installed and already used in intent-control-plane/pyproject.toml. Exit-code table reconfirmed via WebFetch of docs.pytest.org today.",
-  "recheck": "python tools/refute/refute.py selftest (exits 0 today); after wrap, pytest tools/refute/ -k claims --junit-xml=- reproduces identical verdicts.",
-  "our_loc": 500,
-  "migration_loc": "add ~80-120 (conftest.py+test_claims.py+result-writer); delete ~350-400 (dispatch/exit-code arithmetic/_print_table/selftest scaffolding).",
-  "what_ours_does": "refute.py: CLI (run/add/list/selftest) loading named claims+verifiers from state/claims-verify.jsonl, running each via pwsh/Git-Bash, classifying HELD/REFUTED/BROKEN (BROKEN=verifier failed to launch/timed out, unlike a claim that ran and failed). Exit=refuted+broken, capped 125. Ships its own selftest planting synthetic ledgers, locking down two real 2026-07-25 bugs in its exit-code logic.",
-  "strongest_counterargument": "Rewriting adds a second execution model for a 'one maintainer, read by one person' repo. The current file is flat and already-debugged: both incidents that motivated it are regression-locked by its own selftest, and mutate.py already mutation-tests its exit logic. Migration risks new seam bugs for a real but not urgent line-count win on a tool that isn't broken today.",
-  "rechecked": "2026-11-08",
-  "recheck_result": "Rechecked 2026-11-08: selftest RC=0. pytest tools/refute/ -k claims selects NOTHING ('no tests ran') because the recheck's path is stale; the real claims tests live in tests/test_refute_portable.py and pass 8/8.",
-  "absorbed": "selftest passes and the real claims tests (8) pass; the recheck's pytest path was stale (no tests selected under tools/refute/ -k claims)."
+ "component": "tools/refute",
+ "reviewed": "2026-07-25",
+ "recheck_after": "2027-02-06",
+ "verdict": "wrap",
+ "verdict_class": "wrap",
+ "absorption_status": "rejected-with-reason",
+ "why": "The JSONL ledger earns its keep as shared data (written by `add`, mutated by mutate.py --spec refute, tagged by lane for a multi-session setup) -- pytest can't do that. But most of the 500 lines duplicate, imperfectly, distinctions pytest's 5-way exit code already makes for free: both bugs motivating this file are exactly the class pytest's design avoids. Per house rule ('a dependency that deletes hundreds of lines wins') and pytest costing nothing new here: keep the ledger schema, replace dispatch/reporting/selftest with a thin conftest.py.",
+ "alternatives": [
+  {
+   "name": "pytest (already installed v8.4.2, uv-managed, already used in this repo's intent-control-plane/pyproject.toml)",
+   "covers": "Claim-as-test via parametrize; subprocess checks in test bodies; three-way pass/fail/error; five-way exit code (0/1/3/5) already drawing the lines this file hand-built and got wrong; -k filtering replaces --only.",
+   "gap": "no native concept of a claims ledger as external JSONL data other non-Python processes (bus.py, other Claude sessions, ad hoc `refute.py add`) append to at runtime; pytest tests live in .py source.",
+   "cost": "zero net-new install: confirmed already present and already a dependency elsewhere in this repo.",
+   "maturity": "de facto standard runner; exit-code table reconfirmed via docs.pytest.org today."
+  },
+  {
+   "name": "PowerShell Pester",
+   "covers": "Same runner/reporter role, native to the PowerShell half of this dual-shell setup.",
+   "gap": "same missing shared cross-process ledger concept; adds a second parallel test framework alongside the Python one already used.",
+   "cost": "one more framework for a one-maintainer repo to hold in mind.",
+   "maturity": "mature, not independently re-verified this session (prior knowledge)."
+  },
+  {
+   "name": "mutmut/cosmic-ray (Python mutation testers)",
+   "covers": "Repo already reinvents a slice: tools/audit/mutate.py --spec refute hand-plants one known mutant of refute.py's exit-code line.",
+   "gap": "out of scope of the two audited dirs; noted only as adjacent evidence of a hand-rolling pattern.",
+   "cost": "n/a, not evaluated.",
+   "maturity": "not re-verified; named from prior knowledge."
+  }
+ ],
+ "evidence": "Read refute.py in full (501 lines). Callers confirmed: claims C-021/C-022, ship-gate.yml 'refute.py selftest' step. refutations.jsonl has 287 rows, latest 2026-07-25T20:04:37+03:00 (parsed via python) -- actively run today. pytest 8.4.2 confirmed installed and already used in intent-control-plane/pyproject.toml. Exit-code table reconfirmed via WebFetch of docs.pytest.org today.",
+ "recheck": "python tools/refute/refute.py selftest (exits 0 today); after wrap, pytest tools/refute/ -k claims --junit-xml=- reproduces identical verdicts.",
+ "our_loc": 500,
+ "migration_loc": "add ~80-120 (conftest.py+test_claims.py+result-writer); delete ~350-400 (dispatch/exit-code arithmetic/_print_table/selftest scaffolding).",
+ "what_ours_does": "refute.py: CLI (run/add/list/selftest) loading named claims+verifiers from state/claims-verify.jsonl, running each via pwsh/Git-Bash, classifying HELD/REFUTED/BROKEN (BROKEN=verifier failed to launch/timed out, unlike a claim that ran and failed). Exit=refuted+broken, capped 125. Ships its own selftest planting synthetic ledgers, locking down two real 2026-07-25 bugs in its exit-code logic.",
+ "strongest_counterargument": "Rewriting adds a second execution model for a 'one maintainer, read by one person' repo. The current file is flat and already-debugged: both incidents that motivated it are regression-locked by its own selftest, and mutate.py already mutation-tests its exit logic. Migration risks new seam bugs for a real but not urgent line-count win on a tool that isn't broken today.",
+ "rechecked": "2026-11-08",
+ "recheck_result": "Rechecked 2026-11-08: selftest RC=0. pytest tools/refute/ -k claims selects NOTHING ('no tests ran') because the recheck's path is stale; the real claims tests live in tests/test_refute_portable.py and pass 8/8. Fix-forward evidence, all re-run this cycle: `python tools/refute/refute.py selftest` exit 0, 'all checks passed' (23 [ok] checks); `python -m pytest tests/test_refute_portable.py -q -p no:cacheprovider` exit 0, 8 passed in 0.30s; `python -m pytest tools/refute/ -k claims --junit-xml=- -q -p no:cacheprovider` exit 0 with 'no tests ran in 0.03s', re-confirming the recheck's pytest path is still stale.",
+ "absorbed": "selftest passes and the real claims tests (8) pass; the recheck's pytest path was stale (no tests selected under tools/refute/ -k claims). Fix-forward 2026-11-08: `python tools/refute/refute.py selftest` exit 0, 'all checks passed' (23 [ok] checks). `python -m pytest tests/test_refute_portable.py -q -p no:cacheprovider` exit 0, 8 passed in 0.30s. `python -m pytest tools/refute/ -k claims --junit-xml=- -q -p no:cacheprovider` exit 0 with 'no tests ran in 0.03s', re-confirming the recheck's pytest path is stale."
+
 }

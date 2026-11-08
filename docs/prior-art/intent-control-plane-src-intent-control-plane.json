@@ -1,62 +1,63 @@
 {
-  "component": "intent-control-plane/src/intent_control_plane",
-  "reviewed": "2026-07-25",
-  "recheck_after": "2027-02-06",
-  "verdict": "split",
-  "verdict_class": "split",
-  "absorption_status": "rejected-with-reason",
-  "why": "Split verdict. (A) schema.py+transitions.py+durable.py+mappers.py (~612 ln): the sqlite ledger/allow-list core. Real libraries exist but don't fit: FSM libs skip persistence/concurrency; SQLAlchemy+Alembic is overkill for 12 flat JSON-blob tables; Temporal/Prefect/Dagster/Celery/APScheduler solve distributed scheduling, not a same-process 7-state ledger -> keep-ours, EXCEPT durable.py (zero production callers) -> delete-ours. (B) remaining ~6086 ln of gastown/depth-harness domain logic (rubric, guardrails, provenance, TUI, roster HR) has no named competitor -> keep-ours by default.",
-  "alternatives": [
-    {
-      "name": "transitions (pytransitions)",
-      "covers": "Declarative State/Transition/Machine classes with callbacks, conditions, nested states for modeling a graph like PASS_LIFECYCLE.",
-      "gap": "No persistence, no concurrency control; the sqlite BEGIN IMMEDIATE guarded read-check-insert (the actual hard part) stays hand-written regardless of this library.",
-      "cost": "New dependency; learn a Machine API for a graph our flat dict already expresses in ~10 lines.",
-      "maturity": "Long-standing (since ~2014), actively maintained, widely used."
-    },
-    {
-      "name": "python-statemachine",
-      "covers": "Class+decorator based FSM: states, transitions, guards, on_enter/on_exit hooks.",
-      "gap": "Same as pytransitions: pure in-memory model, no sqlite/ledger/concurrency; would sit on top of our existing I/O layer, not replace it.",
-      "cost": "New dependency + decorator API to learn for a 7-state linear graph.",
-      "maturity": "Mature, maintained, stable release line."
-    },
-    {
-      "name": "sqlite-utils",
-      "covers": "Programmatic table creation/upsert/FTS helpers over sqlite3; CLI + library from the Datasette ecosystem.",
-      "gap": "No concurrency-safe guarded-transition logic; would shrink schema.py's DDL string by roughly 30-60 lines, not the transition-guard logic in transitions.py.",
-      "cost": "One new dependency; DDL rewritten as .create() calls.",
-      "maturity": "Actively maintained; v4.0 shipped 2026-07-07 (confirmed via WebSearch)."
-    },
-    {
-      "name": "SQLAlchemy + Alembic",
-      "covers": "ORM models plus a real versioned migration system (upgrade/downgrade scripts, autogenerate diffs).",
-      "gap": "Would require rewriting dozens of hand-written parameterized queries across cli.py/mappers.py/retrieval.py/text_index.py/eval_cmds.py into ORM models for 12 flat JSON-blob tables with no real joins.",
-      "cost": "Large rewrite (see migration_loc); an ORM engine/session layer to maintain going forward.",
-      "maturity": "Extremely mature, industry standard, actively maintained."
-    },
-    {
-      "name": "Temporal (self-hosted OSS)",
-      "covers": "Durable, replay-safe distributed workflow execution across workers; ships a genuinely free single-binary local dev server (temporal server start-dev, sqlite-backed), confirmed via WebSearch.",
-      "gap": "Solves distributed/long-running worker orchestration; this code guards a same-process 7-state ledger with no workers, no remote activities, no multi-day timers to justify replay-determinism workflows.",
-      "cost": "A running server+worker process pair, workflow/activity code restructuring, gRPC.",
-      "maturity": "CNCF-adjacent, production-grade, actively maintained."
-    },
-    {
-      "name": "Prefect / Dagster / Celery / APScheduler",
-      "covers": "Task scheduling (APScheduler), distributed task queues (Celery, needs a broker), asset/DAG orchestration (Dagster), flow orchestration (Prefect).",
-      "gap": "None model an allow-list state-transition ledger; adopting any means bolting sqlite persistence back on top of a scheduler solving a different problem.",
-      "cost": "Celery needs Redis/RabbitMQ; Prefect/Dagster need a server process; APScheduler doesn't fit the problem at all.",
-      "maturity": "All mature, actively maintained OSS projects."
-    }
-  ],
-  "evidence": "Read schema.py/transitions.py/durable.py in full (258+158+81 ln); skimmed docstrings of all 41 top-level .py files. grep for advance_pass|current_pass_state|revert_pass|PASS_LIFECYCLE in src/ matches only those 2 files. grep for DurableBackend|InMemoryBackend in src/ matches only durable.py (6 occ). cli.py has its own separate ILLEGAL_TRANSITIONS deny-list (ln52-57, 672-715) on the same table.",
-  "recheck": "grep -rn \"advance_pass|current_pass_state|revert_pass|PASS_LIFECYCLE|DurableBackend|InMemoryBackend\" intent-control-plane/src -- if any file besides transitions.py/durable.py now matches, the delete-ours call on durable.py is stale.",
-  "our_loc": 6698,
-  "migration_loc": "Keep subsystem A/B as-is (0 lines). Delete durable.py: -81 src lines, -82 test lines (test_durable.py), ~-8 lines trimmed from transitions.py's cross-referencing docstring.",
-  "what_ours_does": "~612 ln (schema/transitions/durable/mappers): sqlite DDL+connection mgmt+a guarded 7-state allow-list pass-lifecycle machine with a swappable in-memory backend. ~6086 ln remaining (cli, tower, retrieval, project_map, standards, guardrails, rubric, company, archive, provenance): bespoke gastown/depth-harness logic - calibration, reward-hacking screens, persona grading, scorecards, TUI.",
-  "strongest_counterargument": "sqlite-utils (v4.0 shipped 2026-07-07, confirmed) or Alembic would give a tested migration path that is genuinely missing today: SCHEMA_VERSION=3 is stamped with no ALTER-based upgrade, only additive CREATE TABLE IF NOT EXISTS. If this ledger ever needs a non-additive schema change, today's code has no story for it and one would have to be written ad hoc anyway.",
-  "rechecked": "2026-11-08",
-  "recheck_result": "Rechecked 2026-11-08: advance_pass and related names appear ONLY in durable.py and transitions.py, so the delete-ours call on durable.py is not stale.",
-  "absorbed": "advance_pass and friends appear only in durable.py and transitions.py; the delete-ours call on durable.py is not stale."
+ "component": "intent-control-plane/src/intent_control_plane",
+ "reviewed": "2026-07-25",
+ "recheck_after": "2027-02-06",
+ "verdict": "split",
+ "verdict_class": "split",
+ "absorption_status": "rejected-with-reason",
+ "why": "Split verdict. (A) schema.py+transitions.py+durable.py+mappers.py (~612 ln): the sqlite ledger/allow-list core. Real libraries exist but don't fit: FSM libs skip persistence/concurrency; SQLAlchemy+Alembic is overkill for 12 flat JSON-blob tables; Temporal/Prefect/Dagster/Celery/APScheduler solve distributed scheduling, not a same-process 7-state ledger -> keep-ours, EXCEPT durable.py (zero production callers) -> delete-ours. (B) remaining ~6086 ln of gastown/depth-harness domain logic (rubric, guardrails, provenance, TUI, roster HR) has no named competitor -> keep-ours by default.",
+ "alternatives": [
+  {
+   "name": "transitions (pytransitions)",
+   "covers": "Declarative State/Transition/Machine classes with callbacks, conditions, nested states for modeling a graph like PASS_LIFECYCLE.",
+   "gap": "No persistence, no concurrency control; the sqlite BEGIN IMMEDIATE guarded read-check-insert (the actual hard part) stays hand-written regardless of this library.",
+   "cost": "New dependency; learn a Machine API for a graph our flat dict already expresses in ~10 lines.",
+   "maturity": "Long-standing (since ~2014), actively maintained, widely used."
+  },
+  {
+   "name": "python-statemachine",
+   "covers": "Class+decorator based FSM: states, transitions, guards, on_enter/on_exit hooks.",
+   "gap": "Same as pytransitions: pure in-memory model, no sqlite/ledger/concurrency; would sit on top of our existing I/O layer, not replace it.",
+   "cost": "New dependency + decorator API to learn for a 7-state linear graph.",
+   "maturity": "Mature, maintained, stable release line."
+  },
+  {
+   "name": "sqlite-utils",
+   "covers": "Programmatic table creation/upsert/FTS helpers over sqlite3; CLI + library from the Datasette ecosystem.",
+   "gap": "No concurrency-safe guarded-transition logic; would shrink schema.py's DDL string by roughly 30-60 lines, not the transition-guard logic in transitions.py.",
+   "cost": "One new dependency; DDL rewritten as .create() calls.",
+   "maturity": "Actively maintained; v4.0 shipped 2026-07-07 (confirmed via WebSearch)."
+  },
+  {
+   "name": "SQLAlchemy + Alembic",
+   "covers": "ORM models plus a real versioned migration system (upgrade/downgrade scripts, autogenerate diffs).",
+   "gap": "Would require rewriting dozens of hand-written parameterized queries across cli.py/mappers.py/retrieval.py/text_index.py/eval_cmds.py into ORM models for 12 flat JSON-blob tables with no real joins.",
+   "cost": "Large rewrite (see migration_loc); an ORM engine/session layer to maintain going forward.",
+   "maturity": "Extremely mature, industry standard, actively maintained."
+  },
+  {
+   "name": "Temporal (self-hosted OSS)",
+   "covers": "Durable, replay-safe distributed workflow execution across workers; ships a genuinely free single-binary local dev server (temporal server start-dev, sqlite-backed), confirmed via WebSearch.",
+   "gap": "Solves distributed/long-running worker orchestration; this code guards a same-process 7-state ledger with no workers, no remote activities, no multi-day timers to justify replay-determinism workflows.",
+   "cost": "A running server+worker process pair, workflow/activity code restructuring, gRPC.",
+   "maturity": "CNCF-adjacent, production-grade, actively maintained."
+  },
+  {
+   "name": "Prefect / Dagster / Celery / APScheduler",
+   "covers": "Task scheduling (APScheduler), distributed task queues (Celery, needs a broker), asset/DAG orchestration (Dagster), flow orchestration (Prefect).",
+   "gap": "None model an allow-list state-transition ledger; adopting any means bolting sqlite persistence back on top of a scheduler solving a different problem.",
+   "cost": "Celery needs Redis/RabbitMQ; Prefect/Dagster need a server process; APScheduler doesn't fit the problem at all.",
+   "maturity": "All mature, actively maintained OSS projects."
+  }
+ ],
+ "evidence": "Read schema.py/transitions.py/durable.py in full (258+158+81 ln); skimmed docstrings of all 41 top-level .py files. grep for advance_pass|current_pass_state|revert_pass|PASS_LIFECYCLE in src/ matches only those 2 files. grep for DurableBackend|InMemoryBackend in src/ matches only durable.py (6 occ). cli.py has its own separate ILLEGAL_TRANSITIONS deny-list (ln52-57, 672-715) on the same table.",
+ "recheck": "grep -rn \"advance_pass|current_pass_state|revert_pass|PASS_LIFECYCLE|DurableBackend|InMemoryBackend\" intent-control-plane/src -- if any file besides transitions.py/durable.py now matches, the delete-ours call on durable.py is stale.",
+ "our_loc": 6698,
+ "migration_loc": "Keep subsystem A/B as-is (0 lines). Delete durable.py: -81 src lines, -82 test lines (test_durable.py), ~-8 lines trimmed from transitions.py's cross-referencing docstring.",
+ "what_ours_does": "~612 ln (schema/transitions/durable/mappers): sqlite DDL+connection mgmt+a guarded 7-state allow-list pass-lifecycle machine with a swappable in-memory backend. ~6086 ln remaining (cli, tower, retrieval, project_map, standards, guardrails, rubric, company, archive, provenance): bespoke gastown/depth-harness logic - calibration, reward-hacking screens, persona grading, scorecards, TUI.",
+ "strongest_counterargument": "sqlite-utils (v4.0 shipped 2026-07-07, confirmed) or Alembic would give a tested migration path that is genuinely missing today: SCHEMA_VERSION=3 is stamped with no ALTER-based upgrade, only additive CREATE TABLE IF NOT EXISTS. If this ledger ever needs a non-additive schema change, today's code has no story for it and one would have to be written ad hoc anyway.",
+ "rechecked": "2026-11-08",
+ "recheck_result": "Rechecked 2026-11-08: advance_pass and related names appear ONLY in durable.py and transitions.py, so the delete-ours call on durable.py is not stale.",
+ "absorbed": "advance_pass and friends appear only in durable.py and transitions.py; the delete-ours call on durable.py is not stale."
+
 }

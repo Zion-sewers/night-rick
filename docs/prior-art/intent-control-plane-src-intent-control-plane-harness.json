@@ -1,48 +1,49 @@
 {
-  "component": "intent-control-plane/src/intent_control_plane/harness",
-  "reviewed": "2026-07-25",
-  "recheck_after": "2027-02-06",
-  "verdict": "keep-ours",
-  "verdict_class": "keep-ours",
-  "absorption_status": "rejected-with-reason",
-  "why": "Despite the package name, this is not a workflow/scheduling harness - it's a stateless prompt-to-skill classifier for one person's ~35-skill catalog, wired into a UserPromptSubmit hook that must fail-safe to '{}' with no network call. None of the task's ten named libraries do prompt routing; category mismatch. The real comparison class - semantic-router, LLM-based classification, Rasa/snips-nlu NLU - trades a deterministic, tested regex table for an embedding dependency, a per-turn model call, or a training pipeline, none proportionate to a hand-curated route list.",
-  "alternatives": [
-    {
-      "name": "semantic-router (aurelio-labs)",
-      "covers": "Embedding-similarity based routing of text to named routes; can run fully local with local encoders. Confirmed active: release dated 2026-05-23.",
-      "gap": "Adds an embedding-model runtime + non-determinism a golden-tested regex table doesn't have; no built-in EN/HE/AR low-confidence phrase list or FTS corpus-snippet retrieval, both would need to be rebuilt alongside it.",
-      "cost": "New dependency + a local encoder model to keep it offline.",
-      "maturity": "Actively maintained MIT project, recent 2026 activity (confirmed via WebSearch)."
-    },
-    {
-      "name": "LLM-based intent classification (ask the model itself)",
-      "covers": "A single model call classifies the prompt into a skill/persona instead of regex matching.",
-      "gap": "Runs on every UserPromptSubmit turn; needs network + a model call, which the hook's own contract avoids ('always exit 0, fail safe to {}'); recurring cost against the no-paid-services constraint.",
-      "cost": "Per-turn latency + token spend; a new failure mode (model unavailable) in a hook that must never block the prompt.",
-      "maturity": "Well-understood pattern (LLM routing chains), not a specific packaged library."
-    },
-    {
-      "name": "Rasa NLU / snips-nlu style frameworks",
-      "covers": "Trained intent-classification NLU with slots, confidence scores, entity extraction.",
-      "gap": "Needs training data + a retraining step for every new skill; disproportionate to a ~35-route personal keyword table one person edits directly.",
-      "cost": "Training pipeline, model artifacts, retrain-on-change workflow.",
-      "maturity": "Rasa mature but heavyweight; snips-nlu largely dormant."
-    },
-    {
-      "name": "transitions / python-statemachine (the task's named FSM libraries)",
-      "covers": "State machines - modeling states and legal transitions between them.",
-      "gap": "Does not apply: router.py has no states to model; it is a stateless classify-and-annotate function over free text, not a state graph, so these are the wrong tool category entirely.",
-      "cost": "n/a - category mismatch.",
-      "maturity": "n/a"
-    }
-  ],
-  "evidence": "Read router.py (306 ln) and self_improve.py (41 ln) in full. Confirmed callers: dot-claude/hooks/prompt-router.sh and dot-codex/hooks/prompt-router.sh exec `python -m intent_control_plane.harness.router`; dot-claude/bin/self-improve.py imports routed_skill_names/build_reflect_prompt/unreachable_skills (ln28-29). WebSearch: semantic-router last released 2026-05-23; not run/tested.",
-  "recheck": "grep -rn \"harness.router|harness.self_improve\" claude-setup --include=*.sh --include=*.py -- confirms the hook wiring is still live before trusting keep-ours again.",
-  "our_loc": 352,
-  "migration_loc": "0 lines (no action, keep-ours). If replaced with semantic-router: est. -150 src / +80 (drop regex table, add route+local-encoder config), plus a new model-runtime dependency to vet for offline CI.",
-  "what_ours_does": "router.py (305 ln): regex classifier for the UserPromptSubmit hook - matches prompt vs ~35 curated patterns to suggest skills + a gastown persona, flags low-confidence EN/HE/AR phrasing, pulls FTS5 corpus snippets, ranks by usage telemetry. self_improve.py (40 ln): set-diff of installed vs reachable skills + a Codex-reflect prompt builder. Both wired into the live hook shim + self-improve script.",
-  "strongest_counterargument": "It's still 305 lines of hand-maintained regex/persona/telemetry logic for something the already-running model could arguably classify in less code, with no regex-drift risk (self_improve.py exists solely to catch stale routes). The audit's prior says hand-rolled infra should lose by default, and this verdict rests on the alternatives being worse-shaped, not on proving this shape is load-bearing.",
-  "rechecked": "2026-11-08",
-  "recheck_result": "Rechecked 2026-11-08: harness.router and self_improve are referenced from dot-claude/bin/self-improve.py and dot-claude/hooks/prompt-router.sh, so the hook wiring is still live.",
-  "absorbed": "harness.router/self_improve are referenced from dot-claude/bin/self-improve.py and dot-claude/hooks/prompt-router.sh; the hook wiring is still live."
+ "component": "intent-control-plane/src/intent_control_plane/harness",
+ "reviewed": "2026-07-25",
+ "recheck_after": "2027-02-06",
+ "verdict": "keep-ours",
+ "verdict_class": "keep-ours",
+ "absorption_status": "rejected-with-reason",
+ "why": "Despite the package name, this is not a workflow/scheduling harness - it's a stateless prompt-to-skill classifier for one person's ~35-skill catalog, wired into a UserPromptSubmit hook that must fail-safe to '{}' with no network call. None of the task's ten named libraries do prompt routing; category mismatch. The real comparison class - semantic-router, LLM-based classification, Rasa/snips-nlu NLU - trades a deterministic, tested regex table for an embedding dependency, a per-turn model call, or a training pipeline, none proportionate to a hand-curated route list.",
+ "alternatives": [
+  {
+   "name": "semantic-router (aurelio-labs)",
+   "covers": "Embedding-similarity based routing of text to named routes; can run fully local with local encoders. Confirmed active: release dated 2026-05-23.",
+   "gap": "Adds an embedding-model runtime + non-determinism a golden-tested regex table doesn't have; no built-in EN/HE/AR low-confidence phrase list or FTS corpus-snippet retrieval, both would need to be rebuilt alongside it.",
+   "cost": "New dependency + a local encoder model to keep it offline.",
+   "maturity": "Actively maintained MIT project, recent 2026 activity (confirmed via WebSearch)."
+  },
+  {
+   "name": "LLM-based intent classification (ask the model itself)",
+   "covers": "A single model call classifies the prompt into a skill/persona instead of regex matching.",
+   "gap": "Runs on every UserPromptSubmit turn; needs network + a model call, which the hook's own contract avoids ('always exit 0, fail safe to {}'); recurring cost against the no-paid-services constraint.",
+   "cost": "Per-turn latency + token spend; a new failure mode (model unavailable) in a hook that must never block the prompt.",
+   "maturity": "Well-understood pattern (LLM routing chains), not a specific packaged library."
+  },
+  {
+   "name": "Rasa NLU / snips-nlu style frameworks",
+   "covers": "Trained intent-classification NLU with slots, confidence scores, entity extraction.",
+   "gap": "Needs training data + a retraining step for every new skill; disproportionate to a ~35-route personal keyword table one person edits directly.",
+   "cost": "Training pipeline, model artifacts, retrain-on-change workflow.",
+   "maturity": "Rasa mature but heavyweight; snips-nlu largely dormant."
+  },
+  {
+   "name": "transitions / python-statemachine (the task's named FSM libraries)",
+   "covers": "State machines - modeling states and legal transitions between them.",
+   "gap": "Does not apply: router.py has no states to model; it is a stateless classify-and-annotate function over free text, not a state graph, so these are the wrong tool category entirely.",
+   "cost": "n/a - category mismatch.",
+   "maturity": "n/a"
+  }
+ ],
+ "evidence": "Read router.py (306 ln) and self_improve.py (41 ln) in full. Confirmed callers: dot-claude/hooks/prompt-router.sh and dot-codex/hooks/prompt-router.sh exec `python -m intent_control_plane.harness.router`; dot-claude/bin/self-improve.py imports routed_skill_names/build_reflect_prompt/unreachable_skills (ln28-29). WebSearch: semantic-router last released 2026-05-23; not run/tested.",
+ "recheck": "grep -rn \"harness.router|harness.self_improve\" claude-setup --include=*.sh --include=*.py -- confirms the hook wiring is still live before trusting keep-ours again.",
+ "our_loc": 352,
+ "migration_loc": "0 lines (no action, keep-ours). If replaced with semantic-router: est. -150 src / +80 (drop regex table, add route+local-encoder config), plus a new model-runtime dependency to vet for offline CI.",
+ "what_ours_does": "router.py (305 ln): regex classifier for the UserPromptSubmit hook - matches prompt vs ~35 curated patterns to suggest skills + a gastown persona, flags low-confidence EN/HE/AR phrasing, pulls FTS5 corpus snippets, ranks by usage telemetry. self_improve.py (40 ln): set-diff of installed vs reachable skills + a Codex-reflect prompt builder. Both wired into the live hook shim + self-improve script.",
+ "strongest_counterargument": "It's still 305 lines of hand-maintained regex/persona/telemetry logic for something the already-running model could arguably classify in less code, with no regex-drift risk (self_improve.py exists solely to catch stale routes). The audit's prior says hand-rolled infra should lose by default, and this verdict rests on the alternatives being worse-shaped, not on proving this shape is load-bearing.",
+ "rechecked": "2026-11-08",
+ "recheck_result": "Rechecked 2026-11-08: harness.router and self_improve are referenced from dot-claude/bin/self-improve.py and dot-claude/hooks/prompt-router.sh, so the hook wiring is still live.",
+ "absorbed": "harness.router/self_improve are referenced from dot-claude/bin/self-improve.py and dot-claude/hooks/prompt-router.sh; the hook wiring is still live."
+
 }

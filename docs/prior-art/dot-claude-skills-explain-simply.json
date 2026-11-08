@@ -1,48 +1,49 @@
 {
-  "component": "dot-claude/skills/explain-simply",
-  "reviewed": "2026-07-25",
-  "recheck_after": "2027-02-06",
-  "verdict": "split",
-  "verdict_class": "split",
-  "absorption_status": "rejected-with-reason",
-  "why": "6 of 8 check types (passive ratio, sentence/avg-length caps, paragraph length, jargon substitution, unexplained-acronym-first-use) have real, free equivalents (write-good's passive check, Vale's confirmed Acronyms rule, Vale/write-good Wordiness). Two do not: unbacked_number is this repo's own claim-discipline rule (tied to the retracted 24%-64% incident), and hidden-verb/nominalization was not found in proselint, write-good, or Vale's rule sets. Verdict: keep the two novel checks plus CI/mutate.py wiring; the rest duplicates available tooling.",
-  "alternatives": [
-    {
-      "name": "textstat",
-      "covers": "Readability/grade-level formulas: Flesch Reading Ease, Flesch-Kincaid Grade, SMOG, Coleman-Liau, ARI, Dale-Chall, Gunning Fog, Linsear Write, from syllable/word/sentence counts.",
-      "gap": "Computes zero of plain.py's actual checks: no passive-voice ratio, no hidden-verb/nominalization, no jargon substitution, no acronym-first-use, no unbacked-number rule, no markdown-aware code/prose split.",
-      "cost": "Free, MIT, pure Python, pip install textstat; depends on Pyphen (also pure Python, offline-cacheable).",
-      "maturity": "v0.7.13 released 2026-02-18 per PyPI (WebFetch checked); long-running, actively released."
-    },
-    {
-      "name": "proselint",
-      "covers": "Prose style linter: weasel words, cliches, industrial jargon, redundancy, hedging, malapropisms, spelling/typography consistency.",
-      "gap": "No passive-voice check, no nominalization/hidden-verb check, no acronym-first-use check, no unbacked-number rule (its GitHub checks/ directory lists neither module, per WebFetch).",
-      "cost": "Free, BSD license, pure Python, pip install proselint.",
-      "maturity": "Actively maintained on GitHub (amperser/proselint); long-established project."
-    },
-    {
-      "name": "write-good",
-      "covers": "Heuristic checks close to ours: passive voice, weasel words, wordy phrases, adverb overuse, 'there is/are' openers, cliches.",
-      "gap": "No nominalization/hidden-verb suffix scan, no acronym-first-use, no unbacked-number rule, no markdown-aware frontmatter/table/list extraction.",
-      "cost": "Free, Node.js/npm only; no Python port found -- adds a JS toolchain to a Python-only repo.",
-      "maturity": "Long-standing (btford/write-good); low recent-commit signal in what WebFetch returned."
-    },
-    {
-      "name": "Vale (+ Google/Microsoft/write-good style packs)",
-      "covers": "Confirmed acronym-first-use rule, wordiness/jargon substitution, a ported write-good passive-voice style, native markdown/HTML scope-aware parsing.",
-      "gap": "No built-in nominalization/hidden-verb rule found; no unbacked-number rule; style packs need vendoring into the repo for offline CI, not fetched by default.",
-      "cost": "Free, MIT, Go binary; winget/scoop/zip install, no WSL; `vale sync` needs network unless styles vendored.",
-      "maturity": "Actively maintained (vale-cli org); widely used by doc teams per 2026 sources."
-    }
-  ],
-  "evidence": "Read plain.py:1-631 (full), SKILL.md:1-129. grep 'plain\\.py' -> ship-gate.yml:140-149 (live CI) and tools/audit/mutations/plain.py (mutation spec) -- active caller. Ran `python plain.py selftest`: 'all checks passed'. WebFetch confirmed textstat's PyPI page, proselint's checks/ dir, Vale's acronym-rule doc; write-good/Vale recency is WebSearch-summary only, not commit-pinned.",
-  "recheck": "pip install proselint; vale sync (or vendor Google+write-good styles) then diff output against `python dot-claude/skills/explain-simply/plain.py check --json SKILL.md`; re-run plain.py selftest.",
-  "our_loc": 630,
-  "migration_loc": "Delete ~380 lines (passive/jargon/acronym/length checks + their selftest); add ~150-200 lines vendored Vale YAML + CI step; keep ~250 lines (extraction, hidden_verb, unbacked_number, CLI).",
-  "what_ours_does": "plain.py (630 lines) strips markdown (frontmatter/code/tables/URLs/headings), then flags sentence>25 words, avg>20 words, passive ratio (>50% gated), hidden-verb/nominalization, jargon substitutions, unexplained acronyms, and a repo-only 'unbacked_number' rule (numeral needs a matching digit in a code block). CLI + selftest wired into ship-gate.yml CI and mutate.py.",
-  "strongest_counterargument": "Vale/write-good require adding a non-Python (Go/Node) toolchain and vendored style packs for offline CI; for a single maintainer, one self-contained, self-tested Python file may be less total cognitive load than composing 2-3 external tools to regain equivalent coverage, even though those tools are individually mature and free.",
-  "rechecked": "2026-11-08",
-  "recheck_result": "Rechecked 2026-11-08: plain.py selftest RC=0; plain.py check --json SKILL.md RC=0 (44 paragraphs, 76 sentences). proselint install and vale sync were not attempted this cycle, so the alternative comparison is unrun and no adoption is justified.",
-  "absorbed": "plain.py selftest and check pass locally; proselint/vale comparison not attempted, so no adoption is justified."
+ "component": "dot-claude/skills/explain-simply",
+ "reviewed": "2026-07-25",
+ "recheck_after": "2027-02-06",
+ "verdict": "split",
+ "verdict_class": "split",
+ "absorption_status": "rejected-with-reason",
+ "why": "6 of 8 check types (passive ratio, sentence/avg-length caps, paragraph length, jargon substitution, unexplained-acronym-first-use) have real, free equivalents (write-good's passive check, Vale's confirmed Acronyms rule, Vale/write-good Wordiness). Two do not: unbacked_number is this repo's own claim-discipline rule (tied to the retracted 24%-64% incident), and hidden-verb/nominalization was not found in proselint, write-good, or Vale's rule sets. Verdict: keep the two novel checks plus CI/mutate.py wiring; the rest duplicates available tooling.",
+ "alternatives": [
+  {
+   "name": "textstat",
+   "covers": "Readability/grade-level formulas: Flesch Reading Ease, Flesch-Kincaid Grade, SMOG, Coleman-Liau, ARI, Dale-Chall, Gunning Fog, Linsear Write, from syllable/word/sentence counts.",
+   "gap": "Computes zero of plain.py's actual checks: no passive-voice ratio, no hidden-verb/nominalization, no jargon substitution, no acronym-first-use, no unbacked-number rule, no markdown-aware code/prose split.",
+   "cost": "Free, MIT, pure Python, pip install textstat; depends on Pyphen (also pure Python, offline-cacheable).",
+   "maturity": "v0.7.13 released 2026-02-18 per PyPI (WebFetch checked); long-running, actively released."
+  },
+  {
+   "name": "proselint",
+   "covers": "Prose style linter: weasel words, cliches, industrial jargon, redundancy, hedging, malapropisms, spelling/typography consistency.",
+   "gap": "No passive-voice check, no nominalization/hidden-verb check, no acronym-first-use check, no unbacked-number rule (its GitHub checks/ directory lists neither module, per WebFetch).",
+   "cost": "Free, BSD license, pure Python, pip install proselint.",
+   "maturity": "Actively maintained on GitHub (amperser/proselint); long-established project."
+  },
+  {
+   "name": "write-good",
+   "covers": "Heuristic checks close to ours: passive voice, weasel words, wordy phrases, adverb overuse, 'there is/are' openers, cliches.",
+   "gap": "No nominalization/hidden-verb suffix scan, no acronym-first-use, no unbacked-number rule, no markdown-aware frontmatter/table/list extraction.",
+   "cost": "Free, Node.js/npm only; no Python port found -- adds a JS toolchain to a Python-only repo.",
+   "maturity": "Long-standing (btford/write-good); low recent-commit signal in what WebFetch returned."
+  },
+  {
+   "name": "Vale (+ Google/Microsoft/write-good style packs)",
+   "covers": "Confirmed acronym-first-use rule, wordiness/jargon substitution, a ported write-good passive-voice style, native markdown/HTML scope-aware parsing.",
+   "gap": "No built-in nominalization/hidden-verb rule found; no unbacked-number rule; style packs need vendoring into the repo for offline CI, not fetched by default.",
+   "cost": "Free, MIT, Go binary; winget/scoop/zip install, no WSL; `vale sync` needs network unless styles vendored.",
+   "maturity": "Actively maintained (vale-cli org); widely used by doc teams per 2026 sources."
+  }
+ ],
+ "evidence": "Read plain.py:1-631 (full), SKILL.md:1-129. grep 'plain\\.py' -> ship-gate.yml:140-149 (live CI) and tools/audit/mutations/plain.py (mutation spec) -- active caller. Ran `python plain.py selftest`: 'all checks passed'. WebFetch confirmed textstat's PyPI page, proselint's checks/ dir, Vale's acronym-rule doc; write-good/Vale recency is WebSearch-summary only, not commit-pinned.",
+ "recheck": "pip install proselint; vale sync (or vendor Google+write-good styles) then diff output against `python dot-claude/skills/explain-simply/plain.py check --json SKILL.md`; re-run plain.py selftest.",
+ "our_loc": 630,
+ "migration_loc": "Delete ~380 lines (passive/jargon/acronym/length checks + their selftest); add ~150-200 lines vendored Vale YAML + CI step; keep ~250 lines (extraction, hidden_verb, unbacked_number, CLI).",
+ "what_ours_does": "plain.py (630 lines) strips markdown (frontmatter/code/tables/URLs/headings), then flags sentence>25 words, avg>20 words, passive ratio (>50% gated), hidden-verb/nominalization, jargon substitutions, unexplained acronyms, and a repo-only 'unbacked_number' rule (numeral needs a matching digit in a code block). CLI + selftest wired into ship-gate.yml CI and mutate.py.",
+ "strongest_counterargument": "Vale/write-good require adding a non-Python (Go/Node) toolchain and vendored style packs for offline CI; for a single maintainer, one self-contained, self-tested Python file may be less total cognitive load than composing 2-3 external tools to regain equivalent coverage, even though those tools are individually mature and free.",
+ "rechecked": "2026-11-08",
+ "recheck_result": "Rechecked 2026-11-08: proselint was installed (pip into /tmp/venv-proselint, exit 0) and run as `proselint check SKILL.md` (this version takes subcommands; the bare `proselint <file>` form errors) \u2014 exit 1 with 3 findings: SKILL.md:48:41 misc.greylist 'utilize', :79:49 typography.diacritical_marks 'r\u00e9sum\u00e9', :83:22 typography.symbols.curly_quotes straight quotes; no passive/jargon/acronym findings from proselint. `python dot-claude/skills/explain-simply/plain.py selftest` exits 0 ('all checks passed', 40 checks). `plain.py check --json SKILL.md` exits 0: 4 passive_sentence findings only (lines 52 'are listed', 70 'is broken', 113 'are removed', 118 'is unfalsified'); stats paragraphs 44, sentences 76, active_ratio 0.95, avg_words 9.4 \u2014 the 44/76 counts match the prior cycle exactly. vale was absent (`which vale` exit 1); ONE quick install route succeeded \u2014 vale 3.9.0 Linux 64-bit tarball from github.com/errata-ai/vale releases (HTTP 200, 11039636 bytes), extracted to /tmp/vale; `vale sync` with Packages = Google, write-good exits 0 ('Synced 2 package(s)'); `vale --output=line SKILL.md` exits 1 with 52 findings. Diff: Vale flags the same 4 passive spans plain.py found (each twice, Google.Passive + write-good.Passive) PLUS a 5th passive 'be pulled' (line 80) that plain.py did not report, plus 1 Google.Acronyms hit ('SKIP', line 32) and many E-Prime/Weasel/Contractions items plain.py does not check. Line numbers differ between the tools because plain.py strips frontmatter/headings/code before measuring ('are listed' is plain.py line 52 vs vale line 61). No unbacked-number or hidden-verb/nominalization equivalent fired in the Vale run.",
+ "absorbed": "proselint installed and run: 3 findings (utilize, r\u00e9sum\u00e9, curly quotes), exit 1. plain.py selftest passes (exit 0); check --json SKILL.md exit 0: 4 passive findings, 44 paragraphs, 76 sentences. vale 3.9.0 installed via one quick download, sync exit 0 (Google + write-good), run exit 1 with 52 findings \u2014 it covers all 4 plain.py passives plus a 5th ('be pulled') and an Acronyms hit; no unbacked-number or nominalization equivalent fired."
+
 }

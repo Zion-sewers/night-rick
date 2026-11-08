@@ -1,77 +1,78 @@
 {
-  "component": "tools/review",
-  "reviewed": "2026-07-26",
-  "recheck_after": "2027-02-06",
-  "verdict": "split",
-  "verdict_class": "split",
-  "absorption_status": "rejected-with-reason",
-  "why": "gate.py's review domain must reach a verdict for an arbitrary target project on a Windows/PowerShell machine with no paid services, without assuming the target has ANY tooling installed \u2014 that requirement genuinely justifies keeping a zero-config regex fallback for house-specific policy checks no security registry publishes (mobile CSS width, alt text, test.only/skip, SQL migrations with no WHERE). But the security persona's per-language vulnerability patterns (shell injection, SQL concat, dangerouslySetInnerHTML, eval, TLS-off, JWT-none, CORS wildcard) duplicate problems that an already-installed, zero-cost tool (ruff, with its S/T20/ERA rulesets sitting unused in this repo's own documented standard) and a free, LGPL, now-Windows-native AST registry (Opengrep) solve more broadly and structurally avoid the \"matched its own pattern definition\" bug class that regex-on-text cannot avoid by construction.",
-  "alternatives": [
-    {
-      "name": "ruff's S/T20/ERA rulesets (ruff 0.14.7, already installed on this machine and already a declared dependency of intent-control-plane/pyproject.toml:16-21)",
-      "covers": "Python-only AST equivalents of py-shell-true, eval-added, tls-off(py), and \u2014 directly \u2014 debug-left/py-print-debug (T20) and commented-code (ERA); this repo's own work-docs/code-quality-standard-2026-07.md:856-875 already recommends S/T20/ERA/D/ANN as house standard, but intent-control-plane/pyproject.toml's actual select list omits S/T20/D/ANN entirely.",
-      "gap": "Python only. No JS/TS/SQL/CSS/HTML coverage; does not touch panel.py's ux_frontend or data personas at all, and does nothing for gate.py's secret_scan.",
-      "cost": "Zero new dependency and zero new install footprint \u2014 a one-line edit to an existing config file already tracked in git. The closest thing to a free lunch this audit found.",
-      "maturity": "Astral-maintained, 0.14.7 confirmed installed via `pip show ruff` this session; industry-standard release cadence."
-    },
-    {
-      "name": "Opengrep (LGPL-2.1 fork of the Semgrep engine, backed by a 10+ company AppSec consortium)",
-      "covers": "AST-based rules across JS/TS/Python/Java/Go/Ruby/PHP/C# etc. for shell-interpolation, dangerous-html, eval, tls-off, cors-wildcard, jwt-none-alg \u2014 most of panel.py's security persona, in more languages than panel.py covers today; backward-compatible with Semgrep's rule format and reported to run natively on Windows since the engine's mid-2025 native-Windows work (per press coverage, not independently re-verified on this machine).",
-      "gap": "No SQL-migration-safety, mobile-CSS/HTML-UX, or ops-release-hygiene registry rules \u2014 those personas would still need hand-authored rules or would stay as-is. Newer fork (~early 2025); its own rule-corpus maturity/adoption size is smaller and less independently verified than upstream Semgrep's.",
-      "cost": "Free, no rules-license ambiguity (unlike Semgrep CE's Dec-2024 restrictive \"Semgrep Rules License\" on its maintained ruleset, engine itself stays LGPL-2.1 either way). A new external binary this repo does not currently depend on, needing version pinning and an availability check with graceful fallback.",
-      "maturity": "Forked ~Jan-Mar 2025 per press (The New Stack, InfoQ JP); described as actively maintained with a dedicated OCaml team; exact adoption numbers unknown, not independently checked."
-    },
-    {
-      "name": "Semgrep CE + OSS registry",
-      "covers": "Same class of AST security rules as Opengrep, vendor-stated 3,000+ community registry rules, 30+ languages, free CLI usable offline without login per vendor docs.",
-      "gap": "Same persona gaps as Opengrep (no SQL/CSS/HTML/ops-hygiene house policy). Its maintained ruleset carries a Dec-2024 \"Semgrep Rules License\" restricting commercial use \u2014 a licensing question a personal, non-commercial repo likely clears but that Opengrep avoids entirely by design.",
-      "cost": "Free CLI, no current dependency in this repo; new binary/pip package to install and pin.",
-      "maturity": "Vendor-stated rule counts and quarterly release notes (Summer/Fall 2025) found this session; not independently audited for exact current numbers."
-    },
-    {
-      "name": "ast-grep (Rust CLI, tree-sitter based)",
-      "covers": "Confirmed native CSS and HTML support (ast-grep.github.io/astgrep.com) \u2014 exactly the two languages panel.py's ux_frontend mobile checks (outline-none, px-width-large, fixed-px-font, img-no-alt) target; approachable YAML rule DSL for a single maintainer; Windows install via scoop/cargo/pip/npm.",
-      "gap": "Confirmed no SQL support and no PowerShell support \u2014 panel.py's data persona and anything ps1-specific stay unaddressed. No maintained security-vulnerability registry like Semgrep/Opengrep's, so every one of our 23 checks would need to be hand-authored from scratch in ast-grep's own pattern DSL \u2014 a real rewrite, not a drop-in.",
-      "cost": "Free, single static binary, no server/login; a new external binary and a new rule-authoring skill to learn and keep current versus editing a Python regex string today.",
-      "maturity": "Documented and packaged across conda-forge/Homebrew/scoop/cargo/npm/PyPI, suggesting active maintenance; exact star/contributor/release-cadence figures not independently checked this session."
-    },
-    {
-      "name": "Bandit (PyCQA)",
-      "covers": "Python-only AST security checks overlapping py-shell-true, eval/exec use, hardcoded-password patterns, weak hashing.",
-      "gap": "Python only; none of JS/TS/SQL/CSS/HTML/ops-release/ux coverage.",
-      "cost": "Pure-Python pip package, Apache-2.0, no other runtime \u2014 the most house-compatible dependency shape of any alternative examined, but ruff's S ruleset already gives equivalent coverage for zero additional install since ruff is already present.",
-      "maturity": "1.9.4 released Feb 2026 per PyPI metadata fetched this session, with 1.9.2/1.9.3 in the prior three months \u2014 actively maintained by that cadence."
-    },
-    {
-      "name": "detect-secrets (Yelp)",
-      "covers": "Regex plus optional entropy-based secret detection; a baseline-file workflow conceptually similar to our PUBLIC_TEST_VECTORS allowlist.",
-      "gap": "Entropy plugins are opt-in and, once enabled, are known to be noisy on ordinary base64/hex/UUID content \u2014 a different false-positive class, not obviously smaller than ours. Does not solve the SECRET_NAME-vs-SECRET name-heuristic problem (gate.py:283-294) any better than we do; whether its baseline format enforces a mandatory reason per allowlisted entry the way our contract does was not confirmed this session.",
-      "cost": "pip install detect-secrets, pure-Python plus pyyaml/requests, installs cleanly on Windows per docs retrieved; would replace ~150 lines of our regex+allowlist logic but we'd still need a thin wrapper to enforce our own mandatory-`why` governance rule.",
-      "maturity": "Yelp-maintained, cited as a leading 2026 OSS option in industry roundups found this session; exact release cadence/star count not independently checked."
-    },
-    {
-      "name": "gitleaks",
-      "covers": "Default plus custom TOML rules for the same value-shaped patterns our SECRET_PATTERNS hand-rolls (AWS keys, GitHub/Slack/Google tokens, PEM blocks); a `--redact` flag that, once always passed, matches our \"never print what it finds\" invariant.",
-      "gap": "`--redact` is opt-in, not default \u2014 forgetting the flag silently breaks the invariant, a fragility at least comparable to our current single withholding code path. Its allowlist has no equivalent to our mandatory-`why`-or-refused rule (gate.py:330-353); that governance layer would have to be reimplemented regardless of engine.",
-      "cost": "Free (MIT), single static Go binary \u2014 no Python dependency chain, the lightest-footprint alternative examined \u2014 but a new external binary this Python-only tool would now shell out to and keep version-pinned.",
-      "maturity": "Cited as an industry-standard secret scanner across every 2026 comparison source found this session; official Windows binaries published on GitHub releases per search results."
-    },
-    {
-      "name": "TruffleHog",
-      "covers": "Same class of value-shaped detectors as gitleaks, plus live credential verification against the actual provider API.",
-      "gap": "The verification step's entire value proposition requires live network calls to third-party providers with the found credential \u2014 directly against this repo's \"no paid services / must run offline\" constraint and its policy against sending repo content to external services without approval. Running with verification disabled removes its main advantage over gitleaks for this house.",
-      "cost": "Free CLI, Go binary, confirmed Windows 7-11 support with binary/Chocolatey install paths found this session; license not independently re-verified this session (do not assert a specific license without checking).",
-      "maturity": "Actively maintained per trufflesecurity; versions 3.83.0/3.95.6 seen on Chocolatey listings this session."
-    }
-  ],
-  "evidence": "DERIVED, not a separate evidence pass: that workflow's schema asked for no evidence field, so what follows is the citations the record makes about itself. The record cites panel.py:104-176 for added_lines, the 5-persona by ~23-check regex set, state/reviews/<sha>.json as the artifact, and work-docs/code-quality-standard-2026-07.md:856-875 for the house ruff standard that intent-control-plane/pyproject.toml does not actually select. It reports `python tools/review/panel.py selftest` producing zero false positives on the EXEMPT and SELF_REFERENTIAL paths. Its recheck step is executable as written. ruff 0.14.7 is stated as already installed rather than newly measured here.",
-  "recheck": "Run `ruff check --select S,T20,ERA .` against intent-control-plane and any other Python subproject to see whether S/T20/ERA have since been turned on (they are documented house standard in work-docs/code-quality-standard-2026-07.md:856-875 but absent from intent-control-plane/pyproject.toml's actual select list as of this audit); check `opengrep --version` or `pip show semgrep opengrep ast-grep-cli` to see if any AST tool has since been adopted; and re-run `python tools/review/panel.py selftest` on a fresh clone to confirm EXEMPT/SELF_REFERENTIAL still produce zero false positives \u2014 a new false-positive instance outside the already-patched paths would materially strengthen the case for the AST migration this audit declined to recommend outright.",
-  "our_loc": 831,
-  "migration_loc": -40,
-  "what_ours_does": "panel.py runs 5 personas x ~23 regex checks total over only the diff's ADDED lines (added_lines(), panel.py:104-176), writes state/reviews/<sha>.json naming a verdict/reviewer/coverage-boundary (panel.py:569-599). gate.py's review domain (gate.py:614-643) treats that artifact as satisfying \"an independent reviewer looked\" whenever it names a non-self reviewer and a pass verdict \u2014 gate.py never reads individual findings, only commit/reviewer/verdict/summary, so panel.py's actual pattern bank is unaccountable to the gate itself; its value is entirely in being a reviewer that exists when nothing else does (codex not installed, Gemini barred by contract, per panel.py:8-13). Separately, gate.py's secret_scan (gate.py:356-421) greps every git-tracked file for 9 value-shaped credential patterns plus one name-shaped \"assigned secret\" rule, withholds matched text unconditionally, and refuses (not just ignores) any contract-declared allowlist entry with no stated `why` (gate.py:330-353, 344-352).",
-  "strongest_counterargument": "The three concrete false positives this audit was asked to judge \u2014 the scanner tripping on its own pattern definitions, on a markdown example, and on a vault-entry name \u2014 were already fixed today, 2026-07-25, with ~20 lines of path-exemption regex (EXEMPT/SELF_REFERENTIAL, panel.py:364-385) and a named, accepted blind-spot comment (gate.py:283-294), not a rewrite. Introducing Opengrep/ast-grep trades a known, cheaply-patched, single-file-editable liability for a new external-binary dependency (version pinning, availability checks, a second toolchain to keep working across Windows/PowerShell/Git Bash on a machine whose whole premise is \"works with nothing installed\") to close a bug class that a 20-line patch already closed for every instance actually measured. If no new instance of that class turns up before the next audit, the larger migration would have bought nothing the existing patch didn't already buy \u2014 and the vault-entry-name false positive specifically is a name-vs-value heuristic problem that no AST tool fixes either, since it is gate.py's variable-name rule, not panel.py's regex-on-text, that produced it.",
-  "_scope": "Scoped to tools/review. The reviewed payload also covered the secret-scanning slice of tools/gate (SECRET_PATTERNS, PUBLIC_TEST_VECTORS, _vector_allowlist, secret_scan at gate.py:270-421, about 210 lines). That slice belongs to the tools/gate record and its verdict is not restated here. our_loc below is panel.py alone (831), not the 1040 the combined payload reported.",
-  "rechecked": "2026-11-08",
-  "recheck_result": "Rechecked 2026-11-08: ruff is NOT installed on this VM (no binary, no module), so ruff check --select S,T20,ERA could not run; the venv install was not attempted this cycle. pyproject select list now includes ERA (the record said S/T20/ERA absent) but NOT S/T20. semgrep, opengrep and ast-grep-cli are none installed. panel.py selftest passes ('every planted defect is caught and a clean change passes clean').",
-  "absorbed": "ruff is not installed here so the S/T20/ERA check could not run; pyproject now includes ERA but not S/T20; semgrep/opengrep/ast-grep-cli are not installed; panel.py selftest passes."
+ "component": "tools/review",
+ "reviewed": "2026-07-26",
+ "recheck_after": "2027-02-06",
+ "verdict": "split",
+ "verdict_class": "split",
+ "absorption_status": "rejected-with-reason",
+ "why": "gate.py's review domain must reach a verdict for an arbitrary target project on a Windows/PowerShell machine with no paid services, without assuming the target has ANY tooling installed — that requirement genuinely justifies keeping a zero-config regex fallback for house-specific policy checks no security registry publishes (mobile CSS width, alt text, test.only/skip, SQL migrations with no WHERE). But the security persona's per-language vulnerability patterns (shell injection, SQL concat, dangerouslySetInnerHTML, eval, TLS-off, JWT-none, CORS wildcard) duplicate problems that an already-installed, zero-cost tool (ruff, with its S/T20/ERA rulesets sitting unused in this repo's own documented standard) and a free, LGPL, now-Windows-native AST registry (Opengrep) solve more broadly and structurally avoid the \"matched its own pattern definition\" bug class that regex-on-text cannot avoid by construction.",
+ "alternatives": [
+  {
+   "name": "ruff's S/T20/ERA rulesets (ruff 0.14.7, already installed on this machine and already a declared dependency of intent-control-plane/pyproject.toml:16-21)",
+   "covers": "Python-only AST equivalents of py-shell-true, eval-added, tls-off(py), and — directly — debug-left/py-print-debug (T20) and commented-code (ERA); this repo's own work-docs/code-quality-standard-2026-07.md:856-875 already recommends S/T20/ERA/D/ANN as house standard, but intent-control-plane/pyproject.toml's actual select list omits S/T20/D/ANN entirely.",
+   "gap": "Python only. No JS/TS/SQL/CSS/HTML coverage; does not touch panel.py's ux_frontend or data personas at all, and does nothing for gate.py's secret_scan.",
+   "cost": "Zero new dependency and zero new install footprint — a one-line edit to an existing config file already tracked in git. The closest thing to a free lunch this audit found.",
+   "maturity": "Astral-maintained, 0.14.7 confirmed installed via `pip show ruff` this session; industry-standard release cadence."
+  },
+  {
+   "name": "Opengrep (LGPL-2.1 fork of the Semgrep engine, backed by a 10+ company AppSec consortium)",
+   "covers": "AST-based rules across JS/TS/Python/Java/Go/Ruby/PHP/C# etc. for shell-interpolation, dangerous-html, eval, tls-off, cors-wildcard, jwt-none-alg — most of panel.py's security persona, in more languages than panel.py covers today; backward-compatible with Semgrep's rule format and reported to run natively on Windows since the engine's mid-2025 native-Windows work (per press coverage, not independently re-verified on this machine).",
+   "gap": "No SQL-migration-safety, mobile-CSS/HTML-UX, or ops-release-hygiene registry rules — those personas would still need hand-authored rules or would stay as-is. Newer fork (~early 2025); its own rule-corpus maturity/adoption size is smaller and less independently verified than upstream Semgrep's.",
+   "cost": "Free, no rules-license ambiguity (unlike Semgrep CE's Dec-2024 restrictive \"Semgrep Rules License\" on its maintained ruleset, engine itself stays LGPL-2.1 either way). A new external binary this repo does not currently depend on, needing version pinning and an availability check with graceful fallback.",
+   "maturity": "Forked ~Jan-Mar 2025 per press (The New Stack, InfoQ JP); described as actively maintained with a dedicated OCaml team; exact adoption numbers unknown, not independently checked."
+  },
+  {
+   "name": "Semgrep CE + OSS registry",
+   "covers": "Same class of AST security rules as Opengrep, vendor-stated 3,000+ community registry rules, 30+ languages, free CLI usable offline without login per vendor docs.",
+   "gap": "Same persona gaps as Opengrep (no SQL/CSS/HTML/ops-hygiene house policy). Its maintained ruleset carries a Dec-2024 \"Semgrep Rules License\" restricting commercial use — a licensing question a personal, non-commercial repo likely clears but that Opengrep avoids entirely by design.",
+   "cost": "Free CLI, no current dependency in this repo; new binary/pip package to install and pin.",
+   "maturity": "Vendor-stated rule counts and quarterly release notes (Summer/Fall 2025) found this session; not independently audited for exact current numbers."
+  },
+  {
+   "name": "ast-grep (Rust CLI, tree-sitter based)",
+   "covers": "Confirmed native CSS and HTML support (ast-grep.github.io/astgrep.com) — exactly the two languages panel.py's ux_frontend mobile checks (outline-none, px-width-large, fixed-px-font, img-no-alt) target; approachable YAML rule DSL for a single maintainer; Windows install via scoop/cargo/pip/npm.",
+   "gap": "Confirmed no SQL support and no PowerShell support — panel.py's data persona and anything ps1-specific stay unaddressed. No maintained security-vulnerability registry like Semgrep/Opengrep's, so every one of our 23 checks would need to be hand-authored from scratch in ast-grep's own pattern DSL — a real rewrite, not a drop-in.",
+   "cost": "Free, single static binary, no server/login; a new external binary and a new rule-authoring skill to learn and keep current versus editing a Python regex string today.",
+   "maturity": "Documented and packaged across conda-forge/Homebrew/scoop/cargo/npm/PyPI, suggesting active maintenance; exact star/contributor/release-cadence figures not independently checked this session."
+  },
+  {
+   "name": "Bandit (PyCQA)",
+   "covers": "Python-only AST security checks overlapping py-shell-true, eval/exec use, hardcoded-password patterns, weak hashing.",
+   "gap": "Python only; none of JS/TS/SQL/CSS/HTML/ops-release/ux coverage.",
+   "cost": "Pure-Python pip package, Apache-2.0, no other runtime — the most house-compatible dependency shape of any alternative examined, but ruff's S ruleset already gives equivalent coverage for zero additional install since ruff is already present.",
+   "maturity": "1.9.4 released Feb 2026 per PyPI metadata fetched this session, with 1.9.2/1.9.3 in the prior three months — actively maintained by that cadence."
+  },
+  {
+   "name": "detect-secrets (Yelp)",
+   "covers": "Regex plus optional entropy-based secret detection; a baseline-file workflow conceptually similar to our PUBLIC_TEST_VECTORS allowlist.",
+   "gap": "Entropy plugins are opt-in and, once enabled, are known to be noisy on ordinary base64/hex/UUID content — a different false-positive class, not obviously smaller than ours. Does not solve the SECRET_NAME-vs-SECRET name-heuristic problem (gate.py:283-294) any better than we do; whether its baseline format enforces a mandatory reason per allowlisted entry the way our contract does was not confirmed this session.",
+   "cost": "pip install detect-secrets, pure-Python plus pyyaml/requests, installs cleanly on Windows per docs retrieved; would replace ~150 lines of our regex+allowlist logic but we'd still need a thin wrapper to enforce our own mandatory-`why` governance rule.",
+   "maturity": "Yelp-maintained, cited as a leading 2026 OSS option in industry roundups found this session; exact release cadence/star count not independently checked."
+  },
+  {
+   "name": "gitleaks",
+   "covers": "Default plus custom TOML rules for the same value-shaped patterns our SECRET_PATTERNS hand-rolls (AWS keys, GitHub/Slack/Google tokens, PEM blocks); a `--redact` flag that, once always passed, matches our \"never print what it finds\" invariant.",
+   "gap": "`--redact` is opt-in, not default — forgetting the flag silently breaks the invariant, a fragility at least comparable to our current single withholding code path. Its allowlist has no equivalent to our mandatory-`why`-or-refused rule (gate.py:330-353); that governance layer would have to be reimplemented regardless of engine.",
+   "cost": "Free (MIT), single static Go binary — no Python dependency chain, the lightest-footprint alternative examined — but a new external binary this Python-only tool would now shell out to and keep version-pinned.",
+   "maturity": "Cited as an industry-standard secret scanner across every 2026 comparison source found this session; official Windows binaries published on GitHub releases per search results."
+  },
+  {
+   "name": "TruffleHog",
+   "covers": "Same class of value-shaped detectors as gitleaks, plus live credential verification against the actual provider API.",
+   "gap": "The verification step's entire value proposition requires live network calls to third-party providers with the found credential — directly against this repo's \"no paid services / must run offline\" constraint and its policy against sending repo content to external services without approval. Running with verification disabled removes its main advantage over gitleaks for this house.",
+   "cost": "Free CLI, Go binary, confirmed Windows 7-11 support with binary/Chocolatey install paths found this session; license not independently re-verified this session (do not assert a specific license without checking).",
+   "maturity": "Actively maintained per trufflesecurity; versions 3.83.0/3.95.6 seen on Chocolatey listings this session."
+  }
+ ],
+ "evidence": "DERIVED, not a separate evidence pass: that workflow's schema asked for no evidence field, so what follows is the citations the record makes about itself. The record cites panel.py:104-176 for added_lines, the 5-persona by ~23-check regex set, state/reviews/<sha>.json as the artifact, and work-docs/code-quality-standard-2026-07.md:856-875 for the house ruff standard that intent-control-plane/pyproject.toml does not actually select. It reports `python tools/review/panel.py selftest` producing zero false positives on the EXEMPT and SELF_REFERENTIAL paths. Its recheck step is executable as written. ruff 0.14.7 is stated as already installed rather than newly measured here.",
+ "recheck": "Run `ruff check --select S,T20,ERA .` against intent-control-plane and any other Python subproject to see whether S/T20/ERA have since been turned on (they are documented house standard in work-docs/code-quality-standard-2026-07.md:856-875 but absent from intent-control-plane/pyproject.toml's actual select list as of this audit); check `opengrep --version` or `pip show semgrep opengrep ast-grep-cli` to see if any AST tool has since been adopted; and re-run `python tools/review/panel.py selftest` on a fresh clone to confirm EXEMPT/SELF_REFERENTIAL still produce zero false positives — a new false-positive instance outside the already-patched paths would materially strengthen the case for the AST migration this audit declined to recommend outright.",
+ "our_loc": 831,
+ "migration_loc": -40,
+ "what_ours_does": "panel.py runs 5 personas x ~23 regex checks total over only the diff's ADDED lines (added_lines(), panel.py:104-176), writes state/reviews/<sha>.json naming a verdict/reviewer/coverage-boundary (panel.py:569-599). gate.py's review domain (gate.py:614-643) treats that artifact as satisfying \"an independent reviewer looked\" whenever it names a non-self reviewer and a pass verdict — gate.py never reads individual findings, only commit/reviewer/verdict/summary, so panel.py's actual pattern bank is unaccountable to the gate itself; its value is entirely in being a reviewer that exists when nothing else does (codex not installed, Gemini barred by contract, per panel.py:8-13). Separately, gate.py's secret_scan (gate.py:356-421) greps every git-tracked file for 9 value-shaped credential patterns plus one name-shaped \"assigned secret\" rule, withholds matched text unconditionally, and refuses (not just ignores) any contract-declared allowlist entry with no stated `why` (gate.py:330-353, 344-352).",
+ "strongest_counterargument": "The three concrete false positives this audit was asked to judge — the scanner tripping on its own pattern definitions, on a markdown example, and on a vault-entry name — were already fixed today, 2026-07-25, with ~20 lines of path-exemption regex (EXEMPT/SELF_REFERENTIAL, panel.py:364-385) and a named, accepted blind-spot comment (gate.py:283-294), not a rewrite. Introducing Opengrep/ast-grep trades a known, cheaply-patched, single-file-editable liability for a new external-binary dependency (version pinning, availability checks, a second toolchain to keep working across Windows/PowerShell/Git Bash on a machine whose whole premise is \"works with nothing installed\") to close a bug class that a 20-line patch already closed for every instance actually measured. If no new instance of that class turns up before the next audit, the larger migration would have bought nothing the existing patch didn't already buy — and the vault-entry-name false positive specifically is a name-vs-value heuristic problem that no AST tool fixes either, since it is gate.py's variable-name rule, not panel.py's regex-on-text, that produced it.",
+ "_scope": "Scoped to tools/review. The reviewed payload also covered the secret-scanning slice of tools/gate (SECRET_PATTERNS, PUBLIC_TEST_VECTORS, _vector_allowlist, secret_scan at gate.py:270-421, about 210 lines). That slice belongs to the tools/gate record and its verdict is not restated here. our_loc below is panel.py alone (831), not the 1040 the combined payload reported.",
+ "rechecked": "2026-11-08",
+ "recheck_result": "Rechecked 2026-11-08: ruff is NOT installed on this VM (no binary, no module), so ruff check --select S,T20,ERA could not run; the venv install was not attempted this cycle. pyproject select list now includes ERA (the record said S/T20/ERA absent) but NOT S/T20. semgrep, opengrep and ast-grep-cli are none installed. panel.py selftest passes ('every planted defect is caught and a clean change passes clean'). Fix-forward evidence, correcting the first sentence: ruff is now installed (0.17.4, in /tmp/venv-ruff, created this cycle) and `ruff check --select S,T20,ERA .` RAN with exit 1 and 10584 errors (S101 5123, T201 5039, S603 152, S607 80, S310 52, S110 43, S608 26, S311 18, S108 13, ERA001 8, S602 8, S324 7, S112 7, S105 5, S104 2, S314 1; 5038 unsafe fixes available). Against intent-control-plane alone it is 843 errors (S101 777, T201 36, S311 17, S607 5, S603 5, S110 2, S608 1). intent-control-plane/pyproject.toml line 46 still selects ERA but NOT S/T20, confirmed, so S/T20/ERA are still not turned on as a set. semgrep, opengrep and ast-grep-cli are still none installed (`which` exit 1; pip show 'Package(s) not found'). `python tools/review/panel.py selftest` re-run, exit 0, verdict 'every planted defect is caught and a clean change passes clean', with EXEMPT/SELF_REFERENTIAL still producing zero false positives.",
+ "absorbed": "ruff is not installed here so the S/T20/ERA check could not run; pyproject now includes ERA but not S/T20; semgrep/opengrep/ast-grep-cli are not installed; panel.py selftest passes. Fix-forward 2026-11-08, correcting the first clause: ruff is now installed (0.17.4, in /tmp/venv-ruff, created this cycle) and the check RAN: `ruff check --select S,T20,ERA .` exit 1 with 10584 errors (S101 5123, T201 5039, S603 152, S607 80, S310 52, S110 43, S608 26, S311 18, S108 13, ERA001 8, S602 8, S324 7, S112 7, S105 5, S104 2, S314 1); intent-control-plane alone contributes 843 errors (S101 777, T201 36, S311 17, S607 5, S603 5, S110 2, S608 1). intent-control-plane/pyproject.toml line 46 select list still includes ERA but NOT S/T20, confirmed. semgrep, opengrep and ast-grep-cli are still none installed (which exit 1; pip show: package(s) not found). `python tools/review/panel.py selftest` exit 0, verdict 'every planted defect is caught and a clean change passes clean'."
+
 }

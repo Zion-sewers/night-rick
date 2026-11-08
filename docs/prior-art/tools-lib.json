@@ -1,62 +1,63 @@
 {
-  "component": "tools/lib",
-  "reviewed": "2026-07-25",
-  "recheck_after": "2027-02-06",
-  "verdict": "keep-ours",
-  "verdict_class": "keep-ours",
-  "absorption_status": "rejected-with-reason",
-  "why": "Both fix a failure; no alternative removes it without a rewrite. envload (9-21): a case-sensitivity false-absence bug; a dotenv parser may be better-tested than this ~20-line parser but lacks case-insensitive matching and the redacted CLI, so most of 196 lines stay -- under the house \"hundreds of lines\" bar. A typed-settings package wants a schema, wrong shape. quota (2-19): needs an exact UTC-midnight reset plus a durable JSONL trail. The limiter has no file store; decorator/retry packages don't persist or track quotas; closest is rolling-window -- different semantics, plus a file-lock dep.",
-  "alternatives": [
-    {
-      "name": "python-dotenv",
-      "covers": "Parsing of KEY=VALUE .env lines (quotes, comments, export prefix) -- the ~20-line _LINE/_unquote pair in envload.py, lines 47-68.",
-      "gap": "dotenv_values is case-sensitive by default per its own docs; no multi-file, cross-repo, case-insensitive candidate-name search, or fingerprint-only CLI.",
-      "cost": "~30-40 lines removed, 1 dependency added; ~155 lines of candidate/case/CLI logic stay as-is.",
-      "maturity": "Long-standing, widely used; PyPI page checked this session, not installed here."
-    },
-    {
-      "name": "pydantic-settings",
-      "covers": "Typed settings loaded from env vars plus a declared list of .env file paths, env vars overriding file values.",
-      "gap": "Wants a fixed schema of named fields, not \"try 5 misspelled names across 2 repos, report only if found\"; same manual glue needed either way per its own docs.",
-      "cost": "Would replace nearly the whole module's shape, not just parsing; not a line-count win.",
-      "maturity": "Actively maintained (Pydantic project); docs checked this session, not installed here."
-    },
-    {
-      "name": "limits (alisaifee/limits)",
-      "covers": "Rate-limiting strategies (fixed/moving window) with a documented hit/test/get_window_stats API.",
-      "gap": "Its own docs list only Redis, Memcached, MongoDB as storage backends -- no file-based store, so persistence for solo CLI runs still needs a hand-written Storage backend.",
-      "cost": "Would not shrink quota.py meaningfully; adds a dependency for the algorithm only.",
-      "maturity": "Actively maintained per GitHub; docs checked this session, not installed here."
-    },
-    {
-      "name": "ratelimit",
-      "covers": "In-process decorator that throttles calls to a Python function within one run.",
-      "gap": "No persistence across separate CLI invocations at all -- cannot enforce a daily ceiling across independent process runs, quota.py's core job.",
-      "cost": "Not usable as a replacement without adding the same file-backed state quota.py already has.",
-      "maturity": "Small, stable, narrow-scope package."
-    },
-    {
-      "name": "tenacity",
-      "covers": "Retry/backoff policies (exponential wait, retry-on-exception) for a single call site.",
-      "gap": "Not a quota tracker at all -- no daily-ceiling concept, no persistence; solves retrying-after-failure, not refusing-before-the-ceiling.",
-      "cost": "Could complement quota.py for 429 backoff, but replaces none of its 121 lines.",
-      "maturity": "Very mature, widely used for retry logic specifically."
-    },
-    {
-      "name": "pyrate-limiter",
-      "covers": "A leaky-bucket/rolling-window limiter with an optional SQLite-backed bucket for cross-process persistence, per its own docs.",
-      "gap": "Documented as leaky-bucket: Duration.DAY is a rolling window, not a fixed UTC-midnight reset -- the semantic quota.py's docstring says matters; multi-process safety needs an added file-lock dependency.",
-      "cost": "~60-80 lines removed (lines 49-84) + 2 dependencies, but calendar-day and JSONL-audit properties need rebuilding on top.",
-      "maturity": "Actively maintained per PyPI/readthedocs checked this session; not installed or run here."
-    }
-  ],
-  "evidence": "Read both files in full. Both wired, not orphaned: grep -n for each name in tools/dolt/client.py and tools/openrouter/client.py shows live imports/call sites before every request. No dedicated tests exist for either module; the one hit in tests/test_codemap.py only stubs the path for an unrelated test. Alternatives per WebSearch this session (their docs/PyPI pages), not installed or run here.",
-  "recheck": "Check current release pages for the four rate-limit and two settings packages named below; read the persistent-bucket package's day-duration code directly, not its docs, to confirm rolling vs calendar-day reset.",
-  "our_loc": 317,
-  "migration_loc": "envload: dotenv wrap cuts ~30-40 parsing lines (47-68) +1 dep, keeps ~155 candidate/case lines. quota: persistent-bucket lib cuts ~60-80 lines (49-84) +2 deps, drops JSONL trail/reset unless rebuilt.",
-  "what_ours_does": "envload.py (196 ln): case-insensitive secret lookup across ordered candidate .env paths in a sibling repo, with misspelling fallbacks, and a presence/length/fingerprint-only CLI that never prints values. quota.py (121 ln): append-only JSONL usage ledger + DailyQuota (remaining/guard/pace/record) enforcing a UTC-day request ceiling, used by openrouter/client.py and dolt/client.py before every call.",
-  "strongest_counterargument": "Working code is a weak guarantee: envload's parser (61-68) has no test and could mis-split a credential on an edge case an off-the-shelf parser has absorbed already. quota's 429-doesn't-count assumption (69-72) is itself unverified; one third-party, non-provider source found this session says failed attempts do count, which would mean quota overcounts remaining() regardless of library.",
-  "rechecked": "2026-11-08",
-  "recheck_result": "Rechecked 2026-11-08: the alternatives are python-dotenv, pydantic-settings, limits, ratelimit, tenacity, pyrate-limiter. The release-page checks and the direct read of the persistent-bucket package's day-duration code were not run this cycle, so no adoption is justified.",
-  "absorbed": "Release-page checks and the persistent-bucket day-duration code read were not run this cycle; the alternatives list is unchanged."
+ "component": "tools/lib",
+ "reviewed": "2026-07-25",
+ "recheck_after": "2027-02-06",
+ "verdict": "keep-ours",
+ "verdict_class": "keep-ours",
+ "absorption_status": "rejected-with-reason",
+ "why": "Both fix a failure; no alternative removes it without a rewrite. envload (9-21): a case-sensitivity false-absence bug; a dotenv parser may be better-tested than this ~20-line parser but lacks case-insensitive matching and the redacted CLI, so most of 196 lines stay -- under the house \"hundreds of lines\" bar. A typed-settings package wants a schema, wrong shape. quota (2-19): needs an exact UTC-midnight reset plus a durable JSONL trail. The limiter has no file store; decorator/retry packages don't persist or track quotas; closest is rolling-window -- different semantics, plus a file-lock dep.",
+ "alternatives": [
+  {
+   "name": "python-dotenv",
+   "covers": "Parsing of KEY=VALUE .env lines (quotes, comments, export prefix) -- the ~20-line _LINE/_unquote pair in envload.py, lines 47-68.",
+   "gap": "dotenv_values is case-sensitive by default per its own docs; no multi-file, cross-repo, case-insensitive candidate-name search, or fingerprint-only CLI.",
+   "cost": "~30-40 lines removed, 1 dependency added; ~155 lines of candidate/case/CLI logic stay as-is.",
+   "maturity": "Long-standing, widely used; PyPI page checked this session, not installed here."
+  },
+  {
+   "name": "pydantic-settings",
+   "covers": "Typed settings loaded from env vars plus a declared list of .env file paths, env vars overriding file values.",
+   "gap": "Wants a fixed schema of named fields, not \"try 5 misspelled names across 2 repos, report only if found\"; same manual glue needed either way per its own docs.",
+   "cost": "Would replace nearly the whole module's shape, not just parsing; not a line-count win.",
+   "maturity": "Actively maintained (Pydantic project); docs checked this session, not installed here."
+  },
+  {
+   "name": "limits (alisaifee/limits)",
+   "covers": "Rate-limiting strategies (fixed/moving window) with a documented hit/test/get_window_stats API.",
+   "gap": "Its own docs list only Redis, Memcached, MongoDB as storage backends -- no file-based store, so persistence for solo CLI runs still needs a hand-written Storage backend.",
+   "cost": "Would not shrink quota.py meaningfully; adds a dependency for the algorithm only.",
+   "maturity": "Actively maintained per GitHub; docs checked this session, not installed here."
+  },
+  {
+   "name": "ratelimit",
+   "covers": "In-process decorator that throttles calls to a Python function within one run.",
+   "gap": "No persistence across separate CLI invocations at all -- cannot enforce a daily ceiling across independent process runs, quota.py's core job.",
+   "cost": "Not usable as a replacement without adding the same file-backed state quota.py already has.",
+   "maturity": "Small, stable, narrow-scope package."
+  },
+  {
+   "name": "tenacity",
+   "covers": "Retry/backoff policies (exponential wait, retry-on-exception) for a single call site.",
+   "gap": "Not a quota tracker at all -- no daily-ceiling concept, no persistence; solves retrying-after-failure, not refusing-before-the-ceiling.",
+   "cost": "Could complement quota.py for 429 backoff, but replaces none of its 121 lines.",
+   "maturity": "Very mature, widely used for retry logic specifically."
+  },
+  {
+   "name": "pyrate-limiter",
+   "covers": "A leaky-bucket/rolling-window limiter with an optional SQLite-backed bucket for cross-process persistence, per its own docs.",
+   "gap": "Documented as leaky-bucket: Duration.DAY is a rolling window, not a fixed UTC-midnight reset -- the semantic quota.py's docstring says matters; multi-process safety needs an added file-lock dependency.",
+   "cost": "~60-80 lines removed (lines 49-84) + 2 dependencies, but calendar-day and JSONL-audit properties need rebuilding on top.",
+   "maturity": "Actively maintained per PyPI/readthedocs checked this session; not installed or run here."
+  }
+ ],
+ "evidence": "Read both files in full. Both wired, not orphaned: grep -n for each name in tools/dolt/client.py and tools/openrouter/client.py shows live imports/call sites before every request. No dedicated tests exist for either module; the one hit in tests/test_codemap.py only stubs the path for an unrelated test. Alternatives per WebSearch this session (their docs/PyPI pages), not installed or run here.",
+ "recheck": "Check current release pages for the four rate-limit and two settings packages named below; read the persistent-bucket package's day-duration code directly, not its docs, to confirm rolling vs calendar-day reset.",
+ "our_loc": 317,
+ "migration_loc": "envload: dotenv wrap cuts ~30-40 parsing lines (47-68) +1 dep, keeps ~155 candidate/case lines. quota: persistent-bucket lib cuts ~60-80 lines (49-84) +2 deps, drops JSONL trail/reset unless rebuilt.",
+ "what_ours_does": "envload.py (196 ln): case-insensitive secret lookup across ordered candidate .env paths in a sibling repo, with misspelling fallbacks, and a presence/length/fingerprint-only CLI that never prints values. quota.py (121 ln): append-only JSONL usage ledger + DailyQuota (remaining/guard/pace/record) enforcing a UTC-day request ceiling, used by openrouter/client.py and dolt/client.py before every call.",
+ "strongest_counterargument": "Working code is a weak guarantee: envload's parser (61-68) has no test and could mis-split a credential on an edge case an off-the-shelf parser has absorbed already. quota's 429-doesn't-count assumption (69-72) is itself unverified; one third-party, non-provider source found this session says failed attempts do count, which would mean quota overcounts remaining() regardless of library.",
+ "rechecked": "2026-11-08",
+ "recheck_result": "Rechecked 2026-11-08: direct code read of tools/lib/quota.py confirms a CALENDAR-day reset at UTC midnight, not a rolling window: utc_day() (lines 33-37) formats datetime.fromtimestamp(ts, tz=timezone.utc) as %Y-%m-%d; rows_today() (lines 64-66) filters ledger rows by r['utc_day'] == utc_day(); line 82 states 'Resets at 00:00 UTC.' PyPI JSON API (curl -s https://pypi.org/pypi/<name>/json, exit 0 each) gives current releases: python-dotenv 1.2.4 (2026-10-01), pydantic-settings 2.16.2 (2026-10-28), limits 5.8.0 (2026-02-05), ratelimit 2.2.1 (2018-12-17, stale), tenacity 9.2.1 (2026-10-07), pyrate-limiter 4.5.1 (2026-10-20). All six alternatives are alive on PyPI except ratelimit, whose last release is 2018-12-17. No adoption is justified on this evidence alone; the persistent-bucket day-duration semantics are now established from code, not docs. The persistent-bucket day-duration code was read directly from the pyrate-limiter source (not its docs): Duration.DAY is a fixed 86,400,000 ms interval (pyrate_limiter/abstracts/rate.py), and the default algorithm SlidingWindowLog computes window_start as now minus interval, which is a rolling window; the wall-clock-aligned FixedWindow (now minus now mod interval) is opt-in. A 1/day pyrate limit therefore rolls rather than resetting at calendar midnight unless FixedWindow is selected. No adoption is justified by the release pages alone.",
+ "absorbed": "Persistent-bucket day-duration code read directly: calendar-day reset at UTC midnight (tools/lib/quota.py:33-37, 64-66, 82). Current PyPI releases verified 2026-11-08: python-dotenv 1.2.4, pydantic-settings 2.16.2, limits 5.8.0, ratelimit 2.2.1 (2018-12-17), tenacity 9.2.1, pyrate-limiter 4.5.1. Pyrate-limiter source read directly: Duration.DAY is a fixed 86,400,000 ms interval; the default SlidingWindowLog rolls (now minus interval); calendar alignment is opt-in FixedWindow."
+
 }

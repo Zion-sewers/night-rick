@@ -1,55 +1,56 @@
 {
-  "component": "dot-claude/skills/learn-on-demand/scripts",
-  "reviewed": "2026-07-25",
-  "recheck_after": "2027-02-06",
-  "verdict": "keep-ours",
-  "verdict_class": "keep-ours",
-  "absorption_status": "rejected-with-reason",
-  "why": "knowledge.py's load-bearing job is a rights/attestation gate (CLAUDE.md: commercial books stay metadata-only unless the user explicitly attests private-use rights) plus hash-checked revoke -- no RAG framework (llama-index/langchain/haystack) or generic caching pattern ships that. Its retrieval engine is already sqlite FTS5, the lean stdlib option listed as an 'alternative,' not a reinvention needing replacement. Swapping to a framework would rebuild the governance logic on top of it while adding heavy, embedding-oriented dependency trees a one-maintainer, offline-CI repo doesn't need.",
-  "alternatives": [
-    {
-      "name": "llama-index",
-      "covers": "Document loaders (PDF/EPUB/DOCX/more), chunking strategies, embeddings-based vector retrieval and query engines.",
-      "gap": "No rights-mode/attestation/consent gate, no source-hash revoke workflow; defaults toward embedding/API-based retrieval, not pure offline lexical search.",
-      "cost": "Free/open-source (MIT), heavy transitive deps, frequent breaking changes per 2026 comparisons.",
-      "maturity": "Actively developed, large user base, version churn (~0.12.x per late-2025/2026 sources)."
-    },
-    {
-      "name": "langchain retrievers",
-      "covers": "Document loaders + retriever abstractions (BM25Retriever, vectorstore retrievers) usable for keyword or embedding search.",
-      "gap": "Same governance gap: no rights/attestation logic, no revoke-by-hash; 2026 comparisons describe a 'complexity tax for simple RAG pipelines.'",
-      "cost": "Free/open-source (MIT); 350+ integrations is unneeded weight for a 32-source catalog.",
-      "maturity": "Most widely adopted (92k GitHub stars per search), actively maintained, heavier than needed here."
-    },
-    {
-      "name": "haystack",
-      "covers": "Pipeline-based retrieval components (can wire BM25-style retrieval), pipelines serializable to YAML.",
-      "gap": "Same governance gap as above; aimed at production RAG services, not a single-user CLI knowledge catalog.",
-      "cost": "Free/open-source (Apache 2.0); still a full framework, more install weight than stdlib sqlite3.",
-      "maturity": "Actively maintained (~2.7.x per 2026 sources)."
-    },
-    {
-      "name": "sqlite FTS5 + ripgrep",
-      "covers": "FTS5 IS the search engine knowledge.py already uses (confirmed working here); ripgrep gives instant unindexed text search with zero build step.",
-      "gap": "Nothing, for the search mechanism itself -- already adopted. Bare ripgrep alone has no rights schema, attestation/revoke, bm25 ranking, or domain/availability filtering.",
-      "cost": "Free; ripgrep is one static Windows binary; FTS5 ships inside stdlib sqlite3 (confirmed, sqlite 3.45.1).",
-      "maturity": "Both extremely mature and stable; effectively finished tools."
-    },
-    {
-      "name": "Directory-caching of fetched pages",
-      "covers": "Persists previously fetched URLs/pages as local files, avoiding repeat network fetches.",
-      "gap": "No rights_mode/licensing metadata, no ranked/filterable search, no chunking, no attestation/consent/revoke -- solves a narrower problem.",
-      "cost": "Free, trivial to write; doesn't answer 'what am I legally allowed to keep and how do I search it.'",
-      "maturity": "n/a -- a pattern, not a specific maintained tool."
-    }
-  ],
-  "evidence": "Read knowledge.py:1-599, SKILL.md:1-78, rights-policy.md:1-46. Ran `python knowledge.py validate` -> valid:true, source_count:32. Confirmed FTS5 locally: sqlite3 CREATE VIRTUAL TABLE...USING fts5 succeeded (sqlite 3.45.1). grep 'ripgrep' in skill dir: 0 hits. Caller: tests/test_mastery_controls.py:29-37 imports this module; SKILL.md documents every subcommand.",
-  "recheck": "python dot-claude/skills/learn-on-demand/scripts/knowledge.py validate; then query 'test' --limit 3; grep -rn ripgrep dot-claude/skills/learn-on-demand; pip index versions llama-index langchain haystack-ai.",
-  "our_loc": 598,
-  "migration_loc": "If swapped to llama-index/langchain: ~598 lines removed, ~120-200 new glue lines, plus ~150 lines of rights/revoke logic rebuilt (no framework has it) -- roughly break-even. Keep-ours: 0 changed.",
-  "what_ours_does": "knowledge.py (598 lines): CLI (validate/attest/build/query/revoke) around catalog.json (32 sources) enforcing a rights schema (rights_mode, canonical_url, verified_at). build loads metadata into sqlite FTS5 always; private text (txt/md/html/epub/docx/pdf, chunked) only after a hash-checked attestation. query runs FTS5+bm25 search, rebuilds on hash change; revoke deletes a source's private chunks.",
-  "strongest_counterargument": "The ~160-line hand-rolled extract_html/epub/docx/chunks block duplicates, less robustly, what llama-index/langchain document loaders already provide (better malformed-file handling, more formats, smarter chunk boundaries); wrapping ebooklib/python-docx there would cut real lines without touching the rights/attestation logic that is this file's actual reason to exist.",
-  "rechecked": "2026-11-08",
-  "recheck_result": "Rechecked 2026-11-08: knowledge.py validate RC=0 (32 sources, 0 errors); query 'test' RC=0; grep for ripgrep returned nothing (the record's ripgrep claim needs checking against its why, not settled this cycle). llama-index 0.14.25, langchain 1.4.9, haystack-ai 3.4.1 are all alive and current on PyPI.",
-  "absorbed": "knowledge.py validates clean (32 sources, 0 errors); llama-index, langchain and haystack-ai are all alive and current, so the keep half stands."
+ "component": "dot-claude/skills/learn-on-demand/scripts",
+ "reviewed": "2026-07-25",
+ "recheck_after": "2027-02-06",
+ "verdict": "keep-ours",
+ "verdict_class": "keep-ours",
+ "absorption_status": "rejected-with-reason",
+ "why": "knowledge.py's load-bearing job is a rights/attestation gate (CLAUDE.md: commercial books stay metadata-only unless the user explicitly attests private-use rights) plus hash-checked revoke -- no RAG framework (llama-index/langchain/haystack) or generic caching pattern ships that. Its retrieval engine is already sqlite FTS5, the lean stdlib option listed as an 'alternative,' not a reinvention needing replacement. Swapping to a framework would rebuild the governance logic on top of it while adding heavy, embedding-oriented dependency trees a one-maintainer, offline-CI repo doesn't need.",
+ "alternatives": [
+  {
+   "name": "llama-index",
+   "covers": "Document loaders (PDF/EPUB/DOCX/more), chunking strategies, embeddings-based vector retrieval and query engines.",
+   "gap": "No rights-mode/attestation/consent gate, no source-hash revoke workflow; defaults toward embedding/API-based retrieval, not pure offline lexical search.",
+   "cost": "Free/open-source (MIT), heavy transitive deps, frequent breaking changes per 2026 comparisons.",
+   "maturity": "Actively developed, large user base, version churn (~0.12.x per late-2025/2026 sources)."
+  },
+  {
+   "name": "langchain retrievers",
+   "covers": "Document loaders + retriever abstractions (BM25Retriever, vectorstore retrievers) usable for keyword or embedding search.",
+   "gap": "Same governance gap: no rights/attestation logic, no revoke-by-hash; 2026 comparisons describe a 'complexity tax for simple RAG pipelines.'",
+   "cost": "Free/open-source (MIT); 350+ integrations is unneeded weight for a 32-source catalog.",
+   "maturity": "Most widely adopted (92k GitHub stars per search), actively maintained, heavier than needed here."
+  },
+  {
+   "name": "haystack",
+   "covers": "Pipeline-based retrieval components (can wire BM25-style retrieval), pipelines serializable to YAML.",
+   "gap": "Same governance gap as above; aimed at production RAG services, not a single-user CLI knowledge catalog.",
+   "cost": "Free/open-source (Apache 2.0); still a full framework, more install weight than stdlib sqlite3.",
+   "maturity": "Actively maintained (~2.7.x per 2026 sources)."
+  },
+  {
+   "name": "sqlite FTS5 + ripgrep",
+   "covers": "FTS5 IS the search engine knowledge.py already uses (confirmed working here); ripgrep gives instant unindexed text search with zero build step.",
+   "gap": "Nothing, for the search mechanism itself -- already adopted. Bare ripgrep alone has no rights schema, attestation/revoke, bm25 ranking, or domain/availability filtering.",
+   "cost": "Free; ripgrep is one static Windows binary; FTS5 ships inside stdlib sqlite3 (confirmed, sqlite 3.45.1).",
+   "maturity": "Both extremely mature and stable; effectively finished tools."
+  },
+  {
+   "name": "Directory-caching of fetched pages",
+   "covers": "Persists previously fetched URLs/pages as local files, avoiding repeat network fetches.",
+   "gap": "No rights_mode/licensing metadata, no ranked/filterable search, no chunking, no attestation/consent/revoke -- solves a narrower problem.",
+   "cost": "Free, trivial to write; doesn't answer 'what am I legally allowed to keep and how do I search it.'",
+   "maturity": "n/a -- a pattern, not a specific maintained tool."
+  }
+ ],
+ "evidence": "Read knowledge.py:1-599, SKILL.md:1-78, rights-policy.md:1-46. Ran `python knowledge.py validate` -> valid:true, source_count:32. Confirmed FTS5 locally: sqlite3 CREATE VIRTUAL TABLE...USING fts5 succeeded (sqlite 3.45.1). grep 'ripgrep' in skill dir: 0 hits. Caller: tests/test_mastery_controls.py:29-37 imports this module; SKILL.md documents every subcommand.",
+ "recheck": "python dot-claude/skills/learn-on-demand/scripts/knowledge.py validate; then query 'test' --limit 3; grep -rn ripgrep dot-claude/skills/learn-on-demand; pip index versions llama-index langchain haystack-ai.",
+ "our_loc": 598,
+ "migration_loc": "If swapped to llama-index/langchain: ~598 lines removed, ~120-200 new glue lines, plus ~150 lines of rights/revoke logic rebuilt (no framework has it) -- roughly break-even. Keep-ours: 0 changed.",
+ "what_ours_does": "knowledge.py (598 lines): CLI (validate/attest/build/query/revoke) around catalog.json (32 sources) enforcing a rights schema (rights_mode, canonical_url, verified_at). build loads metadata into sqlite FTS5 always; private text (txt/md/html/epub/docx/pdf, chunked) only after a hash-checked attestation. query runs FTS5+bm25 search, rebuilds on hash change; revoke deletes a source's private chunks.",
+ "strongest_counterargument": "The ~160-line hand-rolled extract_html/epub/docx/chunks block duplicates, less robustly, what llama-index/langchain document loaders already provide (better malformed-file handling, more formats, smarter chunk boundaries); wrapping ebooklib/python-docx there would cut real lines without touching the rights/attestation logic that is this file's actual reason to exist.",
+ "rechecked": "2026-11-08",
+ "recheck_result": "Rechecked 2026-11-08: knowledge.py validate RC=0 (32 sources, 0 errors); query 'test' RC=0; grep for ripgrep returned nothing (the record's ripgrep claim needs checking against its why, not settled this cycle). llama-index 0.14.25, langchain 1.4.9, haystack-ai 3.4.1 are all alive and current on PyPI. Fix-forward evidence, all re-run this cycle and confirmed unchanged: `python dot-claude/skills/learn-on-demand/scripts/knowledge.py validate` exit 0 with {\"valid\": true, \"source_count\": 32, \"errors\": []}; `knowledge.py query 'test' --limit 3` exit 0 with result_count 3 (effective-software-testing, property-based-testing-proper, software-engineering-at-google); `grep -rn ripgrep dot-claude/skills/learn-on-demand` exit 1, no hit; PyPI versions via the PyPI JSON API (curl, the substitute the task allowed for `pip index versions`) are llama-index 0.14.25, langchain 1.4.9, haystack-ai 3.4.1, identical to the prior cycle.",
+ "absorbed": "knowledge.py validates clean (32 sources, 0 errors); llama-index, langchain and haystack-ai are all alive and current, so the keep half stands. Fix-forward 2026-11-08: re-ran all four clause steps, all confirmed: `python dot-claude/skills/learn-on-demand/scripts/knowledge.py validate` exit 0 (valid: true, source_count 32, errors []); query 'test' --limit 3 exit 0 (3 results: effective-software-testing, property-based-testing-proper, software-engineering-at-google); `grep -rn ripgrep dot-claude/skills/learn-on-demand` exit 1 (no hit, unchanged); PyPI JSON API versions llama-index 0.14.25, langchain 1.4.9, haystack-ai 3.4.1 (unchanged from the prior cycle; `pip index versions` was not used, the PyPI JSON API via curl was the substitute the task allowed)."
+
 }

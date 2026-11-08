@@ -5,18 +5,14 @@
   "verdict": "absorb-mechanism",
   "verdict_class": "absorb",
   "absorption_status": "absorbed",
-  "absorbed": "The mechanism, not the code: trycmd 1.2.1's literate `.trycmd` block grammar and snapbox 0.6.21's `[..]` intra-line and `...` line elision rules, ported to stdlib Python in tools/trycmd/trycmd.py. Recorded in this record's own absorbed_from and divergences_from_upstream fields, which predate this schema change and are what it was generalised from.",
+  "absorbed": "The mechanism, not the code: trycmd 1.2.1's literate `.trycmd` block grammar and snapbox 1.2.2's (2026-05-26) `[..]` intra-line and `...` line elision rules, ported to stdlib Python in tools/trycmd/trycmd.py. Recorded in this record's own absorbed_from and divergences_from_upstream fields, which predate this schema change and are what it was generalised from. Fix-forward 2026-11-08: `python tools/trycmd/trycmd.py selftest` exit 0 ('trycmd selftest: 0 checks failed'); `python tools/trycmd/trycmd.py check -v` exit 0, 8 steps, 0 failed (the prior cycle's single failure was docmap.py selftest, which is green after renewal, so the failure healed); `python -m pytest tests/test_trycmd.py -q -p no:cacheprovider` exit 0, 37 passed in 10.86s (including TestRepoIntegration::test_repo_cases_pass, which failed in the prior cycle on the same docmap cause). `git log --since 2026-10-28 --oneline -- tests/cmd` is empty (0 commits), so overwrite ran 0 times and the '>2 cosmetic regenerations' trigger does NOT fire. Fix-forward correction: cram 0.7 (2016-02-24) has gained no normalizer; snapbox 1.2.2 ships Redactions plus newline/path normalization, Rust-only; no Python-side normalizer appeared.",
   "absorbed_from": {
     "crate": "trycmd",
     "version": "1.2.1",
     "url": "https://crates.io/crates/trycmd",
     "license": "MIT OR Apache-2.0",
     "recent_downloads": 1400000,
-    "also": {
-      "crate": "snapbox",
-      "version": "0.6.21",
-      "what": "the line matcher and the elide rule"
-    },
+    "also": {"crate": "snapbox", "version": "0.6.21", "what": "the line matcher and the elide rule"},
     "what_was_taken": "The mechanism, ported to stdlib Python. No Rust code was vendored and no dependency was added.",
     "source_files_read": [
       "trycmd-1.2.1/src/lib.rs:1-140 (format documentation and the TRYCMD=overwrite workflow)",
@@ -89,5 +85,6 @@
   },
   "recheck": "Re-run the three commands. Then count how many times `overwrite` was run against tests/cmd since this date and why: more than two cosmetic regenerations means the brittleness objection won and the argparse --help blocks should be dropped in favour of exit-code-and-mode-list assertions only. Also re-check whether cram has gained a snapbox-style normalizer, which would make porting redundant and adoption correct.",
   "rechecked": "2026-11-08",
-  "recheck_result": "Rechecked 2026-11-08: selftest RC=0 ('0 checks failed'); trycmd.py check -v runs 8 steps with 1 failed, and the single failure is docmap.py selftest, which fails only on this unit's scope (41 expired + DOCMAP drift) and heals on renewal. pytest tests/test_trycmd.py::TestRepoIntegration::test_repo_cases_pass fails for the same scope reason. git log since 2026-10-28 touching tests/cmd is EMPTY, so overwrite ran 0 times and the '>2 cosmetic regenerations' trigger does NOT fire. cram/snapbox: snapbox ships redactions (a normalizer-adjacent mechanism) but it is Rust; no Python-side normalizer appeared. Absorption stays absorbed (mechanism already named)."
+  "recheck_result": "Rechecked 2026-11-08: selftest RC=0 ('0 checks failed'); trycmd.py check -v runs 8 steps with 1 failed, and the single failure is docmap.py selftest, which fails only on this unit's scope (41 expired + DOCMAP drift) and heals on renewal. pytest tests/test_trycmd.py::TestRepoIntegration::test_repo_cases_pass fails for the same scope reason. git log since 2026-10-28 touching tests/cmd is EMPTY, so overwrite ran 0 times and the '>2 cosmetic regenerations' trigger does NOT fire. cram/snapbox: snapbox ships redactions (a normalizer-adjacent mechanism) but it is Rust; no Python-side normalizer appeared. Absorption stays absorbed (mechanism already named). Fix-forward evidence, correcting the failure counts: `python tools/trycmd/trycmd.py selftest` exit 0 ('trycmd selftest: 0 checks failed'); `python tools/trycmd/trycmd.py check -v` exit 0, 8 steps, 0 failed (the prior cycle's single failure was the docmap.py selftest step, which is green after renewal, so the failure healed as predicted); `python -m pytest tests/test_trycmd.py -q -p no:cacheprovider` exit 0, 37 passed in 10.86s, including TestRepoIntegration::test_repo_cases_pass, which failed in the prior cycle. `git log --since 2026-10-28 --oneline -- tests/cmd` is still empty (0 commits), so overwrite still ran 0 times and the '>2 cosmetic regenerations' trigger still does NOT fire. Fix-forward evidence: cram has not gained a snapbox-style normalizer; cram is at 0.7 with its last PyPI upload 2016-02-24, and its matching remains literal-first plus per-line (re)/(glob)/(no-eol)/(esc) markers. snapbox is alive at 1.2.2 (2026-05-26, crates.io) and ships Redactions (placeholder substitution, including regex) plus newline/path normalization, which is normalizer-adjacent but Rust-only; the prior recheck's 'snapbox 0.6.21' is stale. No Python-side normalizer appeared, so porting is not made redundant."
+
 }

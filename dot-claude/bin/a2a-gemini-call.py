@@ -10,7 +10,7 @@ Returns JSON: {state, model, response_text, duration_ms, error?}
 
 Audit: every call is logged to ~/.claude/cache/a2a/audit.jsonl via a2a-audit.py
 (night-rick#13). Before this change the amended ADR-0007 reviewer left zero
-trace in the canonical record, so the agreement oracle could never pass for a
+trace in the canonical record, so the dispatch oracle could never pass for a
 Gemini second review. Logging never changes the returned JSON or the exit
 code: a logging failure is swallowed, the call result is what it is.
 """
@@ -38,12 +38,49 @@ def _import_audit():
         return None
 
 
+def _resolve_head_commit():
+    """HEAD SHA of the repo in the caller's working directory, else None."""
+    try:
+        import subprocess
+
+        proc = subprocess.run(
+            ("git", "rev-parse", "HEAD"),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        sha = proc.stdout.strip()
+        if proc.returncode == 0 and len(sha) == 40:
+            return sha
+    except Exception:
+        pass
+    return None
+
+
 def _log_call(result, prompt):
-    """Append one audit record. Never raises; never changes the result."""
+    """Append one audit record. Never raises; never changes the result.
+
+    The commit is passed explicitly, like the Codex bridge does: the writer's
+    cwd fallback would otherwise guess from wherever this bridge was invoked.
+    A logging failure is reported on stderr, so a broken recorder never reads
+    as "no dispatch happened". The deployed writer must carry the commit seam
+    (AUDIT_WRITER_SEAM); an older copy logs without a commit, and the warning
+    says so instead of failing silently.
+    """
     try:
         audit = _import_audit()
         if audit is None:
+            print(
+                "a2a-audit: deployed writer not found, no record written for this call",
+                file=sys.stderr,
+            )
             return
+        if not getattr(audit, "AUDIT_WRITER_SEAM", 0):
+            print(
+                "a2a-audit: deployed writer predates the commit seam, record will carry "
+                "no commit; deploy dot-claude/bin/a2a-audit.py to ~/.claude/bin",
+                file=sys.stderr,
+            )
         extra = {}
         if result.get("state") != "completed" and result.get("error"):
             extra["error"] = str(result["error"])[:200]
@@ -54,9 +91,11 @@ def _log_call(result, prompt):
             int(result.get("duration_ms", 0)),
             str(result.get("state", "failed")),
             None,
+            commit=_resolve_head_commit(),
             **extra,
         )
-    except Exception:
+    except Exception as exc:
+        print(f"a2a-audit: logging failed ({exc}), no record written for this call", file=sys.stderr)
         return
 
 MODEL = "gemini-2.5-flash"

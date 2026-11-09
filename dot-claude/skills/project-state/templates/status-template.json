@@ -1,0 +1,35 @@
+{
+  "$schema": "Claude project state tracker v1",
+  "version": "1.0",
+  "project": {
+    "name": "project-name",
+    "path": "/absolute/path/to/project",
+    "authority": [
+      "AGENTS.md",
+      "docs/source-of-truth.md"
+    ]
+  },
+  "currentState": {
+    "summary": "One-sentence project summary",
+    "branch": "main",
+    "lastCommit": "abc1234 message",
+    "testsPass": "unknown",
+    "buildStatus": "unknown"
+  },
+  "blockers": [],
+  "inProgress": [],
+  "nextSteps": [],
+  "verification": {
+    "lastRun": "unknown",
+    "commands": []
+  },
+  "recentDecisions": [],
+  "sessionNotes": {
+    "lastSessionDate": "YYYY-MM-DD",
+    "carryoverNotes": "What the next session must know"
+  },
+  "_instructions": {
+    "usage": "Read at session start and refresh before ending a substantial session",
+    "update": "Keep this file short and factual"
+  }
+}

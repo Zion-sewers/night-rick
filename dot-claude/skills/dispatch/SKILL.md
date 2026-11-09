@@ -54,6 +54,15 @@ Future addresses (NOT supported in v1):
 ~/.claude/bin/a2a-audit.py stats           # aggregate by pair / state / latency
 ```
 
+Every record carries the commit the dispatch was made for (explicit `--commit`,
+else `$A2A_COMMIT`, else `git rev-parse HEAD`, else `"unknown"`). The agreement
+gate is checkable, not just declared: `python tools/audit/a2a_agreement_oracle.py
+check --commit <sha>` exits non-zero unless audit.jsonl holds a completed call
+recorded for that commit. A missing log fails closed, a record for another
+commit does not count, and a failed or timed-out call does not count. A
+`_provenance` block that claims second-model agreement for a commit with no
+such record is an unproven claim, not a passed gate.
+
 ## When to dispatch (decision rules)
 
 | Goal | Use | Rationale |

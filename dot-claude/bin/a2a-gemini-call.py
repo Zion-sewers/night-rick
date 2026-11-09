@@ -7,8 +7,57 @@ agreement gate (ADR-0004/0008). Model is an interchangeable ACTOR, not a fixed p
 Auth: GEMINI_API_KEY env (free at aistudio.google.com/apikey).
 Usage: a2a-gemini-call.py "<prompt>" [--model gemini-2.5-flash]
 Returns JSON: {state, model, response_text, duration_ms, error?}
+
+Audit: every call is logged to ~/.claude/cache/a2a/audit.jsonl via a2a-audit.py
+(night-rick#13). Before this change the amended ADR-0007 reviewer left zero
+trace in the canonical record, so the agreement oracle could never pass for a
+Gemini second review. Logging never changes the returned JSON or the exit
+code: a logging failure is swallowed, the call result is what it is.
 """
-import json, os, sys, time, urllib.request, urllib.error
+import importlib.util
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+
+def _import_audit():
+    """Load a2a-audit.py from the deployed bin dir, or None when absent."""
+    try:
+        audit_path = Path.home() / ".claude" / "bin" / "a2a-audit.py"
+        spec = importlib.util.spec_from_file_location("a2a_audit", audit_path)
+        if spec is None or spec.loader is None:
+            return None
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+    except Exception:
+        return None
+
+
+def _log_call(result, prompt):
+    """Append one audit record. Never raises; never changes the result."""
+    try:
+        audit = _import_audit()
+        if audit is None:
+            return
+        extra = {}
+        if result.get("state") != "completed" and result.get("error"):
+            extra["error"] = str(result["error"])[:200]
+        audit.log_call(
+            "claude:home",
+            f"gemini:{result.get('model', MODEL)}",
+            audit.hash_prompt(prompt),
+            int(result.get("duration_ms", 0)),
+            str(result.get("state", "failed")),
+            None,
+            **extra,
+        )
+    except Exception:
+        return
 
 MODEL = "gemini-2.5-flash"
 if "--model" in sys.argv:
@@ -37,4 +86,6 @@ def call(prompt, model):
 
 
 if __name__ == "__main__":
-    print(json.dumps(call(prompt, MODEL), ensure_ascii=False))
+    result = call(prompt, MODEL)
+    _log_call(result, prompt)
+    print(json.dumps(result, ensure_ascii=False))

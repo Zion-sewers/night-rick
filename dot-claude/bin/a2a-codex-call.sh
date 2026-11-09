@@ -103,9 +103,14 @@ if [ "$STATE" != "completed" ] && [ -s "$TMPERR" ]; then
     fi
 fi
 
-# Audit log (state may now be rate_limited or auth_failed for clearer diagnostics)
+# Audit log (state may now be rate_limited or auth_failed for clearer diagnostics).
+# The commit is passed explicitly: the oracle matches records to the commit the
+# dispatch was made for, and the shell knows the checkout better than the
+# audit writer's cwd fallback does. Fail-soft to "unknown", never block the call.
+COMMIT_SHA=$(git rev-parse HEAD 2>/dev/null || echo unknown)
 python3 "$HOME/.claude/bin/a2a-audit.py" log \
     "$FROM_ADDR" "$TO_ADDR" "$PROMPT_HASH" "$DURATION_MS" "$STATE" "$CONV_ID" \
+    --commit "$COMMIT_SHA" \
     >/dev/null 2>&1 || true
 
 # Persist the stderr tail to ~/.claude/cache/a2a/codex-errors.log for postmortem

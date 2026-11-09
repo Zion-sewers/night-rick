@@ -9,20 +9,31 @@ Usage as a module:
     log_call(from_addr, to_addr, prompt_hash, duration_ms, state, conversation_id, **extra)
 
 Usage as CLI (for shell bridges):
-    a2a-audit.py log <from> <to> <prompt_hash> <duration_ms> <state> [<conversation_id>]
+    a2a-audit.py log <from> <to> <prompt_hash> <duration_ms> <state> [<conversation_id>] [--commit SHA]
     a2a-audit.py tail [N]
     a2a-audit.py stats
+
+Every record carries a "commit" field (night-rick#13): the commit the dispatch
+was made for, resolved as explicit argument, else $A2A_COMMIT, else
+`git rev-parse HEAD` in the caller's working directory, else "unknown".
+tools/audit/a2a_agreement_oracle.py fails unless a completed call is recorded
+for a given commit, so a record without a commit can never satisfy the gate.
+Commit resolution never raises: logging must not break a dispatch.
 """
 from __future__ import annotations
 
 import hashlib
 import json
+import os
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 AUDIT_DIR = Path.home() / ".claude" / "cache" / "a2a"
 AUDIT_LOG = AUDIT_DIR / "audit.jsonl"
+
+UNKNOWN_COMMIT = "unknown"
 
 
 def now_iso() -> str:
@@ -33,6 +44,28 @@ def hash_prompt(prompt: str, length: int = 12) -> str:
     return hashlib.sha1(prompt.encode("utf-8", errors="replace")).hexdigest()[:length]
 
 
+def resolve_commit(explicit: str | None = None) -> str:
+    """Commit a dispatch record belongs to. Never raises, never empty."""
+    if explicit:
+        return explicit
+    env_commit = os.environ.get("A2A_COMMIT", "").strip()
+    if env_commit:
+        return env_commit
+    try:
+        proc = subprocess.run(
+            ("git", "rev-parse", "HEAD"),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        sha = proc.stdout.strip()
+        if proc.returncode == 0 and len(sha) >= 7:
+            return sha
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return UNKNOWN_COMMIT
+
+
 def log_call(
     from_addr: str,
     to_addr: str,
@@ -40,6 +73,7 @@ def log_call(
     duration_ms: int,
     state: str,
     conversation_id: str | None = None,
+    commit: str | None = None,
     **extra,
 ) -> None:
     AUDIT_DIR.mkdir(parents=True, exist_ok=True)
@@ -51,6 +85,7 @@ def log_call(
         "duration_ms": int(duration_ms),
         "state": state,
         "conversation_id": conversation_id,
+        "commit": resolve_commit(commit),
         **extra,
     }
     with open(AUDIT_LOG, "a") as f:
@@ -65,7 +100,8 @@ def tail(n: int = 20) -> None:
     for line in lines:
         try:
             r = json.loads(line)
-            print(f"{r['ts']}  {r['from']:30s} -> {r['to']:30s}  {r['state']:10s}  {r['duration_ms']:>6}ms  {r.get('prompt_hash','-')}")
+            commit = str(r.get("commit", UNKNOWN_COMMIT))[:7]
+            print(f"{r['ts']}  {r['from']:30s} -> {r['to']:30s}  {r['state']:10s}  {r['duration_ms']:>6}ms  {r.get('prompt_hash','-')}  {commit}")
         except Exception:
             print(line)
 
@@ -107,16 +143,26 @@ def main() -> None:
         sys.exit(2)
     cmd = sys.argv[1]
     if cmd == "log":
-        if len(sys.argv) < 7:
-            print("usage: a2a-audit.py log <from> <to> <prompt_hash> <duration_ms> <state> [<conversation_id>]", file=sys.stderr)
+        args = sys.argv[2:]
+        commit = None
+        if "--commit" in args:
+            idx = args.index("--commit")
+            if idx + 1 >= len(args):
+                print("usage: --commit needs a SHA", file=sys.stderr)
+                sys.exit(2)
+            commit = args[idx + 1]
+            del args[idx : idx + 2]
+        if len(args) < 5:
+            print("usage: a2a-audit.py log <from> <to> <prompt_hash> <duration_ms> <state> [<conversation_id>] [--commit SHA]", file=sys.stderr)
             sys.exit(2)
         log_call(
-            from_addr=sys.argv[2],
-            to_addr=sys.argv[3],
-            prompt_hash=sys.argv[4],
-            duration_ms=int(sys.argv[5]),
-            state=sys.argv[6],
-            conversation_id=sys.argv[7] if len(sys.argv) > 7 else None,
+            from_addr=args[0],
+            to_addr=args[1],
+            prompt_hash=args[2],
+            duration_ms=int(args[3]),
+            state=args[4],
+            conversation_id=args[5] if len(args) > 5 else None,
+            commit=commit,
         )
     elif cmd == "tail":
         n = int(sys.argv[2]) if len(sys.argv) > 2 else 20

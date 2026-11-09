@@ -30,6 +30,7 @@ judgement is written down once.
 | perf | nothing, `na_reason` | no budget is declared for this repo. Every budget-shaped hit in the tree belongs to another project's historical audit or reports p95 without enforcing a threshold. Nobody has set a number, and saying so is more honest than inventing one. |
 | codemap | builtin `dir_map`, runs `tools/map/codemap.py check` | every tracked directory states its purpose somewhere a reader will find it, and `docs/CODEBASE-MAP.md` matches the tree. |
 | prior_art | builtin `prior_art`, runs `tools/map/codemap.py prior-art` | every component over 300 lines of Python carries an unexpired record naming what else could do its job. |
+| a2a_dispatch | `tools/audit/a2a_dispatch_oracle.py check`, warn-only (`required: false`) | the gate reports whether a completed dispatch is recorded for the commit under review, and blocks nothing. The log lives on the operator machine and does not exist in CI, so this fails closed there by design until log transport exists. PASS proves a completed dispatch is recorded, not that the second model agreed. |
 
 ## codemap: where a purpose is allowed to live
 

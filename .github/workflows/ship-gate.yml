@@ -12,6 +12,7 @@ name: Ship gate
 #   unit      -- root tests/, gate.py selftest, panel.py selftest,
 #                tools/audit/append_only.py selftest+check (EXT-1),
 #                tools/audit/routing_accuracy.py selftest+report (EXT-3),
+#                tools/audit/a2a_dispatch_oracle.py selftest,
 #                intent-control-plane's own pytest suite
 #   types     -- compileall + intent-control-plane's ruff/mypy
 #   security  -- secret_scan builtin (repo-wide regex scan)
@@ -32,6 +33,14 @@ name: Ship gate
 #                2026-08-19 as an operator-approved extension after an
 #                external review (Agentica) independently converged on the
 #                same finding this session's audit made and named the fix.
+#   a2a_dispatch -- `python tools/audit/a2a_dispatch_oracle.py check`,
+#                warn-only (`required: false` in the contract): the gate
+#                reports whether a completed dispatch is recorded for the
+#                commit under review and blocks nothing. The log lives on
+#                the operator machine and does not exist in CI, so this
+#                domain fails closed there (LOG_MISSING) by design until
+#                log transport exists. PASS proves a completed dispatch is
+#                recorded, not that the second model agreed.
 #
 # NOT run through gate.py, but run as a named CI step in this same job for the
 # same reason (39 dashboard/ files, 0 CI coverage before 2026-08-19):

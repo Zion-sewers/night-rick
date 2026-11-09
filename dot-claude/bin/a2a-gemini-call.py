@@ -7,8 +7,96 @@ agreement gate (ADR-0004/0008). Model is an interchangeable ACTOR, not a fixed p
 Auth: GEMINI_API_KEY env (free at aistudio.google.com/apikey).
 Usage: a2a-gemini-call.py "<prompt>" [--model gemini-2.5-flash]
 Returns JSON: {state, model, response_text, duration_ms, error?}
+
+Audit: every call is logged to ~/.claude/cache/a2a/audit.jsonl via a2a-audit.py
+(night-rick#13). Before this change the amended ADR-0007 reviewer left zero
+trace in the canonical record, so the dispatch oracle could never pass for a
+Gemini second review. Logging never changes the returned JSON or the exit
+code: a logging failure is swallowed, the call result is what it is.
 """
-import json, os, sys, time, urllib.request, urllib.error
+import importlib.util
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+
+def _import_audit():
+    """Load a2a-audit.py from the deployed bin dir, or None when absent."""
+    try:
+        audit_path = Path.home() / ".claude" / "bin" / "a2a-audit.py"
+        spec = importlib.util.spec_from_file_location("a2a_audit", audit_path)
+        if spec is None or spec.loader is None:
+            return None
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+    except Exception:
+        return None
+
+
+def _resolve_head_commit():
+    """HEAD SHA of the repo in the caller's working directory, else None."""
+    try:
+        import subprocess
+
+        proc = subprocess.run(
+            ("git", "rev-parse", "HEAD"),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        sha = proc.stdout.strip()
+        if proc.returncode == 0 and len(sha) == 40:
+            return sha
+    except Exception:
+        pass
+    return None
+
+
+def _log_call(result, prompt):
+    """Append one audit record. Never raises; never changes the result.
+
+    The commit is passed explicitly, like the Codex bridge does: the writer's
+    cwd fallback would otherwise guess from wherever this bridge was invoked.
+    A logging failure is reported on stderr, so a broken recorder never reads
+    as "no dispatch happened". The deployed writer must carry the commit seam
+    (AUDIT_WRITER_SEAM); an older copy logs without a commit, and the warning
+    says so instead of failing silently.
+    """
+    try:
+        audit = _import_audit()
+        if audit is None:
+            print(
+                "a2a-audit: deployed writer not found, no record written for this call",
+                file=sys.stderr,
+            )
+            return
+        if not getattr(audit, "AUDIT_WRITER_SEAM", 0):
+            print(
+                "a2a-audit: deployed writer predates the commit seam, record will carry "
+                "no commit; deploy dot-claude/bin/a2a-audit.py to ~/.claude/bin",
+                file=sys.stderr,
+            )
+        extra = {}
+        if result.get("state") != "completed" and result.get("error"):
+            extra["error"] = str(result["error"])[:200]
+        audit.log_call(
+            "claude:home",
+            f"gemini:{result.get('model', MODEL)}",
+            audit.hash_prompt(prompt),
+            int(result.get("duration_ms", 0)),
+            str(result.get("state", "failed")),
+            None,
+            commit=_resolve_head_commit(),
+            **extra,
+        )
+    except Exception as exc:
+        print(f"a2a-audit: logging failed ({exc}), no record written for this call", file=sys.stderr)
+        return
 
 MODEL = "gemini-2.5-flash"
 if "--model" in sys.argv:
@@ -37,4 +125,6 @@ def call(prompt, model):
 
 
 if __name__ == "__main__":
-    print(json.dumps(call(prompt, MODEL), ensure_ascii=False))
+    result = call(prompt, MODEL)
+    _log_call(result, prompt)
+    print(json.dumps(result, ensure_ascii=False))

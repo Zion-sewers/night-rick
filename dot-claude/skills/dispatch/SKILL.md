@@ -54,6 +54,39 @@ Future addresses (NOT supported in v1):
 ~/.claude/bin/a2a-audit.py stats           # aggregate by pair / state / latency
 ```
 
+Every record carries the commit the dispatch was made for (HEAD of the repo
+under review is authoritative; a valid `--commit` or `$A2A_COMMIT` hint that
+disagrees with HEAD loses to HEAD and is recorded as `commit_hint_mismatch`).
+This is a log-presence check for the agreement gate, not the gate itself:
+`python tools/audit/a2a_dispatch_oracle.py check --commit <sha>` exits
+non-zero unless audit.jsonl holds a completed call recorded for that commit.
+PASS proves a completed dispatch is recorded, not that the second model
+agreed with anything. Run it from the repo root, before writing any
+`_provenance` block that claims agreement and before merge, passing the
+reviewer and prompt hash from the claim when the claim names them:
+`check --commit <sha> --to <reviewer> --prompt-hash <hash>`. Manual-only
+until the gate contract enforces it; the ship-gate `a2a_dispatch` domain
+runs the same check warn-only.
+
+Deploy first, or nothing on the dispatching machine changes: the bridges read
+the audit writer from `~/.claude/bin`, not from this repo. From the repo root
+run `bash dot-claude/bin/deploy-setup.sh --only 'bin/a2a-*'` for a dry run,
+then `--apply` to copy the bridge files, and confirm with
+`~/.claude/bin/a2a-audit.py tail 5` after a real dispatch. A deployed writer
+that predates the commit seam logs records with no commit, and the bridges
+warn on stderr when that happens.
+
+When the check fails, do this, per reason: `LOG_MISSING` means no dispatch
+has ever been recorded, deploy the payload and run a real dispatch, then
+re-run the check; `LOG_UNREADABLE` means the log cannot be read, fix the
+path or permissions, do not claim agreement; `NO_RECORD_FOR_COMMIT` means no
+dispatch was made for this commit, do not claim agreement; `NO_COMPLETED_CALL`
+means re-run the second review to completion, a failed or timed-out call does
+not count; `NO_MATCHING_CALL` means a completed call exists for the commit
+but not from the named reviewer or prompt hash, re-run the review the claim
+refers to. A failing check blocks the `_provenance` claim, not the merge,
+until the contract domain is enforced.
+
 ## When to dispatch (decision rules)
 
 | Goal | Use | Rationale |

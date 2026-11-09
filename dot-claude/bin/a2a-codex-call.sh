@@ -103,10 +103,26 @@ if [ "$STATE" != "completed" ] && [ -s "$TMPERR" ]; then
     fi
 fi
 
-# Audit log (state may now be rate_limited or auth_failed for clearer diagnostics)
-python3 "$HOME/.claude/bin/a2a-audit.py" log \
-    "$FROM_ADDR" "$TO_ADDR" "$PROMPT_HASH" "$DURATION_MS" "$STATE" "$CONV_ID" \
-    >/dev/null 2>&1 || true
+# Audit log (state may now be rate_limited or auth_failed for clearer diagnostics).
+# The commit is passed explicitly: the oracle matches records to the commit the
+# dispatch was made for, and the shell knows the checkout better than the
+# audit writer's cwd fallback does. Fail-soft to "unknown", never block the call.
+# The deployed writer must carry the commit seam (AUDIT_WRITER_SEAM): an older
+# writer would read "--commit" as the conversation id, so check first and log
+# without it, with a warning, rather than corrupt the record.
+COMMIT_SHA=$(git rev-parse HEAD 2>/dev/null || echo unknown)
+AUDIT_WRITER="$HOME/.claude/bin/a2a-audit.py"
+if grep -q "AUDIT_WRITER_SEAM" "$AUDIT_WRITER" 2>/dev/null; then
+    python3 "$AUDIT_WRITER" log \
+        "$FROM_ADDR" "$TO_ADDR" "$PROMPT_HASH" "$DURATION_MS" "$STATE" "$CONV_ID" \
+        --commit "$COMMIT_SHA" \
+        >/dev/null 2>&1 || echo "a2a-audit: logging failed, no record written for this call" >&2
+else
+    echo "a2a-audit: deployed writer predates the commit seam, record will carry no commit; deploy dot-claude/bin/a2a-audit.py to ~/.claude/bin" >&2
+    python3 "$AUDIT_WRITER" log \
+        "$FROM_ADDR" "$TO_ADDR" "$PROMPT_HASH" "$DURATION_MS" "$STATE" "$CONV_ID" \
+        >/dev/null 2>&1 || echo "a2a-audit: logging failed, no record written for this call" >&2
+fi
 
 # Persist the stderr tail to ~/.claude/cache/a2a/codex-errors.log for postmortem
 if [ -n "$ERR_MSG" ]; then

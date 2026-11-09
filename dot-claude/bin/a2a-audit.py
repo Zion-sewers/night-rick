@@ -9,20 +9,40 @@ Usage as a module:
     log_call(from_addr, to_addr, prompt_hash, duration_ms, state, conversation_id, **extra)
 
 Usage as CLI (for shell bridges):
-    a2a-audit.py log <from> <to> <prompt_hash> <duration_ms> <state> [<conversation_id>]
+    a2a-audit.py log <from> <to> <prompt_hash> <duration_ms> <state> [<conversation_id>] [--commit SHA]
     a2a-audit.py tail [N]
     a2a-audit.py stats
+
+Every record carries a "commit" field (night-rick#13): the commit the dispatch
+was made for. HEAD of the repo under review is authoritative: a valid explicit
+argument or $A2A_COMMIT is only a hint, checked against `git rev-parse HEAD`
+(HEAD wins on mismatch and the hint is recorded as commit_hint_mismatch), else
+HEAD, else the hint when no repo is present, else "unknown".
+tools/audit/a2a_dispatch_oracle.py fails unless a completed call is recorded
+for a given commit, so a record without a commit can never satisfy the check.
+Commit resolution never raises: a logging failure must not break a dispatch.
+(AUDIT_WRITER_SEAM is the version marker bridges check before relying on the
+commit seam: 1 means this file records commits. A deployed copy without it
+predates the seam.)
 """
 from __future__ import annotations
 
 import hashlib
 import json
+import os
+import re
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 AUDIT_DIR = Path.home() / ".claude" / "cache" / "a2a"
 AUDIT_LOG = AUDIT_DIR / "audit.jsonl"
+
+UNKNOWN_COMMIT = "unknown"
+AUDIT_WRITER_SEAM = 1
+
+_HEX_RE = re.compile(r"[0-9a-f]+")
 
 
 def now_iso() -> str:
@@ -33,6 +53,93 @@ def hash_prompt(prompt: str, length: int = 12) -> str:
     return hashlib.sha1(prompt.encode("utf-8", errors="replace")).hexdigest()[:length]
 
 
+def _valid_hint(value: str | None) -> str | None:
+    """A commit hint is usable only as stripped hex, 7 to 40 chars, else None."""
+    if value is None:
+        return None
+    hint = value.strip()
+    if not 7 <= len(hint) <= 40:
+        return None
+    if _HEX_RE.fullmatch(hint) is None:
+        return None
+    return hint
+
+
+def _head_commit() -> str | None:
+    """HEAD SHA of the repo in the caller's working directory, else None."""
+    try:
+        proc = subprocess.run(
+            ("git", "rev-parse", "HEAD"),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        sha = proc.stdout.strip()
+        if proc.returncode == 0 and len(sha) == 40 and _HEX_RE.fullmatch(sha):
+            return sha
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return None
+
+
+def _head_repo() -> str:
+    """Basename of the repo in the caller's working directory, else "unknown"."""
+    try:
+        proc = subprocess.run(
+            ("git", "rev-parse", "--show-toplevel"),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        top = proc.stdout.strip()
+        if proc.returncode == 0 and top:
+            return Path(top).name or UNKNOWN_COMMIT
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return UNKNOWN_COMMIT
+
+
+def _prefix_compatible(shorter: str, longer: str) -> bool:
+    return longer.startswith(shorter) or shorter.startswith(longer)
+
+
+def resolve_commit(explicit: str | None = None) -> str:
+    """Commit a dispatch record belongs to. Never raises, never empty.
+
+    HEAD is authoritative: a valid hint that disagrees with HEAD loses to
+    HEAD (see resolve_commit_note for the recorded mismatch).
+    """
+    hint = _valid_hint(explicit) or _valid_hint(os.environ.get("A2A_COMMIT"))
+    head = _head_commit()
+    if head is not None:
+        return head
+    if hint is not None:
+        return hint
+    return UNKNOWN_COMMIT
+
+
+def resolve_commit_note(explicit: str | None = None) -> str | None:
+    """The hint, when it was valid but HEAD overruled it, else None.
+
+    A mismatch is diagnosable, not silent: the caller passed a commit that
+    is not the checkout's HEAD, so the record carries HEAD and this note.
+    """
+    hint = _valid_hint(explicit) or _valid_hint(os.environ.get("A2A_COMMIT"))
+    if hint is None:
+        return None
+    head = _head_commit()
+    if head is None:
+        return None
+    if _prefix_compatible(hint, head):
+        return None
+    return hint
+
+
+def resolve_repo() -> str:
+    """Repo identity for a dispatch record. Never raises."""
+    return _head_repo()
+
+
 def log_call(
     from_addr: str,
     to_addr: str,
@@ -40,9 +147,11 @@ def log_call(
     duration_ms: int,
     state: str,
     conversation_id: str | None = None,
+    commit: str | None = None,
     **extra,
 ) -> None:
     AUDIT_DIR.mkdir(parents=True, exist_ok=True)
+    mismatch = resolve_commit_note(commit)
     record = {
         "ts": now_iso(),
         "from": from_addr,
@@ -51,8 +160,12 @@ def log_call(
         "duration_ms": int(duration_ms),
         "state": state,
         "conversation_id": conversation_id,
+        "commit": resolve_commit(commit),
+        "repo": resolve_repo(),
         **extra,
     }
+    if mismatch is not None:
+        record["commit_hint_mismatch"] = mismatch
     with open(AUDIT_LOG, "a") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
@@ -65,7 +178,8 @@ def tail(n: int = 20) -> None:
     for line in lines:
         try:
             r = json.loads(line)
-            print(f"{r['ts']}  {r['from']:30s} -> {r['to']:30s}  {r['state']:10s}  {r['duration_ms']:>6}ms  {r.get('prompt_hash','-')}")
+            commit = str(r.get("commit", UNKNOWN_COMMIT))[:7]
+            print(f"{r['ts']}  {r['from']:30s} -> {r['to']:30s}  {r['state']:10s}  {r['duration_ms']:>6}ms  {r.get('prompt_hash','-')}  {commit}")
         except Exception:
             print(line)
 
@@ -107,16 +221,26 @@ def main() -> None:
         sys.exit(2)
     cmd = sys.argv[1]
     if cmd == "log":
-        if len(sys.argv) < 7:
-            print("usage: a2a-audit.py log <from> <to> <prompt_hash> <duration_ms> <state> [<conversation_id>]", file=sys.stderr)
+        args = sys.argv[2:]
+        commit = None
+        if "--commit" in args:
+            idx = args.index("--commit")
+            if idx + 1 >= len(args):
+                print("usage: --commit needs a SHA", file=sys.stderr)
+                sys.exit(2)
+            commit = args[idx + 1]
+            del args[idx : idx + 2]
+        if len(args) < 5:
+            print("usage: a2a-audit.py log <from> <to> <prompt_hash> <duration_ms> <state> [<conversation_id>] [--commit SHA]", file=sys.stderr)
             sys.exit(2)
         log_call(
-            from_addr=sys.argv[2],
-            to_addr=sys.argv[3],
-            prompt_hash=sys.argv[4],
-            duration_ms=int(sys.argv[5]),
-            state=sys.argv[6],
-            conversation_id=sys.argv[7] if len(sys.argv) > 7 else None,
+            from_addr=args[0],
+            to_addr=args[1],
+            prompt_hash=args[2],
+            duration_ms=int(args[3]),
+            state=args[4],
+            conversation_id=args[5] if len(args) > 5 else None,
+            commit=commit,
         )
     elif cmd == "tail":
         n = int(sys.argv[2]) if len(sys.argv) > 2 else 20
